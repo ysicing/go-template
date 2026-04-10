@@ -12,7 +12,9 @@
   },
   "aliases": {
     "components": "@/components",
+    "hooks": "@/hooks",
+    "lib": "@/lib",
+    "ui": "@/components/ui",
     "utils": "@/lib/utils"
   }
 }
-
