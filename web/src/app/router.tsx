@@ -5,17 +5,15 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react
 
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import { adminRouteDefinitions } from "./admin-routes";
 import { adminNavigation } from "./admin-navigation";
 import { AdminLayout } from "./layouts/admin-layout";
 import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "../lib/api";
 import { useTheme } from "../lib/theme";
-import { AdminPage } from "../pages/admin";
-import { AdminSettingsPage } from "../pages/admin-settings";
 import { HomePage } from "../pages/home";
 import { LoginPage } from "../pages/login";
 import { ProfilePage } from "../pages/profile";
 import { SetupPage } from "../pages/setup";
-import { UserManagementPage } from "../subsystems/admin-users/pages/user-management-page";
 
 export function AppRouter() {
   return (
@@ -113,48 +111,22 @@ function ApplicationRoutes() {
           <Route path="/login" element={!setupRequired ? <LoginPage /> : <Navigate replace to="/setup" />} />
           <Route path="/" element={<ProtectedRoute isLoading={meQuery.isLoading} user={meQuery.data}><HomePage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute isLoading={meQuery.isLoading} user={meQuery.data}><ProfilePage /></ProtectedRoute>} />
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute isLoading={meQuery.isLoading} user={meQuery.data}>
-                <AdminLayout
-                  description="后台模块入口与当前系统概览。"
-                  navigation={adminNavigation}
-                  title="管理后台"
+          {adminRouteDefinitions.map((route) => (
+            <Route
+              element={
+                <AdminRoutePage
+                  description={route.description}
+                  isLoading={meQuery.isLoading}
+                  title={route.title}
+                  user={meQuery.data}
                 >
-                  <AdminPage />
-                </AdminLayout>
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <AdminRoute isLoading={meQuery.isLoading} user={meQuery.data}>
-                <AdminLayout
-                  description="查看、筛选并维护系统中的用户账号。"
-                  navigation={adminNavigation}
-                  title="用户管理"
-                >
-                  <UserManagementPage />
-                </AdminLayout>
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/settings"
-            element={
-              <AdminRoute isLoading={meQuery.isLoading} user={meQuery.data}>
-                <AdminLayout
-                  description="运行期系统设置与后台配置。"
-                  navigation={adminNavigation}
-                  title="系统设置"
-                >
-                  <AdminSettingsPage />
-                </AdminLayout>
-              </AdminRoute>
-            }
-          />
+                  {route.element}
+                </AdminRoutePage>
+              }
+              key={route.path}
+              path={route.path}
+            />
+          ))}
         </Routes>
       </main>
       <footer className="border-t border-border bg-card/60">
@@ -164,6 +136,28 @@ function ApplicationRoutes() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function AdminRoutePage({
+  children,
+  description,
+  isLoading,
+  title,
+  user
+}: {
+  children: React.ReactNode;
+  description: string;
+  isLoading: boolean;
+  title: string;
+  user?: { role: string };
+}) {
+  return (
+    <AdminRoute isLoading={isLoading} user={user}>
+      <AdminLayout description={description} navigation={adminNavigation} title={title}>
+        {children}
+      </AdminLayout>
+    </AdminRoute>
   );
 }
 
