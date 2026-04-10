@@ -23,10 +23,13 @@ FROM gcr.io/distroless/base-debian12
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_TIME=unknown
-WORKDIR /app
+WORKDIR /
+ENV APP_CONFIG_PATH=/data/config.yaml
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${COMMIT}"
 LABEL org.opencontainers.image.created="${BUILD_TIME}"
 COPY --from=go-builder /out/server /app/server
+COPY configs/config.example.yaml /data/config.example.yaml
 EXPOSE 3206
+VOLUME ["/data"]
 ENTRYPOINT ["/app/server"]

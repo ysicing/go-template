@@ -19,7 +19,7 @@
 
 ## 首次启动
 
-第一次启动时如果不存在 `configs/config.yaml`，系统会进入安装向导。
+第一次启动时如果不存在 `configs/config.yaml`（或环境变量 `APP_CONFIG_PATH` 指向的配置文件），系统会进入安装向导。
 
 安装向导会完成：
 
@@ -110,6 +110,12 @@ task docker:build
 1. 构建前端静态资源
 2. 构建 Go 二进制
 3. 使用 distroless 运行镜像
+
+容器默认约定：
+
+- 配置文件路径：`/data/config.yaml`
+- 持久化目录：`/data`
+- SQLite 默认数据文件：`/data/app.db`
 
 ## CI / Release
 

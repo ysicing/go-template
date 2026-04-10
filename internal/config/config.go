@@ -11,7 +11,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const DefaultPath = "configs/config.yaml"
+const defaultPath = "configs/config.yaml"
+
+func DefaultPath() string {
+	if value := strings.TrimSpace(os.Getenv("APP_CONFIG_PATH")); value != "" {
+		return value
+	}
+	return defaultPath
+}
 
 type Duration string
 

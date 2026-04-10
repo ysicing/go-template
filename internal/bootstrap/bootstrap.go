@@ -33,7 +33,7 @@ func Run() error {
 }
 
 func loadConfig() (*config.Config, error) {
-	cfg, err := config.Load(config.DefaultPath)
+	cfg, err := config.Load(config.DefaultPath())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -49,7 +49,7 @@ func buildApp(cfg *config.Config) (*fiber.App, string, int, error) {
 	if cfg == nil {
 		app := httpserver.New(httpserver.Dependencies{
 			Tokens:        auth.NewTokenManager("go-template", "change-me", config.Duration("15m").Value(), config.Duration("168h").Value()),
-			Setup:         setup.NewService(config.DefaultPath, nil),
+			Setup:         setup.NewService(config.DefaultPath(), nil),
 			SetupRequired: true,
 		})
 		return app, host, port, nil
@@ -63,7 +63,7 @@ func buildApp(cfg *config.Config) (*fiber.App, string, int, error) {
 		return nil, "", 0, err
 	}
 
-	setupService := setup.NewService(config.DefaultPath, conn)
+	setupService := setup.NewService(config.DefaultPath(), conn)
 	setupRequired, err := setupService.SetupRequired()
 	if err != nil {
 		return nil, "", 0, err

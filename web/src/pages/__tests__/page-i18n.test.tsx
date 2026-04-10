@@ -68,8 +68,10 @@ describe("page i18n", () => {
     expect(screen.getByText("Continue extending user management, audit logs, system monitoring, and more here.")).toBeInTheDocument();
     expect(screen.getByText("Username or email + password")).toBeInTheDocument();
     expect(screen.getByText("Setup Wizard")).toBeInTheDocument();
-    expect(screen.getByText("Database Driver")).toBeInTheDocument();
-    expect(screen.getByText("Cache Driver")).toBeInTheDocument();
+    expect(screen.getByText("Complete setup in three sections: database, cache, and admin.")).toBeInTheDocument();
+    expect(screen.getByText("Database")).toBeInTheDocument();
+    expect(screen.getByText("Cache")).toBeInTheDocument();
+    expect(screen.getByText("Administrator")).toBeInTheDocument();
     expect(screen.queryByText("A first-run setup wizard similar to Gitea")).not.toBeInTheDocument();
     expect(screen.queryByText("JWT Secret")).not.toBeInTheDocument();
     expect(screen.getByText("Profile Summary")).toBeInTheDocument();

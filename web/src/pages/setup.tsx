@@ -1,12 +1,15 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Database, Eye, EyeOff, HardDrive, ShieldCheck } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { installSystem } from "@/lib/api";
 
 export type InstallFormValues = {
@@ -95,128 +98,272 @@ function createDefaultValues(): InstallFormValues {
   };
 }
 
+function getErrorMessage(error: unknown, fallbackMessage: string) {
+  return error instanceof Error ? error.message : fallbackMessage;
+}
+
 export function SetupPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [values, setValues] = useState<InstallFormValues>(() => createDefaultValues());
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setIsSubmitting(true);
+
     try {
       await installSystem(values);
       navigate("/login");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : t("setup_failed"));
+      setError(getErrorMessage(submitError, t("setup_failed")));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <Card className="mx-auto w-full max-w-3xl">
-      <CardHeader>
-        <CardTitle>{t("setup")}</CardTitle>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <Card className="border-border/70 bg-card/95 shadow-sm">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge>{t("setup_badge")}</Badge>
+            <span className="text-sm text-muted-foreground">{t("setup_summary")}</span>
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-2xl">{t("setup")}</CardTitle>
+            <CardDescription>{t("setup_description")}</CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <SectionCard
+          description={t("setup_database_description")}
+          icon={<Database className="h-5 w-5" />}
+          step="01"
+          title={t("setup_database_title")}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field hint={t("setup_database_driver_hint")} label={t("database_driver")}>
+              <Select
+                value={values.database.driver}
+                onValueChange={(value) =>
+                  setValues((current) => ({
+                    ...current,
+                    database: {
+                      ...current.database,
+                      driver: value,
+                      dsn: getDatabaseDSN(value)
+                    }
+                  }))
+                }
+              >
+                <SelectTrigger aria-label={t("database_driver")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sqlite">{t("database_driver_sqlite")}</SelectItem>
+                  <SelectItem value="postgres">{t("database_driver_postgres")}</SelectItem>
+                  <SelectItem value="mysql">{t("database_driver_mysql")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field className="md:col-span-2" hint={t("setup_database_dsn_hint")} label={t("database_dsn")}>
+              <Input
+                placeholder={getDatabaseDSN(values.database.driver)}
+                value={values.database.dsn}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    database: {
+                      ...current.database,
+                      dsn: event.target.value
+                    }
+                  }))
+                }
+              />
+            </Field>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          description={t("setup_cache_description")}
+          icon={<HardDrive className="h-5 w-5" />}
+          step="02"
+          title={t("setup_cache_title")}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field hint={t("setup_cache_driver_hint")} label={t("cache_driver")}>
+              <Select
+                value={values.cache.driver}
+                onValueChange={(value) =>
+                  setValues((current) => ({
+                    ...current,
+                    cache: {
+                      driver: value,
+                      ...getCacheDefaults(value)
+                    }
+                  }))
+                }
+              >
+                <SelectTrigger aria-label={t("cache_driver")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="memory">{t("cache_driver_memory")}</SelectItem>
+                  <SelectItem value="redis">{t("cache_driver_redis")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <div className="rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-3 text-sm text-muted-foreground md:col-span-2">
+              {values.cache.driver === "redis" ? t("setup_cache_redis_hint") : t("setup_cache_memory_hint")}
+            </div>
+            {values.cache.driver === "redis" ? (
+              <>
+                <Field label={t("cache_addr")}>
+                  <Input
+                    value={values.cache.addr}
+                    onChange={(event) =>
+                      setValues((current) => ({
+                        ...current,
+                        cache: {
+                          ...current.cache,
+                          addr: event.target.value
+                        }
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label={t("cache_password")}>
+                  <Input
+                    type="password"
+                    value={values.cache.password}
+                    onChange={(event) =>
+                      setValues((current) => ({
+                        ...current,
+                        cache: {
+                          ...current.cache,
+                          password: event.target.value
+                        }
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label={t("cache_db")}>
+                  <Input
+                    type="number"
+                    value={values.cache.db}
+                    onChange={(event) =>
+                      setValues((current) => ({
+                        ...current,
+                        cache: {
+                          ...current.cache,
+                          db: Number.parseInt(event.target.value || "0", 10) || 0
+                        }
+                      }))
+                    }
+                  />
+                </Field>
+              </>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          description={t("setup_admin_description")}
+          icon={<ShieldCheck className="h-5 w-5" />}
+          step="03"
+          title={t("setup_admin_title")}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label={t("admin_username")}>
+              <Input
+                value={values.admin_username}
+                onChange={(event) => setValues((current) => ({ ...current, admin_username: event.target.value }))}
+              />
+            </Field>
+            <Field label={t("admin_email")}>
+              <Input
+                type="email"
+                value={values.admin_email}
+                onChange={(event) => setValues((current) => ({ ...current, admin_email: event.target.value }))}
+              />
+            </Field>
+            <Field className="md:col-span-2" hint={t("setup_admin_password_hint")} label={t("admin_password")}>
+              <div className="relative">
+                <Input
+                  className="pr-12"
+                  type={showPassword ? "text" : "password"}
+                  value={values.admin_password}
+                  onChange={(event) => setValues((current) => ({ ...current, admin_password: event.target.value }))}
+                />
+                <Button
+                  aria-label={showPassword ? t("setup_hide_password") : t("setup_show_password")}
+                  className="absolute right-1 top-1 h-8 w-8"
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </Field>
+          </div>
+        </SectionCard>
+
+        <Card className="sticky bottom-4 border-primary/20 bg-card/95 shadow-lg backdrop-blur">
+          <CardContent className="flex flex-col gap-4 p-6">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{t("setup_action_title")}</div>
+                <p className="text-sm text-muted-foreground">{t("setup_action_description")}</p>
+              </div>
+              <Button className="w-full md:w-auto" disabled={isSubmitting} type="submit">
+                {isSubmitting ? t("submitting") : t("install_now")}
+              </Button>
+            </div>
+            {error ? <p className="text-sm text-red-500">{error}</p> : null}
+          </CardContent>
+        </Card>
+      </form>
+    </div>
+  );
+}
+
+function SectionCard({
+  children,
+  description,
+  icon,
+  step,
+  title
+}: {
+  children: React.ReactNode;
+  description: string;
+  icon: React.ReactNode;
+  step: string;
+  title: string;
+}) {
+  return (
+    <Card className="border-border/70 bg-card/95 shadow-sm">
+      <CardHeader className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg border border-border/70 bg-muted/40 p-2 text-muted-foreground">{icon}</div>
+            <div className="space-y-1">
+              <CardTitle className="text-lg">{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </div>
+          </div>
+          <Badge variant="outline">{step}</Badge>
+        </div>
+        <Separator />
       </CardHeader>
-      <CardContent>
-        <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
-          <Field label={t("admin_username")}>
-            <Input value={values.admin_username} onChange={(event) => setValues({ ...values, admin_username: event.target.value })} />
-          </Field>
-          <Field label={t("admin_email")}>
-            <Input value={values.admin_email} onChange={(event) => setValues({ ...values, admin_email: event.target.value })} />
-          </Field>
-          <Field label={t("admin_password")}>
-            <Input
-              type="password"
-              value={values.admin_password}
-              onChange={(event) => setValues({ ...values, admin_password: event.target.value })}
-            />
-          </Field>
-          <Field label={t("database_driver")}>
-            <Select
-              value={values.database.driver}
-              onValueChange={(value) =>
-                setValues({
-                  ...values,
-                  database: {
-                    ...values.database,
-                    driver: value,
-                    dsn: getDatabaseDSN(value)
-                  }
-                })
-              }
-            >
-              <SelectTrigger aria-label={t("database_driver")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sqlite">{t("database_driver_sqlite")}</SelectItem>
-                <SelectItem value="postgres">{t("database_driver_postgres")}</SelectItem>
-                <SelectItem value="mysql">{t("database_driver_mysql")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field className="md:col-span-2" label={t("database_dsn")}>
-            <Input
-              placeholder={getDatabaseDSN(values.database.driver)}
-              value={values.database.dsn}
-              onChange={(event) => setValues({ ...values, database: { ...values.database, dsn: event.target.value } })}
-            />
-          </Field>
-          <Field label={t("cache_driver")}>
-            <Select
-              value={values.cache.driver}
-              onValueChange={(value) =>
-                setValues({
-                  ...values,
-                  cache: {
-                    driver: value,
-                    ...getCacheDefaults(value)
-                  }
-                })
-              }
-            >
-              <SelectTrigger aria-label={t("cache_driver")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="memory">{t("cache_driver_memory")}</SelectItem>
-                <SelectItem value="redis">{t("cache_driver_redis")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          {values.cache.driver === "redis" ? (
-            <>
-              <Field label={t("cache_addr")}>
-                <Input
-                  value={values.cache.addr}
-                  onChange={(event) => setValues({ ...values, cache: { ...values.cache, addr: event.target.value } })}
-                />
-              </Field>
-              <Field label={t("cache_password")}>
-                <Input
-                  type="password"
-                  value={values.cache.password}
-                  onChange={(event) => setValues({ ...values, cache: { ...values.cache, password: event.target.value } })}
-                />
-              </Field>
-              <Field label={t("cache_db")}>
-                <Input
-                  type="number"
-                  value={values.cache.db}
-                  onChange={(event) =>
-                    setValues({ ...values, cache: { ...values.cache, db: Number.parseInt(event.target.value || "0", 10) || 0 } })
-                  }
-                />
-              </Field>
-            </>
-          ) : null}
-          {error ? <p className="text-sm text-red-500 md:col-span-2">{error}</p> : null}
-          <Button className="md:col-span-2" type="submit">
-            {t("install_now")}
-          </Button>
-        </form>
-      </CardContent>
+      <CardContent>{children}</CardContent>
     </Card>
   );
 }
@@ -224,10 +371,12 @@ export function SetupPage() {
 function Field({
   children,
   className,
+  hint,
   label
 }: {
   children: React.ReactNode;
   className?: string;
+  hint?: string;
   label: string;
 }) {
   return (
@@ -235,6 +384,7 @@ function Field({
       <div className="space-y-2">
         <Label>{label}</Label>
         {children}
+        {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
       </div>
     </div>
   );
