@@ -135,7 +135,7 @@ function ApplicationRoutes() {
       <footer className="border-t border-border bg-card/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
           <span>{t("title")}</span>
-          <span>{buildInfoQuery.data?.full_version ?? "version-unavailable"}</span>
+          <span>{buildInfoQuery.data?.full_version ?? t("version_unavailable")}</span>
         </div>
       </footer>
     </div>

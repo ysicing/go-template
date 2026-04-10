@@ -74,7 +74,7 @@ export function SetupPage() {
       await installSystem(values);
       navigate("/login");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "初始化失败");
+      setError(submitError instanceof Error ? submitError.message : t("setup_failed"));
     }
   }
 

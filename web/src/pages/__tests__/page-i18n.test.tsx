@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,7 +11,9 @@ import { ProfilePage } from "../profile";
 import { SetupPage } from "../setup";
 
 const apiMocks = vi.hoisted(() => ({
-  fetchCurrentUser: vi.fn()
+  fetchCurrentUser: vi.fn(),
+  installSystem: vi.fn(),
+  login: vi.fn()
 }));
 
 vi.mock("../../lib/api", async () => {
@@ -19,13 +21,17 @@ vi.mock("../../lib/api", async () => {
 
   return {
     ...actual,
-    fetchCurrentUser: apiMocks.fetchCurrentUser
+    fetchCurrentUser: apiMocks.fetchCurrentUser,
+    installSystem: apiMocks.installSystem,
+    login: apiMocks.login
   };
 });
 
 describe("page i18n", () => {
   beforeEach(async () => {
     apiMocks.fetchCurrentUser.mockReset();
+    apiMocks.installSystem.mockReset();
+    apiMocks.login.mockReset();
     apiMocks.fetchCurrentUser.mockResolvedValue({
       email: "admin@example.com",
       id: 1,
@@ -68,5 +74,27 @@ describe("page i18n", () => {
     expect(screen.getByText(/Username:/)).toBeInTheDocument();
     expect(screen.getByText(/Email:/)).toBeInTheDocument();
     expect(screen.getByText(/Role:/)).toBeInTheDocument();
+  });
+
+  it("renders english fallback errors for login and setup", async () => {
+    apiMocks.login.mockRejectedValue({ code: "UNKNOWN" });
+    apiMocks.installSystem.mockRejectedValue({ code: "UNKNOWN" });
+
+    render(
+      <AppProviders>
+        <MemoryRouter>
+          <>
+            <LoginPage />
+            <SetupPage />
+          </>
+        </MemoryRouter>
+      </AppProviders>
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Login" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Install" }));
+
+    expect(await screen.findByText("Login failed")).toBeInTheDocument();
+    expect(await screen.findByText("Initialization failed")).toBeInTheDocument();
   });
 });

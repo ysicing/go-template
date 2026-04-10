@@ -49,8 +49,10 @@ const resources = {
       home_stack: "Fiber v3 + GORM + shadcn/ui + Taskfile + Docker + GitHub Actions，面向子系统扩展而设计",
       login_identifier: "用户名或邮箱",
       login_description: "用户名或邮箱 + 密码",
+      login_failed: "登录失败",
       password: "密码",
       setup_description: "类似 Gitea 的首次初始化向导",
+      setup_failed: "初始化失败",
       database_driver: "数据库驱动",
       database_dsn: "数据库 DSN",
       cache_driver: "缓存驱动",
@@ -110,7 +112,8 @@ const resources = {
       admin_users_validation_email_required: "请输入邮箱",
       admin_users_validation_password_length: "密码至少 8 位",
       admin_users_delete_confirm: "确认删除用户 {{username}} 吗？",
-      admin_users_action_failed: "操作失败，请稍后重试"
+      admin_users_action_failed: "操作失败，请稍后重试",
+      version_unavailable: "版本信息不可用"
     }
   },
   "en-US": {
@@ -160,8 +163,10 @@ const resources = {
       home_stack: "Fiber v3 + GORM + shadcn/ui + Taskfile + Docker + GitHub Actions, ready for subsystem-oriented development",
       login_identifier: "Username or email",
       login_description: "Username or email + password",
+      login_failed: "Login failed",
       password: "Password",
       setup_description: "A first-run setup wizard similar to Gitea",
+      setup_failed: "Initialization failed",
       database_driver: "Database Driver",
       database_dsn: "Database DSN",
       cache_driver: "Cache Driver",
@@ -221,7 +226,8 @@ const resources = {
       admin_users_validation_email_required: "Please enter an email address",
       admin_users_validation_password_length: "Password must be at least 8 characters",
       admin_users_delete_confirm: "Delete user {{username}}?",
-      admin_users_action_failed: "Action failed, please try again later"
+      admin_users_action_failed: "Action failed, please try again later",
+      version_unavailable: "Version unavailable"
     }
   }
 } as const;

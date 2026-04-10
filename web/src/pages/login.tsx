@@ -22,7 +22,7 @@ export function LoginPage() {
       const user = await login({ identifier, password });
       navigate(user.role === "admin" ? "/admin" : "/");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "登录失败");
+      setError(submitError instanceof Error ? submitError.message : t("login_failed"));
     }
   }
 
