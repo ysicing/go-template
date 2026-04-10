@@ -4,18 +4,42 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/ysicing/go-template/internal/shared"
 	"github.com/ysicing/go-template/internal/setup"
+	"github.com/ysicing/go-template/internal/shared"
 )
 
 func registerSetupRoutes(app *fiber.App, state *State) {
-	app.Get("/api/setup/status", func(c fiber.Ctx) error {
+	app.Get("/api/setup/status", setupStatusHandler(state))
+	app.Post("/api/setup/install", setupInstallHandler(state))
+}
+
+// setupStatusHandler godoc
+// @Summary 查询是否需要初始化
+// @Tags Setup
+// @Produce json
+// @Success 200 {object} shared.Response{data=httpserver.setupStatusData}
+// @Router /api/setup/status [get]
+func setupStatusHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		return c.JSON(shared.OK(map[string]any{
 			"setup_required": state.SetupRequired(),
 		}))
-	})
+	}
+}
 
-	app.Post("/api/setup/install", func(c fiber.Ctx) error {
+// setupInstallHandler godoc
+// @Summary 执行首次安装
+// @Tags Setup
+// @Accept json
+// @Produce json
+// @Param payload body setup.InstallInput true "安装向导配置"
+// @Success 200 {object} shared.Response{data=httpserver.installResultData}
+// @Failure 400 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/setup/install [post]
+func setupInstallHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		if !state.SetupRequired() {
 			return c.Status(fiber.StatusForbidden).JSON(shared.Err("SETUP_LOCKED", "setup already completed"))
 		}
@@ -37,5 +61,5 @@ func registerSetupRoutes(app *fiber.App, state *State) {
 		}
 
 		return c.JSON(shared.OK(map[string]any{"installed": true}))
-	})
+	}
 }

@@ -140,13 +140,21 @@ func (s *State) ReloadFromConfig(path string) error {
 }
 
 func registerRoutes(app *fiber.App, state *State) {
-	app.Get("/healthz", func(c fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
-	})
+	app.Get("/healthz", healthzHandler)
+	registerDocsRoutes(app)
 	registerSetupRoutes(app, state)
 	registerAuthRoutes(app, state)
 	registerAdminUserRoutes(app, state)
 	registerSystemRoutes(app, state)
+}
+
+// healthzHandler godoc
+// @Summary 健康检查
+// @Tags System
+// @Success 200
+// @Router /healthz [get]
+func healthzHandler(c fiber.Ctx) error {
+	return c.SendStatus(fiber.StatusOK)
 }
 
 func registerStatic(app *fiber.App) {

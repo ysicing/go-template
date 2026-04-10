@@ -51,18 +51,18 @@ type (
 	}
 
 	CreateUserInput struct {
-		Username string
-		Email    string
-		Password string
-		Role     string
-		Status   string
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Role     string `json:"role"`
+		Status   string `json:"status"`
 	}
 
 	UpdateUserInput struct {
-		Username string
-		Email    string
-		Role     string
-		Status   string
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Role     string `json:"role"`
+		Status   string `json:"status"`
 	}
 
 	ChangePasswordInput struct {

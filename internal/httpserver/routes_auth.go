@@ -20,7 +20,26 @@ type refreshPayload struct {
 }
 
 func registerAuthRoutes(app *fiber.App, state *State) {
-	app.Post("/api/auth/login", func(c fiber.Ctx) error {
+	app.Post("/api/auth/login", loginHandler(state))
+	app.Post("/api/auth/refresh", refreshHandler(state))
+	app.Post("/api/auth/logout", logoutHandler)
+	app.Post("/api/auth/change-password", requireAuth(state.Tokens()), changePasswordHandler(state))
+	app.Get("/api/auth/me", requireAuth(state.Tokens()), currentUserHandler(state))
+}
+
+// loginHandler godoc
+// @Summary 用户登录
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param payload body loginPayload true "登录凭据"
+// @Success 200 {object} shared.Response{data=httpserver.loginResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/auth/login [post]
+func loginHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		service, err := requireAuthService(c, state)
 		if err != nil {
 			return err
@@ -40,9 +59,22 @@ func registerAuthRoutes(app *fiber.App, state *State) {
 			"user":  account,
 			"token": pair,
 		}))
-	})
+	}
+}
 
-	app.Post("/api/auth/refresh", func(c fiber.Ctx) error {
+// refreshHandler godoc
+// @Summary 刷新访问令牌
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param payload body refreshPayload true "刷新令牌"
+// @Success 200 {object} shared.Response{data=httpserver.refreshResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/auth/refresh [post]
+func refreshHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		service, err := requireAuthService(c, state)
 		if err != nil {
 			return err
@@ -59,13 +91,33 @@ func registerAuthRoutes(app *fiber.App, state *State) {
 		}
 
 		return c.JSON(shared.OK(map[string]any{"token": pair}))
-	})
+	}
+}
 
-	app.Post("/api/auth/logout", func(c fiber.Ctx) error {
-		return c.JSON(shared.OK(map[string]any{"logged_out": true}))
-	})
+// logoutHandler godoc
+// @Summary 用户登出
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} shared.Response{data=httpserver.logoutResponseData}
+// @Router /api/auth/logout [post]
+func logoutHandler(c fiber.Ctx) error {
+	return c.JSON(shared.OK(map[string]any{"logged_out": true}))
+}
 
-	app.Post("/api/auth/change-password", requireAuth(state.Tokens()), func(c fiber.Ctx) error {
+// changePasswordHandler godoc
+// @Summary 修改当前用户密码
+// @Tags Auth
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param payload body user.ChangePasswordInput true "修改密码请求"
+// @Success 200 {object} shared.Response{data=httpserver.changePasswordResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/auth/change-password [post]
+func changePasswordHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
 		if err != nil {
 			return err
@@ -80,9 +132,20 @@ func registerAuthRoutes(app *fiber.App, state *State) {
 			return writeUserServiceError(c, err, "CHANGE_PASSWORD_FAILED", "failed to change password")
 		}
 		return c.JSON(shared.OK(map[string]any{"changed": true}))
-	})
+	}
+}
 
-	app.Get("/api/auth/me", requireAuth(state.Tokens()), func(c fiber.Ctx) error {
+// currentUserHandler godoc
+// @Summary 获取当前登录用户
+// @Tags Auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} shared.Response{data=httpserver.currentUserResponseData}
+// @Failure 401 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/auth/me [get]
+func currentUserHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		service, err := requireAuthService(c, state)
 		if err != nil {
 			return err
@@ -95,7 +158,7 @@ func registerAuthRoutes(app *fiber.App, state *State) {
 		}
 
 		return c.JSON(shared.OK(map[string]any{"user": account}))
-	})
+	}
 }
 
 func requireAuthService(c fiber.Ctx, state *State) (*auth.Service, error) {

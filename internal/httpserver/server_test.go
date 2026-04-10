@@ -255,6 +255,51 @@ func TestHealthzRoute(t *testing.T) {
 	}
 }
 
+func TestSwaggerUIRoute(t *testing.T) {
+	app := httpserver.NewForTest(true)
+	req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestOpenAPIDocRoute(t *testing.T) {
+	app := httpserver.NewForTest(true)
+	req := httptest.NewRequest(http.MethodGet, "/swagger/doc.json", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+
+	var doc struct {
+		Info struct {
+			Title string `json:"title"`
+		} `json:"info"`
+		Paths map[string]any `json:"paths"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatalf("decode openapi doc: %v", err)
+	}
+	if doc.Info.Title != "go-template API" {
+		t.Fatalf("expected openapi title, got %q", doc.Info.Title)
+	}
+	if _, ok := doc.Paths["/api/auth/login"]; !ok {
+		t.Fatalf("expected /api/auth/login in swagger paths")
+	}
+}
+
 func newTestAppEnv(t *testing.T) *testAppEnv {
 	t.Helper()
 

@@ -21,6 +21,22 @@ func registerAdminUserRoutes(app *fiber.App, state *State) {
 	app.Delete("/api/admin/users/:id", requireAuth(state.Tokens()), requireAdmin, deleteUserHandler(state))
 }
 
+// listUsersHandler godoc
+// @Summary 查询用户列表
+// @Tags Admin Users
+// @Security BearerAuth
+// @Produce json
+// @Param keyword query string false "用户名或邮箱关键字"
+// @Param role query string false "角色过滤" Enums(user,admin)
+// @Param status query string false "状态过滤" Enums(active,disabled)
+// @Param page query int false "页码"
+// @Param page_size query int false "每页数量"
+// @Success 200 {object} shared.Response{data=user.ListUsersResult}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users [get]
 func listUsersHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
@@ -51,6 +67,19 @@ func listUsersHandler(state *State) fiber.Handler {
 	}
 }
 
+// getUserHandler godoc
+// @Summary 查看单个用户
+// @Tags Admin Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "用户 ID"
+// @Success 200 {object} shared.Response{data=httpserver.singleUserResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 404 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users/{id} [get]
 func getUserHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
@@ -71,6 +100,20 @@ func getUserHandler(state *State) fiber.Handler {
 	}
 }
 
+// createUserHandler godoc
+// @Summary 创建用户
+// @Tags Admin Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param payload body user.CreateUserInput true "新用户信息"
+// @Success 200 {object} shared.Response{data=httpserver.singleUserResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 409 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users [post]
 func createUserHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
@@ -91,6 +134,22 @@ func createUserHandler(state *State) fiber.Handler {
 	}
 }
 
+// updateUserHandler godoc
+// @Summary 更新用户
+// @Tags Admin Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "用户 ID"
+// @Param payload body user.UpdateUserInput true "用户更新信息"
+// @Success 200 {object} shared.Response{data=httpserver.singleUserResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 404 {object} shared.Response
+// @Failure 409 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users/{id} [put]
 func updateUserHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
@@ -116,6 +175,19 @@ func updateUserHandler(state *State) fiber.Handler {
 	}
 }
 
+// enableUserHandler godoc
+// @Summary 启用用户
+// @Tags Admin Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "用户 ID"
+// @Success 200 {object} shared.Response{data=httpserver.enableUserResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 404 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users/{id}/enable [post]
 func enableUserHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
@@ -135,6 +207,19 @@ func enableUserHandler(state *State) fiber.Handler {
 	}
 }
 
+// disableUserHandler godoc
+// @Summary 停用用户
+// @Tags Admin Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "用户 ID"
+// @Success 200 {object} shared.Response{data=httpserver.disableUserResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 404 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users/{id}/disable [post]
 func disableUserHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)
@@ -155,6 +240,19 @@ func disableUserHandler(state *State) fiber.Handler {
 	}
 }
 
+// deleteUserHandler godoc
+// @Summary 删除用户
+// @Tags Admin Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "用户 ID"
+// @Success 200 {object} shared.Response{data=httpserver.deleteUserResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 404 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users/{id} [delete]
 func deleteUserHandler(state *State) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		service, err := requireUserService(c, state)

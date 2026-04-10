@@ -26,6 +26,10 @@ tasks:
       - pnpm install --frozen-lockfile
       - pnpm build
 
+  docs:swagger:
+    cmds:
+      - ./hack/generate-swagger.sh
+
   test:go:
     cmds:
       - go test ./...
@@ -40,7 +44,7 @@ tasks:
 
   verify:
     cmds:
+      - task docs:swagger
       - go test ./...
       - task build:web
       - go build ./app/server
-

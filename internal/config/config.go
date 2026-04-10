@@ -40,39 +40,39 @@ func (d Duration) Value() time.Duration {
 }
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Log      LogConfig      `yaml:"log"`
-	JWT      JWTConfig      `yaml:"jwt"`
-	Database DatabaseConfig `yaml:"database"`
-	Cache    CacheConfig    `yaml:"cache"`
+	Server   ServerConfig   `yaml:"server" json:"server"`
+	Log      LogConfig      `yaml:"log" json:"log"`
+	JWT      JWTConfig      `yaml:"jwt" json:"jwt"`
+	Database DatabaseConfig `yaml:"database" json:"database"`
+	Cache    CacheConfig    `yaml:"cache" json:"cache"`
 }
 
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host string `yaml:"host" json:"host"`
+	Port int    `yaml:"port" json:"port"`
 }
 
 type LogConfig struct {
-	Level string `yaml:"level"`
+	Level string `yaml:"level" json:"level"`
 }
 
 type JWTConfig struct {
-	Issuer     string   `yaml:"issuer"`
-	AccessTTL  Duration `yaml:"access_ttl"`
-	RefreshTTL Duration `yaml:"refresh_ttl"`
-	Secret     string   `yaml:"secret"`
+	Issuer     string   `yaml:"issuer" json:"issuer"`
+	AccessTTL  Duration `yaml:"access_ttl" json:"access_ttl"`
+	RefreshTTL Duration `yaml:"refresh_ttl" json:"refresh_ttl"`
+	Secret     string   `yaml:"secret" json:"secret"`
 }
 
 type DatabaseConfig struct {
-	Driver string `yaml:"driver"`
-	DSN    string `yaml:"dsn"`
+	Driver string `yaml:"driver" json:"driver"`
+	DSN    string `yaml:"dsn" json:"dsn"`
 }
 
 type CacheConfig struct {
-	Driver   string `yaml:"driver"`
-	Addr     string `yaml:"addr"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
+	Driver   string `yaml:"driver" json:"driver"`
+	Addr     string `yaml:"addr" json:"addr"`
+	Password string `yaml:"password" json:"password"`
+	DB       int    `yaml:"db" json:"db"`
 }
 
 func Default() *Config {
@@ -158,4 +158,3 @@ func applyDuration(key string, target *Duration) {
 		}
 	}
 }
-

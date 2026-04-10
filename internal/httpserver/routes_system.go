@@ -7,7 +7,21 @@ import (
 )
 
 func registerSystemRoutes(app *fiber.App, state *State) {
-	handler := func(c fiber.Ctx) error {
+	app.Get("/api/system/settings", requireAuth(state.Tokens()), requireAdmin, systemSettingsHandler(state))
+}
+
+// systemSettingsHandler godoc
+// @Summary 获取系统设置
+// @Tags System
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} shared.Response{data=httpserver.settingsResponseData}
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/system/settings [get]
+func systemSettingsHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		conn := state.DB()
 		if conn == nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(shared.Err("SETTINGS_UNAVAILABLE", "settings unavailable"))
@@ -19,6 +33,4 @@ func registerSystemRoutes(app *fiber.App, state *State) {
 		}
 		return c.JSON(shared.OK(map[string]any{"items": settings}))
 	}
-
-	app.Get("/api/system/settings", requireAuth(state.Tokens()), requireAdmin, handler)
 }
