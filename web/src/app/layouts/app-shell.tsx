@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { getConsoleCurrentModule, getConsoleModules, getConsoleSidebarSections, isConsoleNavItemActive, type ConsoleUser } from "@/app/console-navigation";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getConsoleCurrentModule, getConsoleModuleEntry, getConsoleModules, getConsoleSidebarSections, isConsoleNavItemActive, type ConsoleUser } from "@/app/console-navigation";
 import { clearTokens } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,7 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
   const { accent, mode, setAccent, setMode } = useTheme();
   const modules = getConsoleModules(user);
   const currentModule = getConsoleCurrentModule(location.pathname, user);
-  const sidebarSections = getConsoleSidebarSections(location.pathname, user);
+  const sidebarSections = getConsoleSidebarSections(currentModule.id, user);
 
   function handleLogout() {
     clearTokens();
@@ -42,7 +43,8 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <TooltipProvider delayDuration={0}>
+      <div className="flex min-h-screen bg-background text-foreground">
       <aside className={cn("hidden border-r border-border bg-card md:flex md:flex-col", collapsed ? "md:w-16" : "md:w-64")}>
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <Link className="truncate text-sm font-semibold tracking-tight" to="/">
@@ -57,8 +59,7 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const active = isConsoleNavItemActive(item, location.pathname);
-
-                return (
+                const navItem = (
                   <NavLink
                     aria-current={active ? "page" : undefined}
                     className={cn(
@@ -72,6 +73,17 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
                     <Icon className="h-4 w-4 shrink-0" />
                     {!collapsed ? <span>{t(item.labelKey)}</span> : null}
                   </NavLink>
+                );
+
+                if (!collapsed) {
+                  return navItem;
+                }
+
+                return (
+                  <Tooltip key={item.key}>
+                    <TooltipTrigger asChild>{navItem}</TooltipTrigger>
+                    <TooltipContent side="right">{t(item.labelKey)}</TooltipContent>
+                  </Tooltip>
                 );
               })}
             </div>
@@ -101,7 +113,7 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
                     module.id === currentModule.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                   key={module.id}
-                  to={module.to}
+                  to={getConsoleModuleEntry(module.id, user) ?? module.to}
                 >
                   {t(module.labelKey)}
                 </Link>
@@ -144,7 +156,7 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link to="/profile">
+                    <Link to="/account/profile">
                       <UserCircle2 className="mr-2 h-4 w-4" />
                       {t("profile")}
                     </Link>
@@ -172,6 +184,7 @@ export function AppShell({ buildVersion, errorMessage, user }: AppShellProps) {
           </div>
         </footer>
       </div>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api";
+import { fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api";
 import { AppShell } from "@/app/layouts/app-shell";
 import { PublicLayout } from "@/app/layouts/public-layout";
 import { ForgotPasswordPage } from "@/pages/forgot-password";
@@ -75,7 +75,8 @@ function ApplicationRoutes() {
         }
       >
         <Route path="/" element={<HomePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<Navigate replace to="/account/profile" />} />
+        <Route path="/account/profile" element={<ProfilePage />} />
         <Route element={<AdminRoute isLoading={meQuery.isLoading} user={meQuery.data} />}>
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/users" element={<UserManagementPage />} />

@@ -1,4 +1,5 @@
-import { Home, LayoutDashboard, Settings, Shield, UserCircle, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Home, LayoutDashboard, Settings, UserCircle, Users } from "lucide-react";
 
 export type ConsoleUser = {
   role: string;
@@ -7,7 +8,8 @@ export type ConsoleUser = {
 export type ConsoleModuleID = "home" | "account" | "admin";
 
 export interface ConsoleNavItem {
-  icon: typeof Home;
+  icon: LucideIcon;
+  isVisible?: (user?: ConsoleUser) => boolean;
   key: string;
   labelKey: string;
   matches?: string[];
@@ -62,14 +64,14 @@ const consoleModules: ConsoleModule[] = [
             icon: UserCircle,
             key: "profile",
             labelKey: "profile",
-            matches: ["/profile"],
-            to: "/profile"
+            matches: ["/account/profile", "/profile"],
+            to: "/account/profile"
           }
         ],
         key: "account"
       }
     ],
-    to: "/profile"
+    to: "/account/profile"
   },
   {
     id: "admin",
@@ -109,14 +111,22 @@ const consoleModules: ConsoleModule[] = [
 ];
 
 export function getConsoleModules(user?: ConsoleUser) {
-  return consoleModules.filter((module) => module.isVisible(user));
+  return consoleModules.filter((module) => {
+    if (!module.isVisible(user)) {
+      return false;
+    }
+    if (module.id === "admin") {
+      return getConsoleSidebarSections(module.id, user).length > 0;
+    }
+    return true;
+  });
 }
 
 export function getConsoleModuleByPathname(pathname: string): ConsoleModuleID {
   if (pathname.startsWith("/admin")) {
     return "admin";
   }
-  if (pathname.startsWith("/profile")) {
+  if (pathname.startsWith("/account") || pathname.startsWith("/profile")) {
     return "account";
   }
   return "home";
@@ -129,8 +139,33 @@ export function getConsoleCurrentModule(pathname: string, user?: ConsoleUser) {
   return visibleModules.find((module) => module.id === currentModuleID) ?? visibleModules[0] ?? consoleModules[0];
 }
 
-export function getConsoleSidebarSections(pathname: string, user?: ConsoleUser) {
-  return getConsoleCurrentModule(pathname, user).sections;
+export function getConsoleSidebarSections(moduleID: ConsoleModuleID, user?: ConsoleUser) {
+  const module = consoleModules.find((item) => item.id === moduleID);
+
+  if (!module || !module.isVisible(user)) {
+    return [];
+  }
+
+  return module.sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => (item.isVisible ? item.isVisible(user) : true))
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+export function getConsoleModuleEntry(moduleID: ConsoleModuleID, user?: ConsoleUser) {
+  const module = consoleModules.find((item) => item.id === moduleID);
+
+  if (!module || !module.isVisible(user)) {
+    return null;
+  }
+
+  const firstItem = getConsoleSidebarSections(moduleID, user)
+    .flatMap((section) => section.items)
+    .find((item) => item.to.length > 0);
+
+  return firstItem?.to ?? module.to;
 }
 
 export function isConsoleNavItemActive(item: ConsoleNavItem, pathname: string) {

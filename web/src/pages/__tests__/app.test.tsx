@@ -1,8 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AdminLayout } from "@/app/layouts/admin-layout";
 import { AppRouter } from "@/app/router";
 import { AppProviders } from "@/app/providers";
 import i18n from "@/lib/i18n";
@@ -66,44 +64,6 @@ describe("providers", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
 
-  it("renders admin layout navigation area", () => {
-    render(
-      <AppProviders>
-        <MemoryRouter>
-          <AdminLayout title="用户列表" navigation={[{ label: "用户列表", to: "/admin/users" }]}>
-            <div>content</div>
-          </AdminLayout>
-        </MemoryRouter>
-      </AppProviders>
-    );
-
-    expect(screen.getByRole("heading", { name: "用户列表" })).toBeInTheDocument();
-    expect(screen.getByText("content")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "用户列表导航" })).toBeInTheDocument();
-  });
-
-  it("keeps parent admin link inactive on nested routes", () => {
-    render(
-      <AppProviders>
-        <MemoryRouter initialEntries={["/admin/users"]}>
-          <AdminLayout
-            navigation={[
-              { label: "后台概览", to: "/admin" },
-              { label: "用户列表", to: "/admin/users" },
-              { label: "系统设置", to: "/admin/settings" }
-            ]}
-            title="用户列表"
-          >
-            <div>content</div>
-          </AdminLayout>
-        </MemoryRouter>
-      </AppProviders>
-    );
-
-    expect(screen.getByRole("link", { name: "用户列表" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "后台概览" })).not.toHaveAttribute("aria-current");
-  });
-
   it("renders console shell navigation on admin pages", async () => {
     apiMocks.hasAccessToken.mockReturnValue(true);
     apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
@@ -126,6 +86,50 @@ describe("providers", () => {
     expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "用户管理" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "系统设置" })).toBeInTheDocument();
+  });
+
+  it("renders account module navigation on namespaced profile pages", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(true);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    apiMocks.fetchCurrentUser.mockResolvedValue({
+      email: "user@example.com",
+      id: 2,
+      role: "user",
+      username: "demo"
+    });
+    window.history.pushState({}, "", "/account/profile");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    expect(await screen.findByRole("navigation", { name: "控制台模块导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "账户" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "个人中心" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "管理" })).not.toBeInTheDocument();
+  });
+
+  it("redirects legacy profile route to namespaced account profile", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(true);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    apiMocks.fetchCurrentUser.mockResolvedValue({
+      email: "user@example.com",
+      id: 2,
+      role: "user",
+      username: "demo"
+    });
+    window.history.pushState({}, "", "/profile");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    await waitFor(() => expect(window.location.pathname).toBe("/account/profile"));
+    expect(screen.getByRole("link", { name: "账户" })).toHaveAttribute("aria-current", "page");
   });
 
   it("persists language choice after toggling", async () => {
