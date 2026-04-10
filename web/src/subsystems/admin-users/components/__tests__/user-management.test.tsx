@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "../../../../lib/i18n";
 import type { AdminUser } from "../../types";
 import { AppProviders } from "../../../../app/providers";
 import { UserManagementPage } from "../../pages/user-management-page";
@@ -63,6 +64,7 @@ describe("UserManagementPage", () => {
   beforeEach(() => {
     users = [];
     createErrorMessage = null;
+    void i18n.changeLanguage("zh-CN");
 
     apiMocks.delete.mockReset();
     apiMocks.get.mockReset();
@@ -192,6 +194,18 @@ describe("UserManagementPage", () => {
     expect(screen.getByText("用户名")).toBeInTheDocument();
     expect(screen.getByText("邮箱")).toBeInTheDocument();
     expect(await screen.findByText("暂无用户")).toBeInTheDocument();
+  });
+
+  it("renders english copy when language switches to en-US", async () => {
+    await i18n.changeLanguage("en-US");
+
+    renderPage();
+
+    expect(screen.getByRole("textbox", { name: "Search users" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create User" })).toBeInTheDocument();
+    expect(screen.getByText("Users")).toBeInTheDocument();
+    expect(screen.getByText("Filter backend users by keyword, role, and status.")).toBeInTheDocument();
+    expect(await screen.findByText("No users yet")).toBeInTheDocument();
   });
 
   it("opens create, view, and edit dialogs with basic modal behavior", async () => {

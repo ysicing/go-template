@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -6,6 +7,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../shared/ui/select";
 import { Modal } from "./modal";
+import { getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
 import type { AdminUser, UserFormValues } from "../types";
 
 export interface UserFormDialogProps {
@@ -37,15 +39,15 @@ function normalizeValues(mode: "create" | "edit", values: UserFormValues) {
   };
 }
 
-function validateValues(mode: "create" | "edit", values: UserFormValues) {
+function validateValues(mode: "create" | "edit", values: UserFormValues, t: ReturnType<typeof useTranslation>["t"]) {
   if (!values.username.trim()) {
-    return "请输入用户名";
+    return t("admin_users_validation_username_required");
   }
   if (!values.email.trim()) {
-    return "请输入邮箱";
+    return t("admin_users_validation_email_required");
   }
   if (mode === "create" && values.password.trim().length < 8) {
-    return "密码至少 8 位";
+    return t("admin_users_validation_password_length");
   }
   return null;
 }
@@ -61,6 +63,7 @@ function DialogFrame({
   onClose: () => void;
   title: string;
 }) {
+  const { t } = useTranslation();
   const titleId = "user-form-dialog-title";
 
   return (
@@ -72,7 +75,7 @@ function DialogFrame({
             <CardDescription>{description}</CardDescription>
           </div>
           <Button size="sm" variant="ghost" onClick={onClose}>
-            关闭
+            {t("close")}
           </Button>
         </CardHeader>
         <CardContent>{children}</CardContent>
@@ -90,16 +93,18 @@ function UserFormFields({
   values: UserFormValues;
   onChange: (field: keyof UserFormValues, value: string) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <>
-      <Field label="用户名" name="username">
+      <Field label={t("admin_users_field_username")} name="username">
         <Input id="username" value={values.username} onChange={(event) => onChange("username", event.target.value)} />
       </Field>
-      <Field label="邮箱" name="email">
+      <Field label={t("admin_users_field_email")} name="email">
         <Input id="email" type="email" value={values.email} onChange={(event) => onChange("email", event.target.value)} />
       </Field>
       {mode === "create" ? (
-        <Field label="初始密码" name="password">
+        <Field label={t("admin_users_field_initial_password")} name="password">
           <Input
             id="password"
             type="password"
@@ -108,16 +113,16 @@ function UserFormFields({
           />
         </Field>
       ) : null}
-      <Field label="角色" name="role">
+      <Field label={t("admin_users_field_role")} name="role">
         <Select id="role" value={values.role} onChange={(event) => onChange("role", event.target.value)}>
-          <option value="admin">管理员</option>
-          <option value="user">普通用户</option>
+          <option value="admin">{getAdminUserRoleLabel(t, "admin")}</option>
+          <option value="user">{getAdminUserRoleLabel(t, "user")}</option>
         </Select>
       </Field>
-      <Field label="状态" name="status">
+      <Field label={t("admin_users_field_status")} name="status">
         <Select id="status" value={values.status} onChange={(event) => onChange("status", event.target.value)}>
-          <option value="active">启用</option>
-          <option value="disabled">停用</option>
+          <option value="active">{getAdminUserStatusLabel(t, "active")}</option>
+          <option value="disabled">{getAdminUserStatusLabel(t, "disabled")}</option>
         </Select>
       </Field>
     </>
@@ -150,6 +155,7 @@ export function UserFormDialog({
   onOpenChange,
   onSubmit
 }: UserFormDialogProps) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<UserFormValues>(() => createInitialValues(mode, user));
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
@@ -166,7 +172,7 @@ export function UserFormDialog({
     event.preventDefault();
 
     const nextValues = normalizeValues(mode, values);
-    const message = validateValues(mode, nextValues);
+    const message = validateValues(mode, nextValues, t);
     if (message) {
       setValidationMessage(message);
       return;
@@ -182,9 +188,9 @@ export function UserFormDialog({
 
   return (
     <DialogFrame
-      description={mode === "create" ? "创建新的后台用户账号。" : "更新所选用户的基础资料。"}
+      description={mode === "create" ? t("admin_users_create_description") : t("admin_users_edit_description")}
       onClose={() => onOpenChange(false)}
-      title={mode === "create" ? "新建用户" : "编辑用户"}
+      title={mode === "create" ? t("admin_users_create_title") : t("admin_users_edit_title")}
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
         <UserFormFields mode={mode} values={values} onChange={handleChange} />
@@ -192,10 +198,10 @@ export function UserFormDialog({
         {errorMessage ? <p className="text-sm text-red-500">{errorMessage}</p> : null}
         <div className="flex justify-end gap-2">
           <Button size="sm" type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t("cancel")}
           </Button>
           <Button size="sm" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "提交中..." : "提交"}
+            {isSubmitting ? t("submitting") : t("submit")}
           </Button>
         </div>
       </form>

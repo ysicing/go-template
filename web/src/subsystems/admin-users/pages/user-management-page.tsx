@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -10,7 +11,7 @@ import { UserViewDialog } from "../components/user-view-dialog";
 import { useUsers } from "../hooks/use-users";
 import type { AdminUser, AdminUserRole, AdminUserStatus, UserFormValues } from "../types";
 
-function readErrorMessage(error: unknown) {
+function readErrorMessage(error: unknown, fallbackMessage: string) {
   if (typeof error === "object" && error !== null && "response" in error) {
     const response = (error as { response?: { data?: { message?: string } } }).response;
     if (response?.data?.message) {
@@ -18,10 +19,11 @@ function readErrorMessage(error: unknown) {
     }
   }
 
-  return error instanceof Error ? error.message : "操作失败，请稍后重试";
+  return error instanceof Error ? error.message : fallbackMessage;
 }
 
 export function UserManagementPage() {
+  const { t } = useTranslation();
   const [keyword, setKeyword] = useState("");
   const [role, setRole] = useState<AdminUserRole | "">("");
   const [status, setStatus] = useState<AdminUserStatus | "">("");
@@ -79,7 +81,7 @@ export function UserManagementPage() {
       setSelectedUser(null);
       await query.refetch();
     } catch (error) {
-      setFormErrorMessage(readErrorMessage(error));
+      setFormErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -97,14 +99,14 @@ export function UserManagementPage() {
       }
       await query.refetch();
     } catch (error) {
-      setActionErrorMessage(readErrorMessage(error));
+      setActionErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
     } finally {
       setPendingUserId(null);
     }
   }
 
   async function handleDelete(user: AdminUser) {
-    if (!window.confirm(`确认删除用户 ${user.username} 吗？`)) {
+    if (!window.confirm(t("admin_users_delete_confirm", { username: user.username }))) {
       return;
     }
 
@@ -115,7 +117,7 @@ export function UserManagementPage() {
       await deleteUser(user.id);
       await query.refetch();
     } catch (error) {
-      setActionErrorMessage(readErrorMessage(error));
+      setActionErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
     } finally {
       setPendingUserId(null);
     }
@@ -134,17 +136,17 @@ export function UserManagementPage() {
             onStatusChange={setStatus}
           />
         </div>
-        <Button onClick={openCreateDialog}>新建用户</Button>
+        <Button onClick={openCreateDialog}>{t("admin_users_create_title")}</Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>用户列表</CardTitle>
-          <CardDescription>按关键字、角色和状态筛选后台用户。</CardDescription>
+          <CardTitle>{t("admin_users_title")}</CardTitle>
+          <CardDescription>{t("admin_users_description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-sm text-muted-foreground">共 {query.data?.total ?? 0} 位用户</div>
-          {query.error ? <p className="text-sm text-red-500">{readErrorMessage(query.error)}</p> : null}
+          <div className="text-sm text-muted-foreground">{t("admin_users_total", { count: query.data?.total ?? 0 })}</div>
+          {query.error ? <p className="text-sm text-red-500">{readErrorMessage(query.error, t("admin_users_action_failed"))}</p> : null}
           {actionErrorMessage ? <p className="text-sm text-red-500">{actionErrorMessage}</p> : null}
           <UserTable
             isActionPending={pendingUserId !== null}

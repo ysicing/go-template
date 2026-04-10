@@ -1,18 +1,11 @@
+import { useTranslation } from "react-i18next";
+
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../shared/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../shared/ui/table";
 
-import type { AdminUser, AdminUserRole, AdminUserStatus } from "../types";
-
-const roleLabels: Record<AdminUserRole, string> = {
-  admin: "管理员",
-  user: "普通用户"
-};
-
-const statusLabels: Record<AdminUserStatus, string> = {
-  active: "启用",
-  disabled: "停用"
-};
+import { formatAdminUserLastLoginAt, getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
+import type { AdminUser, AdminUserStatus } from "../types";
 
 export interface UserTableProps {
   items: AdminUser[];
@@ -22,14 +15,6 @@ export interface UserTableProps {
   onEdit: (user: AdminUser) => void;
   onToggleStatus: (user: AdminUser) => void;
   onDelete: (user: AdminUser) => void;
-}
-
-function formatLastLoginAt(value?: string | null) {
-  if (!value) {
-    return "从未登录";
-  }
-
-  return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
 function getStatusBadgeClassName(status: AdminUserStatus) {
@@ -57,44 +42,46 @@ export function UserTable({
   onToggleStatus,
   onDelete
 }: UserTableProps) {
+  const { i18n, t } = useTranslation();
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>用户名</TableHead>
-          <TableHead>邮箱</TableHead>
-          <TableHead>角色</TableHead>
-          <TableHead>状态</TableHead>
-          <TableHead>最后登录时间</TableHead>
-          <TableHead className="w-[240px]">操作</TableHead>
+          <TableHead>{t("admin_users_field_username")}</TableHead>
+          <TableHead>{t("admin_users_field_email")}</TableHead>
+          <TableHead>{t("admin_users_field_role")}</TableHead>
+          <TableHead>{t("admin_users_field_status")}</TableHead>
+          <TableHead>{t("admin_users_last_login")}</TableHead>
+          <TableHead className="w-[240px]">{t("admin_users_actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {isLoading ? <EmptyState colSpan={6} message="正在加载用户列表..." /> : null}
-        {!isLoading && items.length === 0 ? <EmptyState colSpan={6} message="暂无用户" /> : null}
+        {isLoading ? <EmptyState colSpan={6} message={t("admin_users_loading")} /> : null}
+        {!isLoading && items.length === 0 ? <EmptyState colSpan={6} message={t("admin_users_empty")} /> : null}
         {!isLoading
           ? items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.username}</TableCell>
                 <TableCell>{item.email}</TableCell>
-                <TableCell>{roleLabels[item.role]}</TableCell>
+                <TableCell>{getAdminUserRoleLabel(t, item.role)}</TableCell>
                 <TableCell>
-                  <Badge className={getStatusBadgeClassName(item.status)}>{statusLabels[item.status]}</Badge>
+                  <Badge className={getStatusBadgeClassName(item.status)}>{getAdminUserStatusLabel(t, item.status)}</Badge>
                 </TableCell>
-                <TableCell>{formatLastLoginAt(item.last_login_at)}</TableCell>
+                <TableCell>{formatAdminUserLastLoginAt(t, i18n.language, item.last_login_at)}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="ghost" onClick={() => onView(item)}>
-                      查看
+                      {t("view")}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => onEdit(item)}>
-                      编辑
+                      {t("edit")}
                     </Button>
                     <Button size="sm" variant="ghost" disabled={isActionPending} onClick={() => onToggleStatus(item)}>
-                      {item.status === "active" ? "停用" : "启用"}
+                      {item.status === "active" ? t("disable") : t("enable")}
                     </Button>
                     <Button size="sm" variant="ghost" disabled={isActionPending} onClick={() => onDelete(item)}>
-                      删除
+                      {t("delete")}
                     </Button>
                   </div>
                 </TableCell>

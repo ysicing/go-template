@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../shared/ui/select";
 
@@ -20,23 +22,25 @@ export function UserFilters({
   onRoleChange,
   onStatusChange
 }: UserFiltersProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="grid gap-3 md:grid-cols-3">
       <Input
-        aria-label="搜索用户"
-        placeholder="搜索用户名或邮箱"
+        aria-label={t("admin_users_search_label")}
+        placeholder={t("admin_users_search_placeholder")}
         value={keyword}
         onChange={(event) => onKeywordChange(event.target.value)}
       />
-      <Select aria-label="角色筛选" value={role} onChange={(event) => onRoleChange(event.target.value as AdminUserRole | "")}>
-        <option value="">全部角色</option>
-        <option value="admin">管理员</option>
-        <option value="user">普通用户</option>
+      <Select aria-label={t("admin_users_role_filter")} value={role} onChange={(event) => onRoleChange(event.target.value as AdminUserRole | "")}>
+        <option value="">{t("admin_users_role_all")}</option>
+        <option value="admin">{t("admin_users_role_admin")}</option>
+        <option value="user">{t("admin_users_role_user")}</option>
       </Select>
-      <Select aria-label="状态筛选" value={status} onChange={(event) => onStatusChange(event.target.value as AdminUserStatus | "")}>
-        <option value="">全部状态</option>
-        <option value="active">启用</option>
-        <option value="disabled">停用</option>
+      <Select aria-label={t("admin_users_status_filter")} value={status} onChange={(event) => onStatusChange(event.target.value as AdminUserStatus | "")}>
+        <option value="">{t("admin_users_status_all")}</option>
+        <option value="active">{t("admin_users_status_active")}</option>
+        <option value="disabled">{t("admin_users_status_disabled")}</option>
       </Select>
     </div>
   );

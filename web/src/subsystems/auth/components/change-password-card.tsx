@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -6,7 +7,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { changePassword } from "../../../lib/api";
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown, fallbackMessage: string) {
   if (
     typeof error === "object" &&
     error !== null &&
@@ -26,10 +27,11 @@ function getErrorMessage(error: unknown) {
     return error.message;
   }
 
-  return "密码修改失败";
+  return fallbackMessage;
 }
 
 export function ChangePasswordCard() {
+  const { t } = useTranslation();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -57,12 +59,12 @@ export function ChangePasswordCard() {
     const trimmedConfirmNewPassword = confirmNewPassword.trim();
 
     if (!trimmedOldPassword || !trimmedNewPassword || !trimmedConfirmNewPassword) {
-      setError("请完整填写所有密码字段");
+      setError(t("change_password_validation_required"));
       return;
     }
 
     if (trimmedNewPassword !== trimmedConfirmNewPassword) {
-      setError("两次输入的新密码不一致");
+      setError(t("change_password_validation_mismatch"));
       return;
     }
 
@@ -76,16 +78,16 @@ export function ChangePasswordCard() {
       });
 
       if (!result.changed) {
-        setError("密码修改失败");
+        setError(t("change_password_failed"));
         return;
       }
 
       setOldPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
-      setSuccess("密码修改成功");
+      setSuccess(t("change_password_success"));
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      setError(getErrorMessage(submitError, t("change_password_failed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -94,13 +96,13 @@ export function ChangePasswordCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>修改密码</CardTitle>
-        <CardDescription>更新当前账号的登录密码</CardDescription>
+        <CardTitle>{t("change_password_title")}</CardTitle>
+        <CardDescription>{t("change_password_description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="old-password">旧密码</Label>
+            <Label htmlFor="old-password">{t("change_password_old_password")}</Label>
             <Input
               id="old-password"
               onChange={(event) => {
@@ -112,7 +114,7 @@ export function ChangePasswordCard() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-password">新密码</Label>
+            <Label htmlFor="new-password">{t("change_password_new_password")}</Label>
             <Input
               id="new-password"
               onChange={(event) => {
@@ -124,7 +126,7 @@ export function ChangePasswordCard() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm-new-password">确认新密码</Label>
+            <Label htmlFor="confirm-new-password">{t("change_password_confirm_new_password")}</Label>
             <Input
               id="confirm-new-password"
               onChange={(event) => {
@@ -138,7 +140,7 @@ export function ChangePasswordCard() {
           {error ? <p className="text-sm text-red-500">{error}</p> : null}
           {success ? <p className="text-sm text-green-600">{success}</p> : null}
           <Button className="w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "提交中..." : "提交"}
+            {isSubmitting ? t("submitting") : t("submit")}
           </Button>
         </form>
       </CardContent>

@@ -25,7 +25,7 @@ export function useAdminRouteDefinitions(): AdminRouteDefinition[] {
     {
       path: "/admin/users",
       title: t("admin_users"),
-      description: t("admin_users_description"),
+      description: t("admin_users_route_description"),
       element: <UserManagementPage />
     },
     {
