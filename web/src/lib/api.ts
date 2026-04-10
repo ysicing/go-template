@@ -16,6 +16,18 @@ export type BuildInfo = {
   full_version: string;
 };
 
+export type MailSettings = {
+  enabled: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  username: string;
+  password?: string;
+  from: string;
+  reset_base_url: string;
+  password_set: boolean;
+  site_name?: string;
+};
+
 const storageKeys = {
   accessToken: "app.auth.access",
   refreshToken: "app.auth.refresh"
@@ -77,6 +89,16 @@ export async function fetchSettings() {
   return response.data.data.items as Array<{ id: number; key: string; value: string; group: string }>;
 }
 
+export async function fetchMailSettings() {
+  const response = await api.get("/system/settings/mail");
+  return response.data.data.mail as MailSettings;
+}
+
+export async function updateMailSettings(payload: MailSettings) {
+  const response = await api.put("/system/settings/mail", payload);
+  return response.data.data.mail as MailSettings;
+}
+
 export async function fetchBuildInfo() {
   const response = await api.get("/system/version");
   return response.data.data as BuildInfo;
@@ -88,5 +110,19 @@ export async function changePassword(payload: {
   confirm_new_password: string;
 }) {
   const response = await api.post("/auth/change-password", payload);
+  return response.data.data as { changed: boolean };
+}
+
+export async function requestPasswordReset(payload: { email: string }) {
+  const response = await api.post("/auth/forgot-password", payload);
+  return response.data.data as { sent: boolean };
+}
+
+export async function resetPassword(payload: {
+  token: string;
+  new_password: string;
+  confirm_new_password: string;
+}) {
+  const response = await api.post("/auth/reset-password", payload);
   return response.data.data as { changed: boolean };
 }

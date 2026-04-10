@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchSystemSettings } from "@/subsystems/system-settings/api/settings";
+import { MailSettingsCard } from "@/subsystems/system-settings/components/mail-settings-card";
 import { SettingsGroupCard } from "@/subsystems/system-settings/components/settings-group-card";
 import type { SystemSetting } from "@/subsystems/system-settings/types";
 
@@ -80,21 +81,27 @@ export function SystemSettingsPage() {
 
   if (groups.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings_empty_title")}</CardTitle>
-          <CardDescription>{t("settings_empty_description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">{t("settings_empty_hint")}</CardContent>
-      </Card>
+      <div className="space-y-4">
+        <MailSettingsCard />
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings_empty_title")}</CardTitle>
+            <CardDescription>{t("settings_empty_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">{t("settings_empty_hint")}</CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      {groups.map((group) => (
-        <SettingsGroupCard description={group.description} items={group.items} key={group.title} title={group.title} />
-      ))}
+    <div className="space-y-4">
+      <MailSettingsCard />
+      <div className="grid gap-4 xl:grid-cols-2">
+        {groups.map((group) => (
+          <SettingsGroupCard description={group.description} items={group.items} key={group.title} title={group.title} />
+        ))}
+      </div>
     </div>
   );
 }

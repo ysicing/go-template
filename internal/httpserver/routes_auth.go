@@ -19,10 +19,22 @@ type refreshPayload struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type forgotPasswordPayload struct {
+	Email string `json:"email"`
+}
+
+type resetPasswordPayload struct {
+	Token              string `json:"token"`
+	NewPassword        string `json:"new_password"`
+	ConfirmNewPassword string `json:"confirm_new_password"`
+}
+
 func registerAuthRoutes(app *fiber.App, state *State) {
 	app.Post("/api/auth/login", loginHandler(state))
 	app.Post("/api/auth/refresh", refreshHandler(state))
 	app.Post("/api/auth/logout", logoutHandler)
+	app.Post("/api/auth/forgot-password", forgotPasswordHandler(state))
+	app.Post("/api/auth/reset-password", resetPasswordHandler(state))
 	app.Post("/api/auth/change-password", requireAuth(state.Tokens()), changePasswordHandler(state))
 	app.Get("/api/auth/me", requireAuth(state.Tokens()), currentUserHandler(state))
 }
@@ -104,6 +116,70 @@ func logoutHandler(c fiber.Ctx) error {
 	return c.JSON(shared.OK(map[string]any{"logged_out": true}))
 }
 
+// forgotPasswordHandler godoc
+// @Summary 发送找回密码邮件
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param payload body httpserver.forgotPasswordPayload true "找回密码请求"
+// @Success 200 {object} shared.Response{data=httpserver.forgotPasswordResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 503 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/auth/forgot-password [post]
+func forgotPasswordHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		service, err := requireAuthService(c, state)
+		if err != nil {
+			return err
+		}
+
+		var payload forgotPasswordPayload
+		if err := c.Bind().Body(&payload); err != nil {
+			return badRequest(c, "invalid request body")
+		}
+
+		if err := service.RequestPasswordReset(c.Context(), payload.Email); err != nil {
+			return writeAuthServiceError(c, err, "FORGOT_PASSWORD_FAILED", "failed to request password reset")
+		}
+
+		return c.JSON(shared.OK(map[string]any{"sent": true}))
+	}
+}
+
+// resetPasswordHandler godoc
+// @Summary 通过找回令牌重置密码
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param payload body httpserver.resetPasswordPayload true "重置密码请求"
+// @Success 200 {object} shared.Response{data=httpserver.resetPasswordResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/auth/reset-password [post]
+func resetPasswordHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		service, err := requireAuthService(c, state)
+		if err != nil {
+			return err
+		}
+
+		var payload resetPasswordPayload
+		if err := c.Bind().Body(&payload); err != nil {
+			return badRequest(c, "invalid request body")
+		}
+
+		if err := service.ResetPasswordByToken(c.Context(), payload.Token, user.ResetPasswordInput{
+			NewPassword:        payload.NewPassword,
+			ConfirmNewPassword: payload.ConfirmNewPassword,
+		}); err != nil {
+			return writeAuthServiceError(c, err, "RESET_PASSWORD_FAILED", "failed to reset password")
+		}
+
+		return c.JSON(shared.OK(map[string]any{"changed": true}))
+	}
+}
+
 // changePasswordHandler godoc
 // @Summary 修改当前用户密码
 // @Tags Auth
@@ -180,6 +256,18 @@ func mapAuthServiceError(err error, internalCode string, internalMessage string)
 	}
 	if errors.Is(err, auth.ErrInvalidRefreshToken) {
 		return fiber.StatusUnauthorized, "INVALID_REFRESH_TOKEN", "invalid refresh token"
+	}
+	if errors.Is(err, auth.ErrInvalidPasswordResetToken) {
+		return fiber.StatusBadRequest, "INVALID_PASSWORD_RESET_TOKEN", "invalid password reset token"
+	}
+	if errors.Is(err, auth.ErrPasswordResetUnavailable) {
+		return fiber.StatusServiceUnavailable, "PASSWORD_RESET_UNAVAILABLE", "password reset unavailable"
+	}
+	if errors.Is(err, user.ErrPasswordTooShort) {
+		return fiber.StatusBadRequest, "PASSWORD_TOO_SHORT", user.ErrPasswordTooShort.Error()
+	}
+	if errors.Is(err, user.ErrPasswordConfirmationMismatch) {
+		return fiber.StatusBadRequest, "PASSWORD_CONFIRMATION_MISMATCH", user.ErrPasswordConfirmationMismatch.Error()
 	}
 	return fiber.StatusInternalServerError, internalCode, internalMessage
 }

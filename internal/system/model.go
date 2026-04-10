@@ -23,6 +23,12 @@ func DefaultSettings() []Setting {
 		{Group: "site", Key: "site.allow_register", Value: "false"},
 		{Group: "auth", Key: "auth.access_ttl", Value: "15m"},
 		{Group: "auth", Key: "auth.refresh_ttl", Value: "168h"},
+		{Group: "mail", Key: SettingMailEnabled, Value: "false"},
+		{Group: "mail", Key: SettingMailSMTPHost, Value: ""},
+		{Group: "mail", Key: SettingMailSMTPPort, Value: "587"},
+		{Group: "mail", Key: SettingMailUsername, Value: ""},
+		{Group: "mail", Key: SettingMailPassword, Value: ""},
+		{Group: "mail", Key: SettingMailFrom, Value: ""},
+		{Group: "mail", Key: SettingMailResetBaseURL, Value: ""},
 	}
 }
-

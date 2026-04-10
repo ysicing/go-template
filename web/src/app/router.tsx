@@ -9,10 +9,12 @@ import { useAdminRouteDefinitions } from "./admin-routes";
 import { useAdminNavigation } from "./admin-navigation";
 import { AdminLayout } from "./layouts/admin-layout";
 import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api";
+import { ForgotPasswordPage } from "@/pages/forgot-password";
 import { useTheme } from "@/lib/theme";
 import { HomePage } from "@/pages/home";
 import { LoginPage } from "@/pages/login";
 import { ProfilePage } from "@/pages/profile";
+import { ResetPasswordPage } from "@/pages/reset-password";
 import { SetupPage } from "@/pages/setup";
 
 export function AppRouter() {
@@ -136,6 +138,8 @@ function ApplicationRoutes() {
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/login" element={!setupRequired ? <LoginPage /> : <Navigate replace to="/setup" />} />
+          <Route path="/forgot-password" element={!setupRequired ? <ForgotPasswordPage /> : <Navigate replace to="/setup" />} />
+          <Route path="/reset-password" element={!setupRequired ? <ResetPasswordPage /> : <Navigate replace to="/setup" />} />
           <Route path="/" element={<ProtectedRoute isLoading={meQuery.isLoading} user={meQuery.data}><HomePage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute isLoading={meQuery.isLoading} user={meQuery.data}><ProfilePage /></ProtectedRoute>} />
           {adminRouteDefinitions.map((route) => (

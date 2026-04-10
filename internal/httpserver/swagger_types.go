@@ -31,6 +31,10 @@ type changePasswordResponseData struct {
 	Changed bool `json:"changed"`
 }
 
+type forgotPasswordResponseData struct {
+	Sent bool `json:"sent"`
+}
+
 type resetPasswordResponseData struct {
 	Changed bool `json:"changed"`
 }
@@ -57,6 +61,10 @@ type deleteUserResponseData struct {
 
 type settingsResponseData struct {
 	Items []system.Setting `json:"items"`
+}
+
+type mailSettingsResponseData struct {
+	Mail system.MailSettings `json:"mail"`
 }
 
 type versionResponseData struct {

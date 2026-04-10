@@ -6,11 +6,15 @@ import i18n from "@/lib/i18n";
 import { SystemSettingsPage } from "@/subsystems/system-settings/pages/system-settings-page";
 
 const settingsApiMocks = vi.hoisted(() => ({
-  fetchSystemSettings: vi.fn()
+  fetchMailSettings: vi.fn(),
+  fetchSystemSettings: vi.fn(),
+  updateMailSettings: vi.fn()
 }));
 
 vi.mock("../../api/settings", () => ({
-  fetchSystemSettings: settingsApiMocks.fetchSystemSettings
+  fetchMailSettings: settingsApiMocks.fetchMailSettings,
+  fetchSystemSettings: settingsApiMocks.fetchSystemSettings,
+  updateMailSettings: settingsApiMocks.updateMailSettings
 }));
 
 function renderPage() {
@@ -23,7 +27,20 @@ function renderPage() {
 
 describe("SystemSettingsPage", () => {
   beforeEach(() => {
+    settingsApiMocks.fetchMailSettings.mockReset();
     settingsApiMocks.fetchSystemSettings.mockReset();
+    settingsApiMocks.updateMailSettings.mockReset();
+    settingsApiMocks.fetchMailSettings.mockResolvedValue({
+      enabled: false,
+      from: "",
+      password: "",
+      password_set: false,
+      reset_base_url: "http://127.0.0.1:3206",
+      site_name: "Go Template",
+      smtp_host: "",
+      smtp_port: 587,
+      username: ""
+    });
     void i18n.changeLanguage("zh-CN");
   });
 
@@ -42,6 +59,7 @@ describe("SystemSettingsPage", () => {
 
     renderPage();
 
+    expect(await screen.findByText("邮件设置")).toBeInTheDocument();
     expect(await screen.findByText("数据库")).toBeInTheDocument();
     expect(screen.getByText("缓存")).toBeInTheDocument();
     expect(screen.getByText("服务监听")).toBeInTheDocument();
@@ -55,6 +73,7 @@ describe("SystemSettingsPage", () => {
 
     renderPage();
 
+    expect(await screen.findByText("邮件设置")).toBeInTheDocument();
     expect(await screen.findByText("暂未生成运行期设置")).toBeInTheDocument();
     expect(screen.getByText("完成安装向导后，这里会展示数据库、缓存、监听与日志等核心配置。"))
       .toBeInTheDocument();
@@ -66,6 +85,7 @@ describe("SystemSettingsPage", () => {
 
     renderPage();
 
+    expect(await screen.findByText("Mail Settings")).toBeInTheDocument();
     expect(await screen.findByText("No runtime settings yet")).toBeInTheDocument();
     expect(screen.getByText("After the setup wizard finishes, this page shows core database, cache, server, and log settings."))
       .toBeInTheDocument();

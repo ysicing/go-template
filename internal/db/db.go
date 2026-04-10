@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"github.com/ysicing/go-template/internal/auth"
 	"github.com/ysicing/go-template/internal/config"
 	"github.com/ysicing/go-template/internal/system"
 	"github.com/ysicing/go-template/internal/user"
@@ -44,8 +45,8 @@ func Open(cfg config.DatabaseConfig) (*gorm.DB, error) {
 func AutoMigrate(conn *gorm.DB) error {
 	return conn.AutoMigrate(
 		&user.User{},
+		&auth.PasswordResetToken{},
 		&system.BootstrapState{},
 		&system.Setting{},
 	)
 }
-

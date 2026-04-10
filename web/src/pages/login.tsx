@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +47,11 @@ export function LoginPage() {
           <Button className="w-full" type="submit">
             {t("login")}
           </Button>
+          <div className="text-right text-sm text-muted-foreground">
+            <Link className="underline underline-offset-4" to="/forgot-password">
+              {t("forgot_password_link")}
+            </Link>
+          </div>
         </form>
       </CardContent>
     </Card>

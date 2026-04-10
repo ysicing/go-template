@@ -75,6 +75,27 @@ definitions:
       message:
         type: string
     type: object
+  github_com_ysicing_go-template_internal_system.MailSettings:
+    properties:
+      enabled:
+        type: boolean
+      from:
+        type: string
+      password:
+        type: string
+      password_set:
+        type: boolean
+      reset_base_url:
+        type: string
+      site_name:
+        type: string
+      smtp_host:
+        type: string
+      smtp_port:
+        type: integer
+      username:
+        type: string
+    type: object
   github_com_ysicing_go-template_internal_system.Setting:
     properties:
       created_at:
@@ -195,6 +216,16 @@ definitions:
       enabled:
         type: boolean
     type: object
+  internal_httpserver.forgotPasswordPayload:
+    properties:
+      email:
+        type: string
+    type: object
+  internal_httpserver.forgotPasswordResponseData:
+    properties:
+      sent:
+        type: boolean
+    type: object
   internal_httpserver.installResultData:
     properties:
       installed:
@@ -219,6 +250,11 @@ definitions:
       logged_out:
         type: boolean
     type: object
+  internal_httpserver.mailSettingsResponseData:
+    properties:
+      mail:
+        $ref: '#/definitions/github_com_ysicing_go-template_internal_system.MailSettings'
+    type: object
   internal_httpserver.refreshPayload:
     properties:
       refresh_token:
@@ -228,6 +264,15 @@ definitions:
     properties:
       token:
         $ref: '#/definitions/github_com_ysicing_go-template_internal_auth.TokenPair'
+    type: object
+  internal_httpserver.resetPasswordPayload:
+    properties:
+      confirm_new_password:
+        type: string
+      new_password:
+        type: string
+      token:
+        type: string
     type: object
   internal_httpserver.resetPasswordResponseData:
     properties:
@@ -705,6 +750,44 @@ paths:
       summary: 修改当前用户密码
       tags:
       - Auth
+  /api/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 找回密码请求
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_httpserver.forgotPasswordPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_httpserver.forgotPasswordResponseData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+      summary: 发送找回密码邮件
+      tags:
+      - Auth
   /api/auth/login:
     post:
       consumes:
@@ -825,6 +908,40 @@ paths:
       summary: 刷新访问令牌
       tags:
       - Auth
+  /api/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 重置密码请求
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_httpserver.resetPasswordPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_httpserver.resetPasswordResponseData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+      summary: 通过找回令牌重置密码
+      tags:
+      - Auth
   /api/setup/install:
     post:
       consumes:
@@ -909,6 +1026,80 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取系统设置
+      tags:
+      - System
+  /api/system/settings/mail:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_httpserver.mailSettingsResponseData'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取邮件设置
+      tags:
+      - System
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 邮件设置
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ysicing_go-template_internal_system.MailSettings'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_httpserver.mailSettingsResponseData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新邮件设置
       tags:
       - System
   /api/system/version:

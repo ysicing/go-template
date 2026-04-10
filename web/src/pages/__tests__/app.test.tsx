@@ -232,6 +232,21 @@ describe("providers", () => {
     expect(screen.queryByText("主题色")).not.toBeInTheDocument();
   });
 
+  it("allows anonymous access to forgot password page", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(false);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    window.history.pushState({}, "", "/forgot-password");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    expect(await screen.findByRole("heading", { name: "找回密码" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "发送重置邮件" })).toBeInTheDocument();
+  });
+
   it("renders localized auth expired message in zh-CN", async () => {
     apiMocks.hasAccessToken.mockReturnValue(true);
     apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });

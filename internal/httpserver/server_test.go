@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/ysicing/go-template/internal/config"
 	"github.com/ysicing/go-template/internal/db"
 	"github.com/ysicing/go-template/internal/httpserver"
+	"github.com/ysicing/go-template/internal/mailer"
 	"github.com/ysicing/go-template/internal/setup"
 	"github.com/ysicing/go-template/internal/user"
 	"gorm.io/gorm"
@@ -32,7 +34,23 @@ type testAppEnv struct {
 	app         *fiber.App
 	conn        *gorm.DB
 	authService *auth.Service
+	mailSender  *testPasswordResetSender
 	tokens      *auth.TokenManager
+}
+
+type testPasswordResetSender struct {
+	lastConfig  mailer.SMTPConfig
+	lastMessage mailer.PasswordResetMessage
+	sendCount   int
+}
+
+func (s *testPasswordResetSender) SendPasswordReset(config *mailer.SMTPConfig, message mailer.PasswordResetMessage) error {
+	if config != nil {
+		s.lastConfig = *config
+	}
+	s.lastMessage = message
+	s.sendCount++
+	return nil
 }
 
 func TestSetupStatusRoute(t *testing.T) {
@@ -281,6 +299,110 @@ func TestAdminResetPasswordRouteChangesPassword(t *testing.T) {
 	}
 }
 
+func TestSystemMailSettingsRoutePersistsMailConfig(t *testing.T) {
+	env := newTestAppEnv(t)
+	admin := env.createUser(t, "admin", "admin@example.com", "password123", user.RoleAdmin)
+
+	resp := env.request(
+		t,
+		http.MethodPut,
+		"/api/system/settings/mail",
+		`{"enabled":true,"smtp_host":"smtp.example.com","smtp_port":587,"username":"mailer","password":"secret","from":"noreply@example.com","reset_base_url":"http://127.0.0.1:3206"}`,
+		admin,
+	)
+	body := readAPIResponse(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if body.Code != "OK" {
+		t.Fatalf("expected OK, got %s", body.Code)
+	}
+
+	getResp := env.request(t, http.MethodGet, "/api/system/settings/mail", "", admin)
+	getBody := readAPIResponse(t, getResp)
+
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", getResp.StatusCode)
+	}
+
+	var data struct {
+		Mail struct {
+			Enabled      bool   `json:"enabled"`
+			SMTPHost     string `json:"smtp_host"`
+			SMTPPort     int    `json:"smtp_port"`
+			Username     string `json:"username"`
+			From         string `json:"from"`
+			ResetBaseURL string `json:"reset_base_url"`
+			PasswordSet  bool   `json:"password_set"`
+		} `json:"mail"`
+	}
+	decodeJSON(t, getBody.Data, &data)
+	if !data.Mail.Enabled || !data.Mail.PasswordSet {
+		t.Fatalf("expected enabled mail config with password set, got %+v", data.Mail)
+	}
+	if data.Mail.SMTPHost != "smtp.example.com" || data.Mail.ResetBaseURL != "http://127.0.0.1:3206" {
+		t.Fatalf("unexpected mail config: %+v", data.Mail)
+	}
+}
+
+func TestForgotPasswordRouteSendsResetEmailAndResetPassword(t *testing.T) {
+	env := newTestAppEnv(t)
+	admin := env.createUser(t, "admin", "admin@example.com", "password123", user.RoleAdmin)
+	member := env.createUser(t, "member", "member@example.com", "oldpass123", user.RoleUser)
+
+	env.request(
+		t,
+		http.MethodPut,
+		"/api/system/settings/mail",
+		`{"enabled":true,"smtp_host":"smtp.example.com","smtp_port":587,"username":"mailer","password":"secret","from":"noreply@example.com","reset_base_url":"http://127.0.0.1:3206"}`,
+		admin,
+	)
+
+	resp := env.request(t, http.MethodPost, "/api/auth/forgot-password", `{"email":"member@example.com"}`, nil)
+	body := readAPIResponse(t, resp)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if body.Code != "OK" {
+		t.Fatalf("expected OK, got %s", body.Code)
+	}
+	if env.mailSender.sendCount != 1 {
+		t.Fatalf("expected exactly one reset email, got %d", env.mailSender.sendCount)
+	}
+
+	resetURL, err := url.Parse(env.mailSender.lastMessage.ResetURL)
+	if err != nil {
+		t.Fatalf("parse reset url: %v", err)
+	}
+	token := resetURL.Query().Get("token")
+	if token == "" {
+		t.Fatal("expected reset token in email url")
+	}
+
+	resetResp := env.request(
+		t,
+		http.MethodPost,
+		"/api/auth/reset-password",
+		`{"token":"`+token+`","new_password":"newpass123","confirm_new_password":"newpass123"}`,
+		nil,
+	)
+	resetBody := readAPIResponse(t, resetResp)
+	if resetResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resetResp.StatusCode)
+	}
+	if resetBody.Code != "OK" {
+		t.Fatalf("expected OK, got %s", resetBody.Code)
+	}
+
+	if _, _, err := env.authService.Login(member.Username, "oldpass123"); !errors.Is(err, auth.ErrInvalidCredentials) {
+		t.Fatalf("expected old password to fail, got %v", err)
+	}
+	if _, _, err := env.authService.Login(member.Username, "newpass123"); err != nil {
+		t.Fatalf("expected new password login to work, got %v", err)
+	}
+}
+
 func TestHealthzRoute(t *testing.T) {
 	app := httpserver.NewForTest(true)
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -393,7 +515,8 @@ func newTestAppEnv(t *testing.T) *testAppEnv {
 
 	tokens := auth.NewTokenManager("issuer", "secret", config.Duration("15m").Value(), config.Duration("1h").Value())
 	userService := user.NewService(conn)
-	authService := auth.NewService(conn, tokens)
+	sender := &testPasswordResetSender{}
+	authService := auth.NewService(conn, tokens, auth.WithPasswordResetSender(sender))
 
 	app := httpserver.New(httpserver.Dependencies{
 		DB:            conn,
@@ -404,7 +527,7 @@ func newTestAppEnv(t *testing.T) *testAppEnv {
 		SetupRequired: false,
 	})
 
-	return &testAppEnv{app: app, conn: conn, authService: authService, tokens: tokens}
+	return &testAppEnv{app: app, conn: conn, authService: authService, mailSender: sender, tokens: tokens}
 }
 
 func (env *testAppEnv) createUser(t *testing.T, username string, email string, password string, role user.Role) *user.User {
