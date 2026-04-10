@@ -104,6 +104,30 @@ describe("providers", () => {
     expect(screen.getByRole("link", { name: "后台概览" })).not.toHaveAttribute("aria-current");
   });
 
+  it("renders console shell navigation on admin pages", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(true);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    apiMocks.fetchCurrentUser.mockResolvedValue({
+      email: "admin@example.com",
+      id: 1,
+      role: "admin",
+      username: "admin"
+    });
+    window.history.pushState({}, "", "/admin/users");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    expect(await screen.findByRole("navigation", { name: "控制台模块导航" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "控制台侧边导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "用户管理" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "系统设置" })).toBeInTheDocument();
+  });
+
   it("persists language choice after toggling", async () => {
     apiMocks.hasAccessToken.mockReturnValue(false);
     apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
@@ -156,7 +180,7 @@ describe("providers", () => {
       username: "admin"
     });
 
-    expect(await screen.findByText("管理后台")).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "控制台模块导航" })).toBeInTheDocument();
     await waitFor(() => expect(window.location.pathname).toBe("/admin"));
   });
 

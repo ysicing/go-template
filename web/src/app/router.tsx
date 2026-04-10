@@ -1,44 +1,24 @@
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LogOut, MoonStar, Palette, SunMedium } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useAdminRouteDefinitions } from "./admin-routes";
-import { useAdminNavigation } from "./admin-navigation";
-import { AdminLayout } from "./layouts/admin-layout";
 import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api";
+import { AppShell } from "@/app/layouts/app-shell";
+import { PublicLayout } from "@/app/layouts/public-layout";
 import { ForgotPasswordPage } from "@/pages/forgot-password";
-import { useTheme } from "@/lib/theme";
 import { HomePage } from "@/pages/home";
 import { LoginPage } from "@/pages/login";
+import { AdminPage } from "@/pages/admin";
 import { ProfilePage } from "@/pages/profile";
 import { ResetPasswordPage } from "@/pages/reset-password";
 import { SetupPage } from "@/pages/setup";
-
-export function AppRouter() {
-  return (
-    <BrowserRouter>
-      <ApplicationRoutes />
-    </BrowserRouter>
-  );
-}
-
-function getLanguageToggleLabel(language: string) {
-  return language === "zh-CN" ? "EN" : "文";
-}
-
-function getNextLanguage(language: string) {
-  return language === "zh-CN" ? "en-US" : "zh-CN";
-}
+import { UserManagementPage } from "@/subsystems/admin-users/pages/user-management-page";
+import { SystemSettingsPage } from "@/subsystems/system-settings/pages/system-settings-page";
 
 function ApplicationRoutes() {
   const location = useLocation();
-  const { i18n, t } = useTranslation();
-  const { accent, mode, setAccent, setMode } = useTheme();
-  const adminNavigation = useAdminNavigation();
-  const adminRouteDefinitions = useAdminRouteDefinitions();
+  const { t } = useTranslation();
 
   const setupQuery = useQuery({
     queryKey: ["setup-status"],
@@ -70,158 +50,60 @@ function ApplicationRoutes() {
     return <Navigate replace to={hasAccessToken() ? "/" : "/login"} />;
   }
 
-  const isSetupPage = setupRequired && location.pathname === "/setup";
-  const languageToggleLabel = getLanguageToggleLabel(i18n.language);
-
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="border-b border-border bg-card/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <nav className="flex items-center gap-4 text-sm">
-            <Link to="/">{t("title")}</Link>
-            {!setupRequired ? (
-              <>
-                <Link to="/profile">{t("profile")}</Link>
-                <Link to="/admin">{t("admin")}</Link>
-                <Link to="/admin/settings">{t("settings")}</Link>
-              </>
-            ) : null}
-          </nav>
-          <div className="flex flex-wrap items-center gap-2">
-            {isSetupPage ? (
-              <>
-                <Button
-                  className="h-9 min-w-9 rounded-full px-3 text-sm font-semibold"
-                  variant="ghost"
-                  onClick={() => i18n.changeLanguage(getNextLanguage(i18n.language))}
-                >
-                  {languageToggleLabel}
-                </Button>
-                <Button
-                  aria-label={t("theme_toggle")}
-                  className="h-9 w-9 rounded-full p-0 text-muted-foreground hover:text-foreground"
-                  variant="ghost"
-                  onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-                >
-                  {mode === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  className="h-9 min-w-9 rounded-full px-3 text-sm font-semibold"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => i18n.changeLanguage(getNextLanguage(i18n.language))}
-                >
-                  {languageToggleLabel}
-                </Button>
-                <Button
-                  aria-label={t("theme_toggle")}
-                  className="h-9 w-9 rounded-full p-0 text-muted-foreground hover:text-foreground"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-                >
-                  {mode === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAccent(accent === "slate" ? "blue" : accent === "blue" ? "green" : accent === "green" ? "violet" : "slate")}
-                >
-                  <Palette className="mr-1 h-4 w-4" />
-                  {t("accent")}
-                </Button>
-              </>
-            )}
-            {hasAccessToken() ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  clearTokens();
-                  window.location.href = "/login";
-                }}
-              >
-                <LogOut className="mr-1 h-4 w-4" />
-                {t("logout")}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
-        {meQuery.error ? <Card className="p-4 text-sm text-red-500">{t("auth_expired")}</Card> : null}
-        <Routes>
-          <Route path="/setup" element={<SetupPage />} />
-          <Route path="/login" element={!setupRequired ? <LoginPage /> : <Navigate replace to="/setup" />} />
-          <Route path="/forgot-password" element={!setupRequired ? <ForgotPasswordPage /> : <Navigate replace to="/setup" />} />
-          <Route path="/reset-password" element={!setupRequired ? <ResetPasswordPage /> : <Navigate replace to="/setup" />} />
-          <Route path="/" element={<ProtectedRoute isLoading={meQuery.isLoading} user={meQuery.data}><HomePage /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute isLoading={meQuery.isLoading} user={meQuery.data}><ProfilePage /></ProtectedRoute>} />
-          {adminRouteDefinitions.map((route) => (
-            <Route
-              element={
-                <AdminRoutePage
-                  description={route.description}
-                  isLoading={meQuery.isLoading}
-                  navigation={adminNavigation}
-                  title={route.title}
-                  user={meQuery.data}
-                >
-                  {route.element}
-                </AdminRoutePage>
-              }
-              key={route.path}
-              path={route.path}
-            />
-          ))}
-        </Routes>
-      </main>
-      <footer className="border-t border-border bg-card/60">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-1 px-4 py-3 text-center text-xs text-muted-foreground">
-          <span>
-            {t("title")} · {buildInfoQuery.data?.full_version ?? t("version_unavailable")}
-          </span>
-          <span>{t("footer_copyright", { year: new Date().getFullYear() })}</span>
-        </div>
-      </footer>
-    </div>
+    <Routes>
+      <Route
+        element={
+          <PublicLayout buildVersion={buildInfoQuery.data?.full_version} compact errorMessage={meQuery.error ? t("auth_expired") : null}>
+            <Outlet />
+          </PublicLayout>
+        }
+      >
+        <Route path="/setup" element={<SetupPage />} />
+        <Route path="/login" element={!setupRequired ? <LoginPage /> : <Navigate replace to="/setup" />} />
+        <Route path="/forgot-password" element={!setupRequired ? <ForgotPasswordPage /> : <Navigate replace to="/setup" />} />
+        <Route path="/reset-password" element={!setupRequired ? <ResetPasswordPage /> : <Navigate replace to="/setup" />} />
+      </Route>
+      <Route
+        element={
+          <ProtectedShell
+            buildVersion={buildInfoQuery.data?.full_version}
+            errorMessage={meQuery.error ? t("auth_expired") : null}
+            isLoading={meQuery.isLoading}
+            user={meQuery.data}
+          />
+        }
+      >
+        <Route path="/" element={<HomePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route element={<AdminRoute isLoading={meQuery.isLoading} user={meQuery.data} />}>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/users" element={<UserManagementPage />} />
+          <Route path="/admin/settings" element={<SystemSettingsPage />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }
 
-function AdminRoutePage({
-  children,
-  description,
-  isLoading,
-  navigation,
-  title,
-  user
-}: {
-  children: React.ReactNode;
-  description: string;
-  isLoading: boolean;
-  navigation: Array<{ label: string; to: string }>;
-  title: string;
-  user?: { role: string };
-}) {
+export function AppRouter() {
   return (
-    <AdminRoute isLoading={isLoading} user={user}>
-      <AdminLayout description={description} navigation={navigation} title={title}>
-        {children}
-      </AdminLayout>
-    </AdminRoute>
+    <BrowserRouter>
+      <ApplicationRoutes />
+    </BrowserRouter>
   );
 }
 
-function ProtectedRoute({
-  children,
+function ProtectedShell({
+  buildVersion,
+  errorMessage,
   isLoading,
   user
 }: {
-  children: React.ReactNode;
+  buildVersion?: string;
+  errorMessage?: string | null;
   isLoading: boolean;
-  user?: { role: string };
+  user?: { email: string; role: string; username: string };
 }) {
   const { t } = useTranslation();
 
@@ -234,15 +116,14 @@ function ProtectedRoute({
   if (!user) {
     return <Navigate replace to="/login" />;
   }
-  return <>{children}</>;
+
+  return <AppShell buildVersion={buildVersion} errorMessage={errorMessage} user={user} />;
 }
 
 function AdminRoute({
-  children,
   isLoading,
   user
 }: {
-  children: React.ReactNode;
   isLoading: boolean;
   user?: { role: string };
 }) {
@@ -260,5 +141,5 @@ function AdminRoute({
   if (user.role !== "admin") {
     return <Navigate replace to="/" />;
   }
-  return <>{children}</>;
+  return <Outlet />;
 }
