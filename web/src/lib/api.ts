@@ -9,6 +9,13 @@ export type UserInfo = {
   role: "user" | "admin";
 };
 
+export type BuildInfo = {
+  version: string;
+  commit: string;
+  build_time: string;
+  full_version: string;
+};
+
 const storageKeys = {
   accessToken: "app.auth.access",
   refreshToken: "app.auth.refresh"
@@ -68,6 +75,11 @@ export async function fetchCurrentUser() {
 export async function fetchSettings() {
   const response = await api.get("/system/settings");
   return response.data.data.items as Array<{ id: number; key: string; value: string; group: string }>;
+}
+
+export async function fetchBuildInfo() {
+  const response = await api.get("/system/version");
+  return response.data.data as BuildInfo;
 }
 
 export async function changePassword(payload: {

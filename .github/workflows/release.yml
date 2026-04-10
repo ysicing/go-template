@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+      - "*.*.*"
 
 permissions:
   contents: read
@@ -22,7 +23,13 @@ jobs:
         id: branch
         run: |
           branch="$(git branch -r --contains "$GITHUB_SHA" | sed 's|origin/||' | grep -v HEAD | head -n1 | xargs)"
-          echo "name=${branch:-main}" >> "$GITHUB_OUTPUT"
+          echo "name=${branch:-master}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare build metadata
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          echo "COMMIT_SHORT=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          echo "BUILD_TIME=$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_ENV"
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -72,3 +79,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:${{ steps.branch.outputs.name }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            COMMIT=${{ env.COMMIT_SHORT }}
+            BUILD_TIME=${{ env.BUILD_TIME }}

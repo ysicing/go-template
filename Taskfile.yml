@@ -36,15 +36,15 @@ tasks:
 
   build:go:
     cmds:
-      - go build ./app/server
+      - eval "$(./hack/build-metadata.sh)" && go build -ldflags "$GO_LDFLAGS" -o ./server ./app/server
 
   docker:build:
     cmds:
-      - docker build -t go-template:local .
+      - eval "$(./hack/build-metadata.sh)" && docker build --build-arg VERSION="$VERSION" --build-arg COMMIT="$COMMIT" --build-arg BUILD_TIME="$BUILD_TIME" -t go-template:local .
 
   verify:
     cmds:
       - task docs:swagger
       - go test ./...
       - task build:web
-      - go build ./app/server
+      - eval "$(./hack/build-metadata.sh)" && go build -ldflags "$GO_LDFLAGS" ./app/server

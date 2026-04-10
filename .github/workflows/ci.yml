@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches:
+      - master
       - main
 
 permissions:
@@ -13,6 +14,9 @@ permissions:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.head_ref || github.ref_name }}
+      COMMIT: ${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,6 +36,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Prepare build metadata
+        run: |
+          echo "COMMIT_SHORT=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          echo "BUILD_TIME=$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_ENV"
+
       - name: Run Go tests
         run: go test ./...
 
@@ -44,7 +53,12 @@ jobs:
 
       - name: Build Docker image for PR validation
         if: github.event_name == 'pull_request'
-        run: docker build -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
+        run: |
+          docker build \
+            --build-arg VERSION="${VERSION}" \
+            --build-arg COMMIT="${COMMIT_SHORT}" \
+            --build-arg BUILD_TIME="${BUILD_TIME}" \
+            -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
 
       - name: Login to GHCR
         if: github.event_name == 'push'
@@ -67,3 +81,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            COMMIT=${{ env.COMMIT_SHORT }}
+            BUILD_TIME=${{ env.BUILD_TIME }}

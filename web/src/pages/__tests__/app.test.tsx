@@ -9,6 +9,7 @@ import { AppProviders } from "../../app/providers";
 const apiMocks = vi.hoisted(() => ({
   clearTokens: vi.fn(),
   fetchCurrentUser: vi.fn(),
+  fetchBuildInfo: vi.fn(),
   fetchSetupStatus: vi.fn(),
   hasAccessToken: vi.fn()
 }));
@@ -19,6 +20,7 @@ vi.mock("../../lib/api", async () => {
   return {
     ...actual,
     clearTokens: apiMocks.clearTokens,
+    fetchBuildInfo: apiMocks.fetchBuildInfo,
     fetchCurrentUser: apiMocks.fetchCurrentUser,
     fetchSetupStatus: apiMocks.fetchSetupStatus,
     hasAccessToken: apiMocks.hasAccessToken
@@ -41,9 +43,13 @@ describe("providers", () => {
 
   beforeEach(() => {
     apiMocks.clearTokens.mockReset();
+    apiMocks.fetchBuildInfo.mockReset();
     apiMocks.fetchCurrentUser.mockReset();
     apiMocks.fetchSetupStatus.mockReset();
     apiMocks.hasAccessToken.mockReset();
+    apiMocks.fetchBuildInfo.mockResolvedValue({
+      full_version: "master-abc1234-20260410T084512Z"
+    });
     window.history.pushState({}, "", "/");
   });
 
@@ -162,5 +168,19 @@ describe("providers", () => {
       role: "admin",
       username: "admin"
     });
+  });
+
+  it("renders backend build version in footer", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(false);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    window.history.pushState({}, "", "/login");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    expect(await screen.findByText("master-abc1234-20260410T084512Z")).toBeInTheDocument();
   });
 });

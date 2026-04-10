@@ -2,12 +2,24 @@ package httpserver
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/ysicing/go-template/internal/buildinfo"
 	"github.com/ysicing/go-template/internal/shared"
 	"github.com/ysicing/go-template/internal/system"
 )
 
 func registerSystemRoutes(app *fiber.App, state *State) {
+	app.Get("/api/system/version", systemVersionHandler)
 	app.Get("/api/system/settings", requireAuth(state.Tokens()), requireAdmin, systemSettingsHandler(state))
+}
+
+// systemVersionHandler godoc
+// @Summary 获取构建版本信息
+// @Tags System
+// @Produce json
+// @Success 200 {object} shared.Response{data=httpserver.versionResponseData}
+// @Router /api/system/version [get]
+func systemVersionHandler(c fiber.Ctx) error {
+	return c.JSON(shared.OK(buildinfo.Current()))
 }
 
 // systemSettingsHandler godoc

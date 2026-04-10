@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/ysicing/go-template/internal/auth"
+	"github.com/ysicing/go-template/internal/buildinfo"
 	"github.com/ysicing/go-template/internal/config"
 	"github.com/ysicing/go-template/internal/db"
 	"github.com/ysicing/go-template/internal/httpserver"
@@ -285,7 +286,8 @@ func TestOpenAPIDocRoute(t *testing.T) {
 
 	var doc struct {
 		Info struct {
-			Title string `json:"title"`
+			Title   string `json:"title"`
+			Version string `json:"version"`
 		} `json:"info"`
 		Paths map[string]any `json:"paths"`
 	}
@@ -295,8 +297,48 @@ func TestOpenAPIDocRoute(t *testing.T) {
 	if doc.Info.Title != "go-template API" {
 		t.Fatalf("expected openapi title, got %q", doc.Info.Title)
 	}
+	if doc.Info.Version != buildinfo.FullVersion() {
+		t.Fatalf("expected openapi version %q, got %q", buildinfo.FullVersion(), doc.Info.Version)
+	}
 	if _, ok := doc.Paths["/api/auth/login"]; !ok {
 		t.Fatalf("expected /api/auth/login in swagger paths")
+	}
+}
+
+func TestSystemVersionRouteReturnsBuildMetadata(t *testing.T) {
+	app := httpserver.NewForTest(false)
+	req := httptest.NewRequest(http.MethodGet, "/api/system/version", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	body := readAPIResponse(t, resp)
+	if body.Code != "OK" {
+		t.Fatalf("expected OK, got %s", body.Code)
+	}
+
+	var data struct {
+		FullVersion string `json:"full_version"`
+		Version     string `json:"version"`
+		Commit      string `json:"commit"`
+		BuildTime   string `json:"build_time"`
+	}
+	decodeJSON(t, body.Data, &data)
+	if data.FullVersion == "" {
+		t.Fatal("expected full_version to be present")
+	}
+	if data.Version == "" {
+		t.Fatal("expected version to be present")
+	}
+	if data.Commit == "" {
+		t.Fatal("expected commit to be present")
+	}
+	if data.BuildTime == "" {
+		t.Fatal("expected build_time to be present")
 	}
 }
 

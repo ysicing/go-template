@@ -3,10 +3,12 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/ysicing/go-template/internal/auth"
+	"github.com/ysicing/go-template/internal/buildinfo"
 	"github.com/ysicing/go-template/internal/cache"
 	"github.com/ysicing/go-template/internal/config"
 	"github.com/ysicing/go-template/internal/db"
@@ -26,6 +28,7 @@ func Run() error {
 		return err
 	}
 
+	log.Printf("starting go-template version=%s", buildinfo.FullVersion())
 	return app.Listen(fmt.Sprintf("%s:%d", host, port))
 }
 

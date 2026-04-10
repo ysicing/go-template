@@ -54,3 +54,10 @@ type deleteUserResponseData struct {
 type settingsResponseData struct {
 	Items []system.Setting `json:"items"`
 }
+
+type versionResponseData struct {
+	Version     string `json:"version"`
+	Commit      string `json:"commit"`
+	BuildTime   string `json:"build_time"`
+	FullVersion string `json:"full_version"`
+}

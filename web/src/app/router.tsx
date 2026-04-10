@@ -7,7 +7,7 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { adminNavigation } from "./admin-navigation";
 import { AdminLayout } from "./layouts/admin-layout";
-import { clearTokens, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "../lib/api";
+import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "../lib/api";
 import { useTheme } from "../lib/theme";
 import { AdminPage } from "../pages/admin";
 import { AdminSettingsPage } from "../pages/admin-settings";
@@ -37,6 +37,11 @@ function ApplicationRoutes() {
 
   const setupRequired = setupQuery.data?.setup_required ?? true;
   const authEnabled = !setupRequired && hasAccessToken();
+  const buildInfoQuery = useQuery({
+    queryKey: ["build-info"],
+    queryFn: fetchBuildInfo,
+    retry: false
+  });
   const meQuery = useQuery({
     queryKey: ["auth-me"],
     queryFn: fetchCurrentUser,
@@ -152,6 +157,12 @@ function ApplicationRoutes() {
           />
         </Routes>
       </main>
+      <footer className="border-t border-border bg-card/60">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
+          <span>Go Template</span>
+          <span>{buildInfoQuery.data?.full_version ?? "version-unavailable"}</span>
+        </div>
+      </footer>
     </div>
   );
 }

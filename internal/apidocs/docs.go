@@ -1003,6 +1003,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/system/version": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "获取构建版本信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_httpserver.versionResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "tags": [
@@ -1386,6 +1417,23 @@ const docTemplate = `{
             "properties": {
                 "user": {
                     "$ref": "#/definitions/github_com_ysicing_go-template_internal_user.User"
+                }
+            }
+        },
+        "internal_httpserver.versionResponseData": {
+            "type": "object",
+            "properties": {
+                "build_time": {
+                    "type": "string"
+                },
+                "commit": {
+                    "type": "string"
+                },
+                "full_version": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         }

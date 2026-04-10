@@ -239,6 +239,17 @@ definitions:
       user:
         $ref: '#/definitions/github_com_ysicing_go-template_internal_user.User'
     type: object
+  internal_httpserver.versionResponseData:
+    properties:
+      build_time:
+        type: string
+      commit:
+        type: string
+      full_version:
+        type: string
+      version:
+        type: string
+    type: object
 info:
   contact: {}
   description: go-template 的后端 API，包含安装向导、认证、管理员用户管理与系统设置接口。
@@ -833,6 +844,23 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取系统设置
+      tags:
+      - System
+  /api/system/version:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_httpserver.versionResponseData'
+              type: object
+      summary: 获取构建版本信息
       tags:
       - System
   /healthz:
