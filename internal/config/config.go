@@ -77,7 +77,7 @@ type CacheConfig struct {
 
 func Default() *Config {
 	return &Config{
-		Server: ServerConfig{Host: "0.0.0.0", Port: 8080},
+		Server: ServerConfig{Host: "0.0.0.0", Port: 3206},
 		Log:    LogConfig{Level: "info"},
 		JWT: JWTConfig{
 			Issuer:     "go-template",

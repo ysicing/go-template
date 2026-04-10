@@ -28,5 +28,5 @@ LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${COMMIT}"
 LABEL org.opencontainers.image.created="${BUILD_TIME}"
 COPY --from=go-builder /out/server /app/server
-EXPOSE 8080
+EXPOSE 3206
 ENTRYPOINT ["/app/server"]

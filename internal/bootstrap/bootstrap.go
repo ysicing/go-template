@@ -45,7 +45,7 @@ func loadConfig() (*config.Config, error) {
 
 func buildApp(cfg *config.Config) (*fiber.App, string, int, error) {
 	host := "0.0.0.0"
-	port := 8080
+	port := 3206
 	if cfg == nil {
 		app := httpserver.New(httpserver.Dependencies{
 			Tokens:        auth.NewTokenManager("go-template", "change-me", config.Duration("15m").Value(), config.Duration("168h").Value()),

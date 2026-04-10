@@ -40,11 +40,11 @@ func TestInstallCreatesAdminAndBootstrapState(t *testing.T) {
 
 	svc := setup.NewService(cfgPath, nil)
 	input := setup.InstallInput{
-		Server:   config.ServerConfig{Host: "0.0.0.0", Port: 8080},
-		Log:      config.LogConfig{Level: "info"},
-		JWT:      config.JWTConfig{Issuer: "go-template", AccessTTL: "15m", RefreshTTL: "168h", Secret: "secret123"},
-		Database: config.DatabaseConfig{Driver: "sqlite", DSN: "file:" + dbPath + "?_pragma=foreign_keys(1)"},
-		Cache:    config.CacheConfig{Driver: "memory"},
+		Server:        config.ServerConfig{Host: "0.0.0.0", Port: 3206},
+		Log:           config.LogConfig{Level: "info"},
+		JWT:           config.JWTConfig{Issuer: "go-template", AccessTTL: "15m", RefreshTTL: "168h", Secret: "secret123"},
+		Database:      config.DatabaseConfig{Driver: "sqlite", DSN: "file:" + dbPath + "?_pragma=foreign_keys(1)"},
+		Cache:         config.CacheConfig{Driver: "memory"},
 		AdminUsername: "admin",
 		AdminEmail:    "admin@example.com",
 		AdminPassword: "secret123",
@@ -71,4 +71,3 @@ func TestInstallCreatesAdminAndBootstrapState(t *testing.T) {
 		t.Fatalf("load config: %v", err)
 	}
 }
-

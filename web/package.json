@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node -e \"require('fs').writeFileSync('dist/embed-placeholder.txt','placeholder file for go:embed on clean checkouts\\n')\"",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run"
   },

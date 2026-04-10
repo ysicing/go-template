@@ -38,7 +38,7 @@ export type InstallFormValues = {
 };
 
 const defaultValues: InstallFormValues = {
-  server: { host: "0.0.0.0", port: 8080 },
+  server: { host: "0.0.0.0", port: 3206 },
   log: { level: "info" },
   jwt: {
     issuer: "go-template",
@@ -145,4 +145,3 @@ function Field({
     </div>
   );
 }
-
