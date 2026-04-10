@@ -2,6 +2,7 @@
   "name": "go-template-web",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "pnpm@10.32.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -38,4 +39,3 @@
     "vitest": "^3.2.4"
   }
 }
-

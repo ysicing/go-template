@@ -6,7 +6,7 @@ RUN corepack enable && cd web && pnpm install --frozen-lockfile
 COPY web ./web
 RUN cd web && pnpm build
 
-FROM golang:1.26 AS go-builder
+FROM golang:1.26.2 AS go-builder
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_TIME=unknown
