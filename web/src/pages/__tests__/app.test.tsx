@@ -49,7 +49,7 @@ describe("providers", () => {
     apiMocks.fetchSetupStatus.mockReset();
     apiMocks.hasAccessToken.mockReset();
     apiMocks.fetchBuildInfo.mockResolvedValue({
-      full_version: "master-abc1234-20260410T084512Z"
+      full_version: "master-abc1234-20260410"
     });
     window.localStorage.clear();
     window.history.pushState({}, "", "/");
@@ -115,14 +115,14 @@ describe("providers", () => {
       </AppProviders>
     );
 
-    const languageButton = await screen.findByRole("button", { name: "语言" });
+    const languageButton = await screen.findByRole("button", { name: "EN" });
 
     expect(window.localStorage.getItem("app.language")).toBe("zh-CN");
     expect(document.documentElement.lang).toBe("zh-CN");
 
     fireEvent.click(languageButton);
 
-    await screen.findByRole("button", { name: "Language" });
+    await screen.findByRole("button", { name: "文" });
     expect(window.localStorage.getItem("app.language")).toBe("en-US");
     expect(document.documentElement.lang).toBe("en-US");
   });
@@ -212,11 +212,11 @@ describe("providers", () => {
       </AppProviders>
     );
 
-    expect(await screen.findByText(/master-abc1234-20260410T084512Z/)).toBeInTheDocument();
+    expect(await screen.findByText(/master-abc1234-20260410/)).toBeInTheDocument();
     expect(screen.getByText(/© 2026 ysicing/)).toBeInTheDocument();
   });
 
-  it("renders icon-only language and theme controls on setup page", async () => {
+  it("renders compact language and theme controls on setup page", async () => {
     apiMocks.hasAccessToken.mockReturnValue(false);
     apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: true });
     window.history.pushState({}, "", "/setup");
@@ -227,9 +227,10 @@ describe("providers", () => {
       </AppProviders>
     );
 
-    expect(await screen.findByRole("button", { name: "切换语言" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "EN" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "切换明暗模式" })).toBeInTheDocument();
     expect(screen.queryByText("主题色")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "主题" })).not.toBeInTheDocument();
   });
 
   it("allows anonymous access to forgot password page", async () => {

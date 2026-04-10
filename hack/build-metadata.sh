@@ -11,7 +11,7 @@ if [[ -z "${version}" || "${version}" == "HEAD" ]]; then
 fi
 
 commit="${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
-build_time="${BUILD_TIME:-$(date -u +%Y%m%dT%H%M%SZ)}"
+build_time="${BUILD_TIME:-$(date -u +%Y%m%d)}"
 full_version="${version}-${commit}-${build_time}"
 go_ldflags="-X github.com/ysicing/go-template/internal/buildinfo.Version=${version} -X github.com/ysicing/go-template/internal/buildinfo.Commit=${commit} -X github.com/ysicing/go-template/internal/buildinfo.BuildTime=${build_time}"
 

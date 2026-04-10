@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Globe, LogOut, MoonStar, Palette, SunMedium } from "lucide-react";
+import { LogOut, MoonStar, Palette, SunMedium } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
@@ -23,6 +23,14 @@ export function AppRouter() {
       <ApplicationRoutes />
     </BrowserRouter>
   );
+}
+
+function getLanguageToggleLabel(language: string) {
+  return language === "zh-CN" ? "EN" : "文";
+}
+
+function getNextLanguage(language: string) {
+  return language === "zh-CN" ? "en-US" : "zh-CN";
 }
 
 function ApplicationRoutes() {
@@ -63,6 +71,7 @@ function ApplicationRoutes() {
   }
 
   const isSetupPage = setupRequired && location.pathname === "/setup";
+  const languageToggleLabel = getLanguageToggleLabel(i18n.language);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -82,17 +91,16 @@ function ApplicationRoutes() {
             {isSetupPage ? (
               <>
                 <Button
-                  aria-label={t("language_toggle")}
-                  className="h-9 w-9 p-0"
-                  variant="outline"
-                  onClick={() => i18n.changeLanguage(i18n.language === "zh-CN" ? "en-US" : "zh-CN")}
+                  className="h-9 min-w-9 rounded-full px-3 text-sm font-semibold"
+                  variant="ghost"
+                  onClick={() => i18n.changeLanguage(getNextLanguage(i18n.language))}
                 >
-                  <Globe className="h-4 w-4" />
+                  {languageToggleLabel}
                 </Button>
                 <Button
                   aria-label={t("theme_toggle")}
-                  className="h-9 w-9 p-0"
-                  variant="outline"
+                  className="h-9 w-9 rounded-full p-0 text-muted-foreground hover:text-foreground"
+                  variant="ghost"
                   onClick={() => setMode(mode === "dark" ? "light" : "dark")}
                 >
                   {mode === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
@@ -100,13 +108,22 @@ function ApplicationRoutes() {
               </>
             ) : (
               <>
-                <Button variant="outline" size="sm" onClick={() => i18n.changeLanguage(i18n.language === "zh-CN" ? "en-US" : "zh-CN")}>
-                  <Globe className="mr-1 h-4 w-4" />
-                  {t("language")}
+                <Button
+                  className="h-9 min-w-9 rounded-full px-3 text-sm font-semibold"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => i18n.changeLanguage(getNextLanguage(i18n.language))}
+                >
+                  {languageToggleLabel}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
-                  {mode === "dark" ? <SunMedium className="mr-1 h-4 w-4" /> : <MoonStar className="mr-1 h-4 w-4" />}
-                  {t("theme")}
+                <Button
+                  aria-label={t("theme_toggle")}
+                  className="h-9 w-9 rounded-full p-0 text-muted-foreground hover:text-foreground"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+                >
+                  {mode === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
                 </Button>
                 <Button
                   variant="outline"

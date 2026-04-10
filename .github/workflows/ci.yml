@@ -41,7 +41,7 @@ jobs:
       - name: Prepare build metadata
         run: |
           echo "COMMIT_SHORT=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
-          echo "BUILD_TIME=$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_ENV"
+          echo "BUILD_TIME=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
 
       - name: Run Go tests
         run: go test ./...
