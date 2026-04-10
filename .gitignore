@@ -1,5 +1,6 @@
 configs/config.yaml
-web/dist
+web/dist/*
+!web/dist/embed-placeholder.txt
 node_modules
 .pnpm-store
 coverage
