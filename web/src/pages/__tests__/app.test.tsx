@@ -212,7 +212,24 @@ describe("providers", () => {
       </AppProviders>
     );
 
-    expect(await screen.findByText("master-abc1234-20260410T084512Z")).toBeInTheDocument();
+    expect(await screen.findByText(/master-abc1234-20260410T084512Z/)).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 ysicing/)).toBeInTheDocument();
+  });
+
+  it("renders icon-only language and theme controls on setup page", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(false);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: true });
+    window.history.pushState({}, "", "/setup");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    expect(await screen.findByRole("button", { name: "切换语言" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "切换明暗模式" })).toBeInTheDocument();
+    expect(screen.queryByText("主题色")).not.toBeInTheDocument();
   });
 
   it("renders localized auth expired message in zh-CN", async () => {

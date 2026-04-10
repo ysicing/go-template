@@ -67,8 +67,11 @@ describe("page i18n", () => {
     expect(screen.getByText("Bootstrap shell for admin subsystems")).toBeInTheDocument();
     expect(screen.getByText("Continue extending user management, audit logs, system monitoring, and more here.")).toBeInTheDocument();
     expect(screen.getByText("Username or email + password")).toBeInTheDocument();
-    expect(screen.getByText("A first-run setup wizard similar to Gitea")).toBeInTheDocument();
+    expect(screen.getByText("Setup Wizard")).toBeInTheDocument();
     expect(screen.getByText("Database Driver")).toBeInTheDocument();
+    expect(screen.getByText("Cache Driver")).toBeInTheDocument();
+    expect(screen.queryByText("A first-run setup wizard similar to Gitea")).not.toBeInTheDocument();
+    expect(screen.queryByText("JWT Secret")).not.toBeInTheDocument();
     expect(screen.getByText("Profile Summary")).toBeInTheDocument();
     expect(await screen.findByText("Signed-in account overview")).toBeInTheDocument();
     expect(screen.getByText(/Username:/)).toBeInTheDocument();

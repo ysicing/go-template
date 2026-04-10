@@ -60,8 +60,10 @@ function ApplicationRoutes() {
     return <Navigate replace to={hasAccessToken() ? "/" : "/login"} />;
   }
 
+  const isSetupPage = setupRequired && location.pathname === "/setup";
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="border-b border-border bg-card/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <nav className="flex items-center gap-4 text-sm">
@@ -75,22 +77,45 @@ function ApplicationRoutes() {
             ) : null}
           </nav>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => i18n.changeLanguage(i18n.language === "zh-CN" ? "en-US" : "zh-CN")}>
-              <Globe className="mr-1 h-4 w-4" />
-              {t("language")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
-              {mode === "dark" ? <SunMedium className="mr-1 h-4 w-4" /> : <MoonStar className="mr-1 h-4 w-4" />}
-              {t("theme")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAccent(accent === "slate" ? "blue" : accent === "blue" ? "green" : accent === "green" ? "violet" : "slate")}
-            >
-              <Palette className="mr-1 h-4 w-4" />
-              {t("accent")}
-            </Button>
+            {isSetupPage ? (
+              <>
+                <Button
+                  aria-label={t("language_toggle")}
+                  className="h-9 w-9 p-0"
+                  variant="outline"
+                  onClick={() => i18n.changeLanguage(i18n.language === "zh-CN" ? "en-US" : "zh-CN")}
+                >
+                  <Globe className="h-4 w-4" />
+                </Button>
+                <Button
+                  aria-label={t("theme_toggle")}
+                  className="h-9 w-9 p-0"
+                  variant="outline"
+                  onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+                >
+                  {mode === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={() => i18n.changeLanguage(i18n.language === "zh-CN" ? "en-US" : "zh-CN")}>
+                  <Globe className="mr-1 h-4 w-4" />
+                  {t("language")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
+                  {mode === "dark" ? <SunMedium className="mr-1 h-4 w-4" /> : <MoonStar className="mr-1 h-4 w-4" />}
+                  {t("theme")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAccent(accent === "slate" ? "blue" : accent === "blue" ? "green" : accent === "green" ? "violet" : "slate")}
+                >
+                  <Palette className="mr-1 h-4 w-4" />
+                  {t("accent")}
+                </Button>
+              </>
+            )}
             {hasAccessToken() ? (
               <Button
                 size="sm"
@@ -106,7 +131,7 @@ function ApplicationRoutes() {
           </div>
         </div>
       </header>
-      <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
         {meQuery.error ? <Card className="p-4 text-sm text-red-500">{t("auth_expired")}</Card> : null}
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
@@ -133,9 +158,11 @@ function ApplicationRoutes() {
         </Routes>
       </main>
       <footer className="border-t border-border bg-card/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
-          <span>{t("title")}</span>
-          <span>{buildInfoQuery.data?.full_version ?? t("version_unavailable")}</span>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-1 px-4 py-3 text-center text-xs text-muted-foreground">
+          <span>
+            {t("title")} · {buildInfoQuery.data?.full_version ?? t("version_unavailable")}
+          </span>
+          <span>{t("footer_copyright", { year: new Date().getFullYear() })}</span>
         </div>
       </footer>
     </div>
