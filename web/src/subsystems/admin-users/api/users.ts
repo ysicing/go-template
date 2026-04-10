@@ -1,6 +1,6 @@
 import { api } from "../../../lib/api";
 
-import type { AdminUser, CreateAdminUserPayload, ListUsersResponse, UpdateAdminUserPayload } from "../types";
+import type { AdminUser, CreateAdminUserPayload, ListUsersResponse, ResetAdminUserPasswordPayload, UpdateAdminUserPayload } from "../types";
 
 export async function listUsers(params: URLSearchParams) {
   const response = await api.get(`/admin/users?${params.toString()}`);
@@ -30,4 +30,9 @@ export async function disableUser(userId: number) {
 export async function deleteUser(userId: number) {
   const response = await api.delete(`/admin/users/${userId}`);
   return response.data.data as { deleted: boolean };
+}
+
+export async function resetUserPassword(userId: number, payload: ResetAdminUserPasswordPayload) {
+  const response = await api.post(`/admin/users/${userId}/reset-password`, payload);
+  return response.data.data as { changed: boolean };
 }

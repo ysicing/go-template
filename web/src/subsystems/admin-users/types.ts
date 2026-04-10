@@ -37,3 +37,8 @@ export type UserFormValues = {
 export type CreateAdminUserPayload = UserFormValues;
 
 export type UpdateAdminUserPayload = Omit<UserFormValues, "password">;
+
+export type ResetAdminUserPasswordPayload = {
+  new_password: string;
+  confirm_new_password: string;
+};

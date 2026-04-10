@@ -244,6 +244,43 @@ func TestAdminCreateUserRouteReturnsConflictForDuplicateUsername(t *testing.T) {
 	}
 }
 
+func TestAdminResetPasswordRouteChangesPassword(t *testing.T) {
+	env := newTestAppEnv(t)
+	admin := env.createUser(t, "admin", "admin@example.com", "password123", user.RoleAdmin)
+	member := env.createUser(t, "member", "member@example.com", "oldpass123", user.RoleUser)
+
+	resp := env.request(
+		t,
+		http.MethodPost,
+		"/api/admin/users/"+itoa(member.ID)+"/reset-password",
+		`{"new_password":"newpass123","confirm_new_password":"newpass123"}`,
+		admin,
+	)
+	body := readAPIResponse(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if body.Code != "OK" {
+		t.Fatalf("expected OK, got %s", body.Code)
+	}
+
+	var data struct {
+		Changed bool `json:"changed"`
+	}
+	decodeJSON(t, body.Data, &data)
+	if !data.Changed {
+		t.Fatal("expected changed=true")
+	}
+
+	if _, _, err := env.authService.Login(member.Username, "oldpass123"); !errors.Is(err, auth.ErrInvalidCredentials) {
+		t.Fatalf("expected old password to fail, got %v", err)
+	}
+	if _, _, err := env.authService.Login(member.Username, "newpass123"); err != nil {
+		t.Fatalf("expected new password login to work, got %v", err)
+	}
+}
+
 func TestHealthzRoute(t *testing.T) {
 	app := httpserver.NewForTest(true)
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

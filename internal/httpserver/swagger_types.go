@@ -31,6 +31,10 @@ type changePasswordResponseData struct {
 	Changed bool `json:"changed"`
 }
 
+type resetPasswordResponseData struct {
+	Changed bool `json:"changed"`
+}
+
 type currentUserResponseData struct {
 	User *user.User `json:"user"`
 }

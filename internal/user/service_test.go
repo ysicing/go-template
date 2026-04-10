@@ -272,6 +272,28 @@ func TestServiceChangePasswordRejectsConfirmMismatch(t *testing.T) {
 	}
 }
 
+func TestServiceResetPassword(t *testing.T) {
+	service, conn := newUserServiceForTest(t)
+	admin := createTestUser(t, conn, "admin", "admin@example.com", RoleAdmin, "active")
+	account := createTestUserWithPassword(t, conn, "user1", "user1@example.com", "oldpass123")
+
+	err := service.ResetPassword(admin.ID, account.ID, ResetPasswordInput{
+		NewPassword:        "newpass123",
+		ConfirmNewPassword: "newpass123",
+	})
+	if err != nil {
+		t.Fatalf("reset password: %v", err)
+	}
+
+	var updated User
+	if err := conn.First(&updated, account.ID).Error; err != nil {
+		t.Fatalf("reload user: %v", err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(updated.PasswordHash), []byte("newpass123")); err != nil {
+		t.Fatalf("expected password updated: %v", err)
+	}
+}
+
 func newUserServiceForTest(t *testing.T) (*Service, *gorm.DB) {
 	t.Helper()
 

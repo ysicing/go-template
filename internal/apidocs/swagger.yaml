@@ -125,6 +125,13 @@ definitions:
       total:
         type: integer
     type: object
+  github_com_ysicing_go-template_internal_user.ResetPasswordInput:
+    properties:
+      confirm_new_password:
+        type: string
+      new_password:
+        type: string
+    type: object
   github_com_ysicing_go-template_internal_user.Role:
     enum:
     - user
@@ -221,6 +228,11 @@ definitions:
     properties:
       token:
         $ref: '#/definitions/github_com_ysicing_go-template_internal_auth.TokenPair'
+    type: object
+  internal_httpserver.resetPasswordResponseData:
+    properties:
+      changed:
+        type: boolean
     type: object
   internal_httpserver.settingsResponseData:
     properties:
@@ -598,6 +610,59 @@ paths:
       security:
       - BearerAuth: []
       summary: 启用用户
+      tags:
+      - Admin Users
+  /api/admin/users/{id}/reset-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 重置密码请求
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ysicing_go-template_internal_user.ResetPasswordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_httpserver.resetPasswordResponseData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ysicing_go-template_internal_shared.Response'
+      security:
+      - BearerAuth: []
+      summary: 重置用户密码
       tags:
       - Admin Users
   /api/auth/change-password:

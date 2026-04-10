@@ -60,10 +60,12 @@ function renderPage() {
 describe("UserManagementPage", () => {
   let users: AdminUser[];
   let createErrorMessage: string | null;
+  let resetPasswordErrorMessage: string | null;
 
   beforeEach(() => {
     users = [];
     createErrorMessage = null;
+    resetPasswordErrorMessage = null;
     void i18n.changeLanguage("zh-CN");
 
     apiMocks.delete.mockReset();
@@ -131,6 +133,26 @@ describe("UserManagementPage", () => {
           data: {
             data: {
               enabled: true
+            }
+          }
+        };
+      }
+
+      if (url.endsWith("/reset-password")) {
+        if (resetPasswordErrorMessage) {
+          return Promise.reject({
+            response: {
+              data: {
+                message: resetPasswordErrorMessage
+              }
+            }
+          });
+        }
+
+        return {
+          data: {
+            data: {
+              changed: true
             }
           }
         };
@@ -261,5 +283,29 @@ describe("UserManagementPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "提交" }));
 
     expect(await screen.findByText("邮箱已存在")).toBeInTheDocument();
+  });
+
+  it("resets user password from the admin table", async () => {
+    users = [baseUser];
+    renderPage();
+
+    expect(await screen.findByText("alice@example.com")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "重置密码" }));
+
+    expect(screen.getByRole("dialog", { name: "重置密码" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("新密码"), { target: { value: "resetpass123" } });
+    fireEvent.change(screen.getByLabelText("确认新密码"), { target: { value: "resetpass123" } });
+    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+
+    await waitFor(() =>
+      expect(apiMocks.post).toHaveBeenCalledWith("/admin/users/1/reset-password", {
+        confirm_new_password: "resetpass123",
+        new_password: "resetpass123"
+      })
+    );
+    expect(await screen.findByText("已重置 alice 的密码")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "重置密码" })).not.toBeInTheDocument());
   });
 });

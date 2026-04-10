@@ -18,6 +18,7 @@ func registerAdminUserRoutes(app *fiber.App, state *State) {
 	app.Put("/api/admin/users/:id", requireAuth(state.Tokens()), requireAdmin, updateUserHandler(state))
 	app.Post("/api/admin/users/:id/enable", requireAuth(state.Tokens()), requireAdmin, enableUserHandler(state))
 	app.Post("/api/admin/users/:id/disable", requireAuth(state.Tokens()), requireAdmin, disableUserHandler(state))
+	app.Post("/api/admin/users/:id/reset-password", requireAuth(state.Tokens()), requireAdmin, resetUserPasswordHandler(state))
 	app.Delete("/api/admin/users/:id", requireAuth(state.Tokens()), requireAdmin, deleteUserHandler(state))
 }
 
@@ -237,6 +238,46 @@ func disableUserHandler(state *State) fiber.Handler {
 			return writeUserServiceError(c, err, "DISABLE_USER_FAILED", "failed to disable user")
 		}
 		return c.JSON(shared.OK(map[string]any{"disabled": true}))
+	}
+}
+
+// resetUserPasswordHandler godoc
+// @Summary 重置用户密码
+// @Tags Admin Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "用户 ID"
+// @Param payload body user.ResetPasswordInput true "重置密码请求"
+// @Success 200 {object} shared.Response{data=httpserver.resetPasswordResponseData}
+// @Failure 400 {object} shared.Response
+// @Failure 401 {object} shared.Response
+// @Failure 403 {object} shared.Response
+// @Failure 404 {object} shared.Response
+// @Failure 500 {object} shared.Response
+// @Router /api/admin/users/{id}/reset-password [post]
+func resetUserPasswordHandler(state *State) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		service, err := requireUserService(c, state)
+		if err != nil {
+			return err
+		}
+
+		userID, err := parseUserID(c)
+		if err != nil {
+			return err
+		}
+
+		var payload user.ResetPasswordInput
+		if err := c.Bind().Body(&payload); err != nil {
+			return badRequest(c, "invalid request body")
+		}
+
+		actorID, _ := c.Locals(localUserID).(uint)
+		if err := service.ResetPassword(actorID, userID, payload); err != nil {
+			return writeUserServiceError(c, err, "RESET_PASSWORD_FAILED", "failed to reset password")
+		}
+		return c.JSON(shared.OK(map[string]any{"changed": true}))
 	}
 }
 

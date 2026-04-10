@@ -579,6 +579,93 @@
                 }
             }
         },
+        "/api/admin/users/{id}/reset-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "重置用户密码",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "重置密码请求",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ysicing_go-template_internal_user.ResetPasswordInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_httpserver.resetPasswordResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ysicing_go-template_internal_shared.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/change-password": {
             "post": {
                 "security": [
@@ -1239,6 +1326,17 @@
                 }
             }
         },
+        "github_com_ysicing_go-template_internal_user.ResetPasswordInput": {
+            "type": "object",
+            "properties": {
+                "confirm_new_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ysicing_go-template_internal_user.Role": {
             "type": "string",
             "enum": [
@@ -1387,6 +1485,14 @@
             "properties": {
                 "token": {
                     "$ref": "#/definitions/github_com_ysicing_go-template_internal_auth.TokenPair"
+                }
+            }
+        },
+        "internal_httpserver.resetPasswordResponseData": {
+            "type": "object",
+            "properties": {
+                "changed": {
+                    "type": "boolean"
                 }
             }
         },

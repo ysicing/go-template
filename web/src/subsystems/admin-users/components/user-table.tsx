@@ -13,6 +13,7 @@ export interface UserTableProps {
   isActionPending?: boolean;
   onView: (user: AdminUser) => void;
   onEdit: (user: AdminUser) => void;
+  onResetPassword: (user: AdminUser) => void;
   onToggleStatus: (user: AdminUser) => void;
   onDelete: (user: AdminUser) => void;
 }
@@ -39,6 +40,7 @@ export function UserTable({
   isActionPending = false,
   onView,
   onEdit,
+  onResetPassword,
   onToggleStatus,
   onDelete
 }: UserTableProps) {
@@ -53,7 +55,7 @@ export function UserTable({
           <TableHead>{t("admin_users_field_role")}</TableHead>
           <TableHead>{t("admin_users_field_status")}</TableHead>
           <TableHead>{t("admin_users_last_login")}</TableHead>
-          <TableHead className="w-[240px]">{t("admin_users_actions")}</TableHead>
+          <TableHead className="w-[320px]">{t("admin_users_actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -76,6 +78,9 @@ export function UserTable({
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => onEdit(item)}>
                       {t("edit")}
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={isActionPending} onClick={() => onResetPassword(item)}>
+                      {t("admin_users_reset_password")}
                     </Button>
                     <Button size="sm" variant="ghost" disabled={isActionPending} onClick={() => onToggleStatus(item)}>
                       {item.status === "active" ? t("disable") : t("enable")}

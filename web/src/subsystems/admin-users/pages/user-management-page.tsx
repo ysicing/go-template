@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { createUser, deleteUser, disableUser, enableUser, updateUser } from "../api/users";
+import { createUser, deleteUser, disableUser, enableUser, resetUserPassword, updateUser } from "../api/users";
 import { UserFilters } from "../components/user-filters";
 import { UserFormDialog } from "../components/user-form-dialog";
+import { UserResetPasswordDialog } from "../components/user-reset-password-dialog";
 import { UserTable } from "../components/user-table";
 import { UserViewDialog } from "../components/user-view-dialog";
 import { useUsers } from "../hooks/use-users";
-import type { AdminUser, AdminUserRole, AdminUserStatus, UserFormValues } from "../types";
+import type { AdminUser, AdminUserRole, AdminUserStatus, ResetAdminUserPasswordPayload, UserFormValues } from "../types";
 
 function readErrorMessage(error: unknown, fallbackMessage: string) {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -29,29 +30,42 @@ export function UserManagementPage() {
   const [status, setStatus] = useState<AdminUserStatus | "">("");
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetPasswordSubmitting, setIsResetPasswordSubmitting] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<number | null>(null);
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
+  const [resetPasswordErrorMessage, setResetPasswordErrorMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
   const query = useUsers({ keyword, role, status, page: 1, pageSize: 10 });
 
   function openCreateDialog() {
     setSelectedUser(null);
     setFormErrorMessage(null);
+    setActionSuccessMessage(null);
     setFormMode("create");
   }
 
   function openEditDialog(user: AdminUser) {
     setSelectedUser(user);
     setFormErrorMessage(null);
+    setActionSuccessMessage(null);
     setFormMode("edit");
   }
 
   function openViewDialog(user: AdminUser) {
+    setActionSuccessMessage(null);
     setSelectedUser(user);
     setIsViewOpen(true);
+  }
+
+  function openResetPasswordDialog(user: AdminUser) {
+    setActionSuccessMessage(null);
+    setResetPasswordErrorMessage(null);
+    setResetPasswordUser(user);
   }
 
   function closeForm(open: boolean) {
@@ -61,9 +75,17 @@ export function UserManagementPage() {
     }
   }
 
+  function closeResetPasswordDialog(open: boolean) {
+    if (!open) {
+      setResetPasswordUser(null);
+      setResetPasswordErrorMessage(null);
+    }
+  }
+
   async function handleFormSubmit(values: UserFormValues) {
     setIsSubmitting(true);
     setFormErrorMessage(null);
+    setActionSuccessMessage(null);
 
     try {
       if (formMode === "edit" && selectedUser) {
@@ -90,6 +112,7 @@ export function UserManagementPage() {
   async function handleToggleStatus(user: AdminUser) {
     setPendingUserId(user.id);
     setActionErrorMessage(null);
+    setActionSuccessMessage(null);
 
     try {
       if (user.status === "active") {
@@ -112,6 +135,7 @@ export function UserManagementPage() {
 
     setPendingUserId(user.id);
     setActionErrorMessage(null);
+    setActionSuccessMessage(null);
 
     try {
       await deleteUser(user.id);
@@ -120,6 +144,26 @@ export function UserManagementPage() {
       setActionErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
     } finally {
       setPendingUserId(null);
+    }
+  }
+
+  async function handleResetPasswordSubmit(values: ResetAdminUserPasswordPayload) {
+    if (!resetPasswordUser) {
+      return;
+    }
+
+    setIsResetPasswordSubmitting(true);
+    setResetPasswordErrorMessage(null);
+    setActionSuccessMessage(null);
+
+    try {
+      await resetUserPassword(resetPasswordUser.id, values);
+      setResetPasswordUser(null);
+      setActionSuccessMessage(t("admin_users_reset_password_success", { username: resetPasswordUser.username }));
+    } catch (error) {
+      setResetPasswordErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
+    } finally {
+      setIsResetPasswordSubmitting(false);
     }
   }
 
@@ -148,12 +192,14 @@ export function UserManagementPage() {
           <div className="text-sm text-muted-foreground">{t("admin_users_total", { count: query.data?.total ?? 0 })}</div>
           {query.error ? <p className="text-sm text-red-500">{readErrorMessage(query.error, t("admin_users_action_failed"))}</p> : null}
           {actionErrorMessage ? <p className="text-sm text-red-500">{actionErrorMessage}</p> : null}
+          {actionSuccessMessage ? <p className="text-sm text-green-600">{actionSuccessMessage}</p> : null}
           <UserTable
-            isActionPending={pendingUserId !== null}
+            isActionPending={pendingUserId !== null || isResetPasswordSubmitting}
             isLoading={query.isLoading}
             items={query.data?.items ?? []}
             onDelete={handleDelete}
             onEdit={openEditDialog}
+            onResetPassword={openResetPasswordDialog}
             onToggleStatus={handleToggleStatus}
             onView={openViewDialog}
           />
@@ -168,6 +214,15 @@ export function UserManagementPage() {
         user={selectedUser}
         onOpenChange={closeForm}
         onSubmit={handleFormSubmit}
+      />
+
+      <UserResetPasswordDialog
+        errorMessage={resetPasswordErrorMessage}
+        isSubmitting={isResetPasswordSubmitting}
+        open={resetPasswordUser !== null}
+        user={resetPasswordUser}
+        onOpenChange={closeResetPasswordDialog}
+        onSubmit={handleResetPasswordSubmit}
       />
 
       <UserViewDialog open={isViewOpen} user={selectedUser} onOpenChange={setIsViewOpen} />

@@ -3,6 +3,7 @@
 一个可直接复用的 Go 全栈模板，默认提供：
 
 - 后端：`Go + Fiber v3 + GORM`
+- 认证：登录、安装向导、修改密码、管理员用户管理
 - 数据库：`sqlite(nocgo)` / `PostgreSQL` / `MySQL`
 - 缓存：`memory` / `Redis`
 - 前端：`React + Vite + shadcn/ui + pnpm`

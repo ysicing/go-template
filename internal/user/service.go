@@ -70,6 +70,11 @@ type (
 		NewPassword        string `json:"new_password"`
 		ConfirmNewPassword string `json:"confirm_new_password"`
 	}
+
+	ResetPasswordInput struct {
+		NewPassword        string `json:"new_password"`
+		ConfirmNewPassword string `json:"confirm_new_password"`
+	}
 )
 
 func NewService(db *gorm.DB) *Service {
@@ -188,11 +193,8 @@ func (s *Service) DeleteUser(actorID uint, userID uint) error {
 
 func (s *Service) ChangePassword(userID uint, input ChangePasswordInput) error {
 	normalized := normalizeChangePasswordInput(input)
-	if len(normalized.NewPassword) < minPasswordLen {
-		return ErrPasswordTooShort
-	}
-	if normalized.ConfirmNewPassword != normalized.NewPassword {
-		return ErrPasswordConfirmationMismatch
+	if err := validateNewPassword(normalized.NewPassword, normalized.ConfirmNewPassword); err != nil {
+		return err
 	}
 
 	var account User
@@ -203,11 +205,24 @@ func (s *Service) ChangePassword(userID uint, input ChangePasswordInput) error {
 		return ErrInvalidOldPassword
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(normalized.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
+	return s.updatePasswordHash(&account, normalized.NewPassword)
+}
+
+func (s *Service) ResetPassword(actorID uint, userID uint, input ResetPasswordInput) error {
+	normalized := normalizeResetPasswordInput(input)
+	if err := validateNewPassword(normalized.NewPassword, normalized.ConfirmNewPassword); err != nil {
 		return err
 	}
-	return s.db.Model(&account).Update("password_hash", string(hash)).Error
+
+	var account User
+	if err := s.db.First(&account, userID).Error; err != nil {
+		return err
+	}
+	if actorID == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return s.updatePasswordHash(&account, normalized.NewPassword)
 }
 
 func (s *Service) updateStatus(userID uint, status string) error {
@@ -273,6 +288,31 @@ func normalizeChangePasswordInput(input ChangePasswordInput) ChangePasswordInput
 		NewPassword:        strings.TrimSpace(input.NewPassword),
 		ConfirmNewPassword: strings.TrimSpace(input.ConfirmNewPassword),
 	}
+}
+
+func normalizeResetPasswordInput(input ResetPasswordInput) ResetPasswordInput {
+	return ResetPasswordInput{
+		NewPassword:        strings.TrimSpace(input.NewPassword),
+		ConfirmNewPassword: strings.TrimSpace(input.ConfirmNewPassword),
+	}
+}
+
+func validateNewPassword(password string, confirmPassword string) error {
+	if len(password) < minPasswordLen {
+		return ErrPasswordTooShort
+	}
+	if confirmPassword != password {
+		return ErrPasswordConfirmationMismatch
+	}
+	return nil
+}
+
+func (s *Service) updatePasswordHash(account *User, password string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	return s.db.Model(account).Update("password_hash", string(hash)).Error
 }
 
 func validateIdentity(username string, email string) error {
