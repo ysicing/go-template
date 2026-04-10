@@ -6,8 +6,8 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { installSystem } from "../lib/api";
-import { Select } from "../shared/ui/select";
 
 export type InstallFormValues = {
   server: {
@@ -134,22 +134,26 @@ export function SetupPage() {
           </Field>
           <Field label={t("database_driver")}>
             <Select
-              aria-label={t("database_driver")}
               value={values.database.driver}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setValues({
                   ...values,
                   database: {
                     ...values.database,
-                    driver: event.target.value,
-                    dsn: getDatabaseDSN(event.target.value)
+                    driver: value,
+                    dsn: getDatabaseDSN(value)
                   }
                 })
               }
             >
-              <option value="sqlite">{t("database_driver_sqlite")}</option>
-              <option value="postgres">{t("database_driver_postgres")}</option>
-              <option value="mysql">{t("database_driver_mysql")}</option>
+              <SelectTrigger aria-label={t("database_driver")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sqlite">{t("database_driver_sqlite")}</SelectItem>
+                <SelectItem value="postgres">{t("database_driver_postgres")}</SelectItem>
+                <SelectItem value="mysql">{t("database_driver_mysql")}</SelectItem>
+              </SelectContent>
             </Select>
           </Field>
           <Field className="md:col-span-2" label={t("database_dsn")}>
@@ -161,20 +165,24 @@ export function SetupPage() {
           </Field>
           <Field label={t("cache_driver")}>
             <Select
-              aria-label={t("cache_driver")}
               value={values.cache.driver}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setValues({
                   ...values,
                   cache: {
-                    driver: event.target.value,
-                    ...getCacheDefaults(event.target.value)
+                    driver: value,
+                    ...getCacheDefaults(value)
                   }
                 })
               }
             >
-              <option value="memory">{t("cache_driver_memory")}</option>
-              <option value="redis">{t("cache_driver_redis")}</option>
+              <SelectTrigger aria-label={t("cache_driver")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="memory">{t("cache_driver_memory")}</SelectItem>
+                <SelectItem value="redis">{t("cache_driver_redis")}</SelectItem>
+              </SelectContent>
             </Select>
           </Field>
           {values.cache.driver === "redis" ? (

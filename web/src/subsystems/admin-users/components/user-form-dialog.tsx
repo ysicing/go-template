@@ -5,7 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Select } from "../../../shared/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { Modal } from "./modal";
 import { getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
 import type { AdminUser, UserFormValues } from "../types";
@@ -114,15 +114,25 @@ function UserFormFields({
         </Field>
       ) : null}
       <Field label={t("admin_users_field_role")} name="role">
-        <Select id="role" value={values.role} onChange={(event) => onChange("role", event.target.value)}>
-          <option value="admin">{getAdminUserRoleLabel(t, "admin")}</option>
-          <option value="user">{getAdminUserRoleLabel(t, "user")}</option>
+        <Select value={values.role} onValueChange={(value) => onChange("role", value)}>
+          <SelectTrigger aria-label={t("admin_users_field_role")} id="role">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">{getAdminUserRoleLabel(t, "admin")}</SelectItem>
+            <SelectItem value="user">{getAdminUserRoleLabel(t, "user")}</SelectItem>
+          </SelectContent>
         </Select>
       </Field>
       <Field label={t("admin_users_field_status")} name="status">
-        <Select id="status" value={values.status} onChange={(event) => onChange("status", event.target.value)}>
-          <option value="active">{getAdminUserStatusLabel(t, "active")}</option>
-          <option value="disabled">{getAdminUserStatusLabel(t, "disabled")}</option>
+        <Select value={values.status} onValueChange={(value) => onChange("status", value)}>
+          <SelectTrigger aria-label={t("admin_users_field_status")} id="status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">{getAdminUserStatusLabel(t, "active")}</SelectItem>
+            <SelectItem value="disabled">{getAdminUserStatusLabel(t, "disabled")}</SelectItem>
+          </SelectContent>
         </Select>
       </Field>
     </>

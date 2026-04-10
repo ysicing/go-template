@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 
+import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
-import { Badge } from "../../../shared/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../shared/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
 
 import { formatAdminUserLastLoginAt, getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
 import type { AdminUser, AdminUserStatus } from "../types";

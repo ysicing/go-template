@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 
+import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Badge } from "../../../shared/ui/badge";
 import { Modal } from "./modal";
 import { formatAdminUserLastLoginAt, getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
 import type { AdminUser, AdminUserStatus } from "../types";
