@@ -1,5 +1,7 @@
+import type { TFunction } from "i18next";
+
 import type { NavigationItem } from "../../shared/navigation/types";
 
-export const adminUsersNavigationItems: NavigationItem[] = [
-  { label: "用户列表", to: "/admin/users" }
-];
+export function getAdminUsersNavigationItems(t: TFunction<"translation">): NavigationItem[] {
+  return [{ label: t("admin_users"), to: "/admin/users" }];
+}

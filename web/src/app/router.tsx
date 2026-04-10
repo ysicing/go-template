@@ -5,8 +5,8 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react
 
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
-import { adminRouteDefinitions } from "./admin-routes";
-import { adminNavigation } from "./admin-navigation";
+import { useAdminRouteDefinitions } from "./admin-routes";
+import { useAdminNavigation } from "./admin-navigation";
 import { AdminLayout } from "./layouts/admin-layout";
 import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "../lib/api";
 import { useTheme } from "../lib/theme";
@@ -27,6 +27,8 @@ function ApplicationRoutes() {
   const location = useLocation();
   const { i18n, t } = useTranslation();
   const { accent, mode, setAccent, setMode } = useTheme();
+  const adminNavigation = useAdminNavigation();
+  const adminRouteDefinitions = useAdminRouteDefinitions();
 
   const setupQuery = useQuery({
     queryKey: ["setup-status"],
@@ -117,6 +119,7 @@ function ApplicationRoutes() {
                 <AdminRoutePage
                   description={route.description}
                   isLoading={meQuery.isLoading}
+                  navigation={adminNavigation}
                   title={route.title}
                   user={meQuery.data}
                 >
@@ -143,18 +146,20 @@ function AdminRoutePage({
   children,
   description,
   isLoading,
+  navigation,
   title,
   user
 }: {
   children: React.ReactNode;
   description: string;
   isLoading: boolean;
+  navigation: Array<{ label: string; to: string }>;
   title: string;
   user?: { role: string };
 }) {
   return (
     <AdminRoute isLoading={isLoading} user={user}>
-      <AdminLayout description={description} navigation={adminNavigation} title={title}>
+      <AdminLayout description={description} navigation={navigation} title={title}>
         {children}
       </AdminLayout>
     </AdminRoute>

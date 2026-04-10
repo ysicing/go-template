@@ -1,14 +1,18 @@
+import { useTranslation } from "react-i18next";
+
 import type { NavigationItem } from "../shared/navigation/types";
-import { adminUsersNavigationItems } from "../subsystems/admin-users/navigation";
-import { systemSettingsNavigationItems } from "../subsystems/system-settings/navigation";
+import { getAdminUsersNavigationItems } from "../subsystems/admin-users/navigation";
+import { getSystemSettingsNavigationItems } from "../subsystems/system-settings/navigation";
 
-const adminOverviewNavigationItem: NavigationItem = {
-  label: "后台概览",
-  to: "/admin"
-};
+export function useAdminNavigation(): NavigationItem[] {
+  const { t } = useTranslation();
 
-export const adminNavigation: NavigationItem[] = [
-  adminOverviewNavigationItem,
-  ...adminUsersNavigationItems,
-  ...systemSettingsNavigationItems
-];
+  return [
+    {
+      label: t("admin_overview"),
+      to: "/admin"
+    },
+    ...getAdminUsersNavigationItems(t),
+    ...getSystemSettingsNavigationItems(t)
+  ];
+}

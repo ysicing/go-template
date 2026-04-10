@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { fetchSystemSettings } from "../api/settings";
@@ -8,24 +9,24 @@ import type { SystemSetting } from "../types";
 
 const groupOrder = ["database", "cache", "server", "log", "default"] as const;
 
-const groupMeta: Record<string, { title: string; description: string }> = {
-  cache: { title: "缓存", description: "内存缓存或 Redis 连接相关设置。" },
-  database: { title: "数据库", description: "数据库驱动、地址与连接信息。" },
-  default: { title: "未分组", description: "未归类但运行期仍会读取的核心配置。" },
-  log: { title: "日志", description: "启动日志级别与输出行为。" },
-  server: { title: "服务监听", description: "服务监听地址、端口与基础网络参数。" }
-};
-
 function normalizeGroup(group: string) {
   const normalizedGroup = group.trim().toLowerCase();
   return normalizedGroup.length > 0 ? normalizedGroup : "default";
 }
 
-function getGroupMeta(group: string) {
-  return groupMeta[group] ?? { title: group, description: "自定义配置分组。" };
+function getGroupMeta(
+  group: string,
+  groupMeta: Record<string, { title: string; description: string }>,
+  fallbackDescription: string
+) {
+  return groupMeta[group] ?? { title: group, description: fallbackDescription };
 }
 
-function buildGroups(items: SystemSetting[]) {
+function buildGroups(
+  items: SystemSetting[],
+  groupMeta: Record<string, { title: string; description: string }>,
+  fallbackDescription: string
+) {
   const groupedItems = new Map<string, SystemSetting[]>();
 
   items.forEach((item) => {
@@ -48,33 +49,43 @@ function buildGroups(items: SystemSetting[]) {
       return leftGroup.localeCompare(rightGroup);
     })
     .map(([group, groupItems]) => ({
-      ...getGroupMeta(group),
+      ...getGroupMeta(group, groupMeta, fallbackDescription),
       items: [...groupItems].sort((leftItem, rightItem) => leftItem.key.localeCompare(rightItem.key))
     }));
 }
 
 export function SystemSettingsPage() {
+  const { t } = useTranslation();
   const query = useQuery({
     queryKey: ["system-settings"],
     queryFn: fetchSystemSettings
   });
 
-  const groups = useMemo(() => buildGroups(query.data ?? []), [query.data]);
+  const groupMeta = useMemo(
+    () => ({
+      cache: { title: t("settings_group_cache"), description: t("settings_group_cache_description") },
+      database: { title: t("settings_group_database"), description: t("settings_group_database_description") },
+      default: { title: t("settings_group_default"), description: t("settings_group_default_description") },
+      log: { title: t("settings_group_log"), description: t("settings_group_log_description") },
+      server: { title: t("settings_group_server"), description: t("settings_group_server_description") }
+    }),
+    [t]
+  );
+  const fallbackDescription = t("settings_group_custom_description");
+  const groups = useMemo(() => buildGroups(query.data ?? [], groupMeta, fallbackDescription), [fallbackDescription, groupMeta, query.data]);
 
   if (query.isLoading) {
-    return <div className="text-sm text-muted-foreground">加载系统设置中...</div>;
+    return <div className="text-sm text-muted-foreground">{t("settings_loading")}</div>;
   }
 
   if (groups.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>暂未生成运行期设置</CardTitle>
-          <CardDescription>安装向导会先生成最小可运行配置，后续可继续扩展更多模块设置。</CardDescription>
+          <CardTitle>{t("settings_empty_title")}</CardTitle>
+          <CardDescription>{t("settings_empty_description")}</CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          完成安装向导后，这里会展示数据库、缓存、监听与日志等核心配置。
-        </CardContent>
+        <CardContent className="text-sm text-muted-foreground">{t("settings_empty_hint")}</CardContent>
       </Card>
     );
   }

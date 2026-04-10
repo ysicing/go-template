@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { AdminPage } from "../pages/admin";
 import { UserManagementPage } from "../subsystems/admin-users/pages/user-management-page";
@@ -11,23 +12,27 @@ export interface AdminRouteDefinition {
   element: ReactNode;
 }
 
-export const adminRouteDefinitions: AdminRouteDefinition[] = [
-  {
-    path: "/admin",
-    title: "管理后台",
-    description: "后台模块入口与当前系统概览。",
-    element: <AdminPage />
-  },
-  {
-    path: "/admin/users",
-    title: "用户管理",
-    description: "查看、筛选并维护系统中的用户账号。",
-    element: <UserManagementPage />
-  },
-  {
-    path: "/admin/settings",
-    title: "系统设置",
-    description: "运行期系统设置与后台配置。",
-    element: <SystemSettingsPage />
-  }
-];
+export function useAdminRouteDefinitions(): AdminRouteDefinition[] {
+  const { t } = useTranslation();
+
+  return [
+    {
+      path: "/admin",
+      title: t("admin_console"),
+      description: t("admin_console_description"),
+      element: <AdminPage />
+    },
+    {
+      path: "/admin/users",
+      title: t("admin_users"),
+      description: t("admin_users_description"),
+      element: <UserManagementPage />
+    },
+    {
+      path: "/admin/settings",
+      title: t("settings"),
+      description: t("admin_settings_description"),
+      element: <SystemSettingsPage />
+    }
+  ];
+}

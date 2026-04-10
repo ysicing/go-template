@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppProviders } from "../../../../app/providers";
+import i18n from "../../../../lib/i18n";
 import { SystemSettingsPage } from "../../pages/system-settings-page";
 
 const settingsApiMocks = vi.hoisted(() => ({
@@ -23,10 +24,12 @@ function renderPage() {
 describe("SystemSettingsPage", () => {
   beforeEach(() => {
     settingsApiMocks.fetchSystemSettings.mockReset();
+    void i18n.changeLanguage("zh-CN");
   });
 
   afterEach(() => {
     cleanup();
+    void i18n.changeLanguage("zh-CN");
   });
 
   it("renders grouped settings and uncategorized fallback", async () => {
@@ -54,6 +57,17 @@ describe("SystemSettingsPage", () => {
 
     expect(await screen.findByText("暂未生成运行期设置")).toBeInTheDocument();
     expect(screen.getByText("完成安装向导后，这里会展示数据库、缓存、监听与日志等核心配置。"))
+      .toBeInTheDocument();
+  });
+
+  it("renders english copy when language switches to en-US", async () => {
+    settingsApiMocks.fetchSystemSettings.mockResolvedValue([]);
+    await i18n.changeLanguage("en-US");
+
+    renderPage();
+
+    expect(await screen.findByText("No runtime settings yet")).toBeInTheDocument();
+    expect(screen.getByText("After the setup wizard finishes, this page shows core database, cache, server, and log settings."))
       .toBeInTheDocument();
   });
 });
