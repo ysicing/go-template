@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -51,6 +51,7 @@ describe("providers", () => {
     apiMocks.fetchBuildInfo.mockResolvedValue({
       full_version: "master-abc1234-20260410T084512Z"
     });
+    window.localStorage.clear();
     window.history.pushState({}, "", "/");
     void i18n.changeLanguage("zh-CN");
   });
@@ -67,35 +68,63 @@ describe("providers", () => {
 
   it("renders admin layout navigation area", () => {
     render(
-      <MemoryRouter>
-        <AdminLayout title="Users" navigation={[{ label: "用户列表", to: "/admin/users" }]}>
-          <div>content</div>
-        </AdminLayout>
-      </MemoryRouter>
+      <AppProviders>
+        <MemoryRouter>
+          <AdminLayout title="用户列表" navigation={[{ label: "用户列表", to: "/admin/users" }]}>
+            <div>content</div>
+          </AdminLayout>
+        </MemoryRouter>
+      </AppProviders>
     );
 
-    expect(screen.getByText("用户列表")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "用户列表" })).toBeInTheDocument();
     expect(screen.getByText("content")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "用户列表导航" })).toBeInTheDocument();
   });
 
   it("keeps parent admin link inactive on nested routes", () => {
     render(
-      <MemoryRouter initialEntries={["/admin/users"]}>
-        <AdminLayout
-          navigation={[
-            { label: "后台概览", to: "/admin" },
-            { label: "用户列表", to: "/admin/users" },
-            { label: "系统设置", to: "/admin/settings" }
-          ]}
-          title="Users"
-        >
-          <div>content</div>
-        </AdminLayout>
-      </MemoryRouter>
+      <AppProviders>
+        <MemoryRouter initialEntries={["/admin/users"]}>
+          <AdminLayout
+            navigation={[
+              { label: "后台概览", to: "/admin" },
+              { label: "用户列表", to: "/admin/users" },
+              { label: "系统设置", to: "/admin/settings" }
+            ]}
+            title="用户列表"
+          >
+            <div>content</div>
+          </AdminLayout>
+        </MemoryRouter>
+      </AppProviders>
     );
 
     expect(screen.getByRole("link", { name: "用户列表" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "后台概览" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("persists language choice after toggling", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(false);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    window.history.pushState({}, "", "/login");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    const languageButton = await screen.findByRole("button", { name: "语言" });
+
+    expect(window.localStorage.getItem("app.language")).toBe("zh-CN");
+    expect(document.documentElement.lang).toBe("zh-CN");
+
+    fireEvent.click(languageButton);
+
+    await screen.findByRole("button", { name: "Language" });
+    expect(window.localStorage.getItem("app.language")).toBe("en-US");
+    expect(document.documentElement.lang).toBe("en-US");
   });
 
   it("keeps admin route during refresh while current user is loading", async () => {

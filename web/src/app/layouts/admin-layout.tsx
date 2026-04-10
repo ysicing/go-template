@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 import { cn } from "../../lib/utils";
@@ -11,10 +12,12 @@ export interface AdminLayoutProps extends PropsWithChildren {
 }
 
 export function AdminLayout({ title, description, navigation, children }: AdminLayoutProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="grid min-h-[calc(100vh-5rem)] gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="self-start rounded-xl border border-border bg-card p-4">
-        <nav aria-label={`${title} navigation`} className="flex flex-col gap-2">
+        <nav aria-label={t("admin_navigation_label", { section: title })} className="flex flex-col gap-2">
           {navigation.map((item) => (
             <NavLink
               end={navigation.some((candidate) => candidate.to !== item.to && candidate.to.startsWith(`${item.to}/`))}

@@ -1,6 +1,8 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+const languageStorageKey = "app.language";
+
 const resources = {
   "zh-CN": {
     translation: {
@@ -45,6 +47,7 @@ const resources = {
       theme: "主题",
       language: "语言",
       accent: "主题色",
+      admin_navigation_label: "{{section}}导航",
       home_intro: "一个可安装、可嵌入发布的 Go 全栈模板",
       home_stack: "Fiber v3 + GORM + shadcn/ui + Taskfile + Docker + GitHub Actions，面向子系统扩展而设计",
       login_identifier: "用户名或邮箱",
@@ -159,6 +162,7 @@ const resources = {
       theme: "Theme",
       language: "Language",
       accent: "Accent",
+      admin_navigation_label: "{{section}} navigation",
       home_intro: "A modular Go full-stack starter for installable and embedded delivery",
       home_stack: "Fiber v3 + GORM + shadcn/ui + Taskfile + Docker + GitHub Actions, ready for subsystem-oriented development",
       login_identifier: "Username or email",
@@ -232,8 +236,13 @@ const resources = {
   }
 } as const;
 
-const savedLanguage = localStorage.getItem("app.language");
+const savedLanguage = localStorage.getItem(languageStorageKey);
 const browserLanguage = navigator.language.startsWith("en") ? "en-US" : "zh-CN";
+
+function syncLanguageState(language: string) {
+  localStorage.setItem(languageStorageKey, language);
+  document.documentElement.lang = language;
+}
 
 void i18n.use(initReactI18next).init({
   resources,
@@ -243,5 +252,8 @@ void i18n.use(initReactI18next).init({
     escapeValue: false
   }
 });
+
+i18n.on("languageChanged", syncLanguageState);
+syncLanguageState(savedLanguage || browserLanguage);
 
 export default i18n;
