@@ -1,0 +1,46 @@
+version: "3"
+
+tasks:
+  dev:
+    cmds:
+      - task: dev:backend
+
+  dev:backend:
+    cmds:
+      - go run ./app/server
+
+  dev:web:
+    dir: web
+    cmds:
+      - pnpm install
+      - pnpm dev --host 0.0.0.0
+
+  dev:full:
+    desc: 前后端分离开发，分别启动 backend 与 web
+    cmds:
+      - echo "run 'task dev:backend' and 'task dev:web' in separate terminals"
+
+  build:web:
+    dir: web
+    cmds:
+      - pnpm install --frozen-lockfile
+      - pnpm build
+
+  test:go:
+    cmds:
+      - go test ./...
+
+  build:go:
+    cmds:
+      - go build ./app/server
+
+  docker:build:
+    cmds:
+      - docker build -t go-template:local .
+
+  verify:
+    cmds:
+      - go test ./...
+      - task build:web
+      - go build ./app/server
+

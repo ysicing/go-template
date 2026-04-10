@@ -1,0 +1,9 @@
+configs/config.yaml
+web/dist
+node_modules
+.pnpm-store
+coverage
+build
+.DS_Store
+.superpowers
+
