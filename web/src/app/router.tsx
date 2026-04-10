@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
@@ -6,15 +6,30 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "rea
 import { fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api";
 import { AppShell } from "@/app/layouts/app-shell";
 import { PublicLayout } from "@/app/layouts/public-layout";
-import { ForgotPasswordPage } from "@/pages/forgot-password";
-import { HomePage } from "@/pages/home";
-import { LoginPage } from "@/pages/login";
-import { AdminPage } from "@/pages/admin";
-import { ProfilePage } from "@/pages/profile";
-import { ResetPasswordPage } from "@/pages/reset-password";
-import { SetupPage } from "@/pages/setup";
-import { UserManagementPage } from "@/subsystems/admin-users/pages/user-management-page";
-import { SystemSettingsPage } from "@/subsystems/system-settings/pages/system-settings-page";
+
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password").then((module) => ({ default: module.ForgotPasswordPage })));
+const HomePage = lazy(() => import("@/pages/home").then((module) => ({ default: module.HomePage })));
+const LoginPage = lazy(() => import("@/pages/login").then((module) => ({ default: module.LoginPage })));
+const AdminPage = lazy(() => import("@/pages/admin").then((module) => ({ default: module.AdminPage })));
+const ProfilePage = lazy(() => import("@/pages/profile").then((module) => ({ default: module.ProfilePage })));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password").then((module) => ({ default: module.ResetPasswordPage })));
+const SetupPage = lazy(() => import("@/pages/setup").then((module) => ({ default: module.SetupPage })));
+const UserManagementPage = lazy(() =>
+  import("@/subsystems/admin-users/pages/user-management-page").then((module) => ({ default: module.UserManagementPage }))
+);
+const SystemSettingsPage = lazy(() =>
+  import("@/subsystems/system-settings/pages/system-settings-page").then((module) => ({ default: module.SystemSettingsPage }))
+);
+
+function RouteFallback() {
+  const { t } = useTranslation();
+
+  return <div className="flex min-h-[12rem] items-center justify-center text-sm text-muted-foreground">{t("app_loading")}</div>;
+}
+
+function LazyPage({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
+}
 
 function ApplicationRoutes() {
   const location = useLocation();
@@ -59,10 +74,10 @@ function ApplicationRoutes() {
           </PublicLayout>
         }
       >
-        <Route path="/setup" element={<SetupPage />} />
-        <Route path="/login" element={!setupRequired ? <LoginPage /> : <Navigate replace to="/setup" />} />
-        <Route path="/forgot-password" element={!setupRequired ? <ForgotPasswordPage /> : <Navigate replace to="/setup" />} />
-        <Route path="/reset-password" element={!setupRequired ? <ResetPasswordPage /> : <Navigate replace to="/setup" />} />
+        <Route path="/setup" element={<LazyPage><SetupPage /></LazyPage>} />
+        <Route path="/login" element={!setupRequired ? <LazyPage><LoginPage /></LazyPage> : <Navigate replace to="/setup" />} />
+        <Route path="/forgot-password" element={!setupRequired ? <LazyPage><ForgotPasswordPage /></LazyPage> : <Navigate replace to="/setup" />} />
+        <Route path="/reset-password" element={!setupRequired ? <LazyPage><ResetPasswordPage /></LazyPage> : <Navigate replace to="/setup" />} />
       </Route>
       <Route
         element={
@@ -74,13 +89,13 @@ function ApplicationRoutes() {
           />
         }
       >
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<LazyPage><HomePage /></LazyPage>} />
         <Route path="/profile" element={<Navigate replace to="/account/profile" />} />
-        <Route path="/account/profile" element={<ProfilePage />} />
+        <Route path="/account/profile" element={<LazyPage><ProfilePage /></LazyPage>} />
         <Route element={<AdminRoute isLoading={meQuery.isLoading} user={meQuery.data} />}>
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/users" element={<UserManagementPage />} />
-          <Route path="/admin/settings" element={<SystemSettingsPage />} />
+          <Route path="/admin" element={<LazyPage><AdminPage /></LazyPage>} />
+          <Route path="/admin/users" element={<LazyPage><UserManagementPage /></LazyPage>} />
+          <Route path="/admin/settings" element={<LazyPage><SystemSettingsPage /></LazyPage>} />
         </Route>
       </Route>
     </Routes>
