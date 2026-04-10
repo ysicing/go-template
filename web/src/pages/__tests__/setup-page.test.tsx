@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -55,5 +55,33 @@ describe("SetupPage", () => {
     renderPage();
 
     expect(screen.getByDisplayValue("file:data/app.db?_pragma=foreign_keys(1)")).toBeInTheDocument();
+  });
+
+  it("validates required fields before submitting", async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("管理员用户名"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "初始化系统" }));
+
+    expect(await screen.findAllByText("请输入管理员用户名")).toHaveLength(2);
+    expect(apiMocks.installSystem).not.toHaveBeenCalled();
+  });
+
+  it("shows installing feedback while setup request is pending", async () => {
+    let resolveInstall: (() => void) | undefined;
+    apiMocks.installSystem.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveInstall = resolve;
+      })
+    );
+
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "初始化系统" }));
+
+    expect(await screen.findByRole("button", { name: "校验连接并初始化中..." })).toBeDisabled();
+
+    resolveInstall?.();
+
+    await waitFor(() => expect(apiMocks.installSystem).toHaveBeenCalledTimes(1));
   });
 });

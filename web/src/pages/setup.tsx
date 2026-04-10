@@ -99,7 +99,50 @@ function createDefaultValues(): InstallFormValues {
 }
 
 function getErrorMessage(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error) {
+    return mapSetupErrorMessage(error.message, fallbackMessage);
+  }
+
   return error instanceof Error ? error.message : fallbackMessage;
+}
+
+type SetupFieldErrors = Partial<Record<"admin_username" | "admin_email" | "admin_password" | "database_dsn" | "cache_addr", string>>;
+
+function mapSetupErrorMessage(message: string, fallbackMessage: string) {
+  switch (message) {
+    case "admin username is required":
+      return "请输入管理员用户名";
+    case "admin email is required":
+      return "请输入管理员邮箱";
+    case "admin password must be at least 8 characters":
+      return "管理员密码至少需要 8 位";
+    case "database dsn is required":
+      return "请输入数据库 DSN";
+    default:
+      return message || fallbackMessage;
+  }
+}
+
+function validateSetup(values: InstallFormValues, t: ReturnType<typeof useTranslation>["t"]) {
+  const fieldErrors: SetupFieldErrors = {};
+
+  if (!values.admin_username.trim()) {
+    fieldErrors.admin_username = t("setup_validation_admin_username_required");
+  }
+  if (!values.admin_email.trim()) {
+    fieldErrors.admin_email = t("setup_validation_admin_email_required");
+  }
+  if (values.admin_password.trim().length < 8) {
+    fieldErrors.admin_password = t("setup_validation_admin_password_length");
+  }
+  if (!values.database.dsn.trim()) {
+    fieldErrors.database_dsn = t("setup_validation_database_dsn_required");
+  }
+  if (values.cache.driver === "redis" && !values.cache.addr.trim()) {
+    fieldErrors.cache_addr = t("setup_validation_cache_addr_required");
+  }
+
+  return fieldErrors;
 }
 
 export function SetupPage() {
@@ -107,12 +150,33 @@ export function SetupPage() {
   const navigate = useNavigate();
   const [values, setValues] = useState<InstallFormValues>(() => createDefaultValues());
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<SetupFieldErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function clearFieldError(field: keyof SetupFieldErrors) {
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    const nextFieldErrors = validateSetup(values, t);
+    setFieldErrors(nextFieldErrors);
+    const firstError = Object.values(nextFieldErrors)[0];
+    if (firstError) {
+      setError(firstError);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -162,7 +226,7 @@ export function SetupPage() {
                   }))
                 }
               >
-                <SelectTrigger aria-label={t("database_driver")}>
+                <SelectTrigger aria-label={t("database_driver")} id="setup-database-driver">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -172,19 +236,28 @@ export function SetupPage() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field className="md:col-span-2" hint={t("setup_database_dsn_hint")} label={t("database_dsn")}>
+            <Field
+              className="md:col-span-2"
+              error={fieldErrors.database_dsn}
+              hint={t("setup_database_dsn_hint")}
+              htmlFor="setup-database-dsn"
+              label={t("database_dsn")}
+            >
               <Input
+                aria-invalid={Boolean(fieldErrors.database_dsn)}
+                id="setup-database-dsn"
                 placeholder={getDatabaseDSN(values.database.driver)}
                 value={values.database.dsn}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("database_dsn");
                   setValues((current) => ({
                     ...current,
                     database: {
                       ...current.database,
                       dsn: event.target.value
                     }
-                  }))
-                }
+                  }));
+                }}
               />
             </Field>
           </div>
@@ -210,7 +283,7 @@ export function SetupPage() {
                   }))
                 }
               >
-                <SelectTrigger aria-label={t("cache_driver")}>
+                <SelectTrigger aria-label={t("cache_driver")} id="setup-cache-driver">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -224,22 +297,26 @@ export function SetupPage() {
             </div>
             {values.cache.driver === "redis" ? (
               <>
-                <Field label={t("cache_addr")}>
+                <Field error={fieldErrors.cache_addr} htmlFor="setup-cache-addr" label={t("cache_addr")}>
                   <Input
+                    aria-invalid={Boolean(fieldErrors.cache_addr)}
+                    id="setup-cache-addr"
                     value={values.cache.addr}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      clearFieldError("cache_addr");
                       setValues((current) => ({
                         ...current,
                         cache: {
                           ...current.cache,
                           addr: event.target.value
                         }
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 </Field>
-                <Field label={t("cache_password")}>
+                <Field htmlFor="setup-cache-password" label={t("cache_password")}>
                   <Input
+                    id="setup-cache-password"
                     type="password"
                     value={values.cache.password}
                     onChange={(event) =>
@@ -253,8 +330,9 @@ export function SetupPage() {
                     }
                   />
                 </Field>
-                <Field label={t("cache_db")}>
+                <Field htmlFor="setup-cache-db" label={t("cache_db")}>
                   <Input
+                    id="setup-cache-db"
                     type="number"
                     value={values.cache.db}
                     onChange={(event) =>
@@ -280,26 +358,47 @@ export function SetupPage() {
           title={t("setup_admin_title")}
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label={t("admin_username")}>
+            <Field error={fieldErrors.admin_username} htmlFor="setup-admin-username" label={t("admin_username")}>
               <Input
+                aria-invalid={Boolean(fieldErrors.admin_username)}
+                id="setup-admin-username"
                 value={values.admin_username}
-                onChange={(event) => setValues((current) => ({ ...current, admin_username: event.target.value }))}
+                onChange={(event) => {
+                  clearFieldError("admin_username");
+                  setValues((current) => ({ ...current, admin_username: event.target.value }));
+                }}
               />
             </Field>
-            <Field label={t("admin_email")}>
+            <Field error={fieldErrors.admin_email} htmlFor="setup-admin-email" label={t("admin_email")}>
               <Input
+                aria-invalid={Boolean(fieldErrors.admin_email)}
+                id="setup-admin-email"
                 type="email"
                 value={values.admin_email}
-                onChange={(event) => setValues((current) => ({ ...current, admin_email: event.target.value }))}
+                onChange={(event) => {
+                  clearFieldError("admin_email");
+                  setValues((current) => ({ ...current, admin_email: event.target.value }));
+                }}
               />
             </Field>
-            <Field className="md:col-span-2" hint={t("setup_admin_password_hint")} label={t("admin_password")}>
+            <Field
+              className="md:col-span-2"
+              error={fieldErrors.admin_password}
+              hint={t("setup_admin_password_hint")}
+              htmlFor="setup-admin-password"
+              label={t("admin_password")}
+            >
               <div className="relative">
                 <Input
+                  aria-invalid={Boolean(fieldErrors.admin_password)}
                   className="pr-12"
+                  id="setup-admin-password"
                   type={showPassword ? "text" : "password"}
                   value={values.admin_password}
-                  onChange={(event) => setValues((current) => ({ ...current, admin_password: event.target.value }))}
+                  onChange={(event) => {
+                    clearFieldError("admin_password");
+                    setValues((current) => ({ ...current, admin_password: event.target.value }));
+                  }}
                 />
                 <Button
                   aria-label={showPassword ? t("setup_hide_password") : t("setup_show_password")}
@@ -324,7 +423,7 @@ export function SetupPage() {
                 <p className="text-sm text-muted-foreground">{t("setup_action_description")}</p>
               </div>
               <Button className="w-full md:w-auto" disabled={isSubmitting} type="submit">
-                {isSubmitting ? t("submitting") : t("install_now")}
+                {isSubmitting ? t("setup_installing") : t("install_now")}
               </Button>
             </div>
             {error ? <p className="text-sm text-red-500">{error}</p> : null}
@@ -371,20 +470,25 @@ function SectionCard({
 function Field({
   children,
   className,
+  error,
   hint,
+  htmlFor,
   label
 }: {
   children: React.ReactNode;
   className?: string;
+  error?: string;
   hint?: string;
+  htmlFor?: string;
   label: string;
 }) {
   return (
     <div className={className}>
       <div className="space-y-2">
-        <Label>{label}</Label>
+        <Label htmlFor={htmlFor}>{label}</Label>
         {children}
         {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
+        {error ? <p className="text-sm text-red-500">{error}</p> : null}
       </div>
     </div>
   );
