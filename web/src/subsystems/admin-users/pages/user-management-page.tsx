@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { createUser, deleteUser, disableUser, enableUser, resetUserPassword, updateUser } from "../api/users";
+import { getAdminUsersErrorMessage } from "../i18n";
 import { UserFilters } from "../components/user-filters";
 import { UserFormDialog } from "../components/user-form-dialog";
 import { UserResetPasswordDialog } from "../components/user-reset-password-dialog";
@@ -11,17 +12,6 @@ import { UserTable } from "../components/user-table";
 import { UserViewDialog } from "../components/user-view-dialog";
 import { useUsers } from "../hooks/use-users";
 import type { AdminUser, AdminUserRole, AdminUserStatus, ResetAdminUserPasswordPayload, UserFormValues } from "../types";
-
-function readErrorMessage(error: unknown, fallbackMessage: string) {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response;
-    if (response?.data?.message) {
-      return response.data.message;
-    }
-  }
-
-  return error instanceof Error ? error.message : fallbackMessage;
-}
 
 export function UserManagementPage() {
   const { t } = useTranslation();
@@ -103,7 +93,7 @@ export function UserManagementPage() {
       setSelectedUser(null);
       await query.refetch();
     } catch (error) {
-      setFormErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
+      setFormErrorMessage(getAdminUsersErrorMessage(t, error, t("admin_users_action_failed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -122,7 +112,7 @@ export function UserManagementPage() {
       }
       await query.refetch();
     } catch (error) {
-      setActionErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
+      setActionErrorMessage(getAdminUsersErrorMessage(t, error, t("admin_users_action_failed")));
     } finally {
       setPendingUserId(null);
     }
@@ -141,7 +131,7 @@ export function UserManagementPage() {
       await deleteUser(user.id);
       await query.refetch();
     } catch (error) {
-      setActionErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
+      setActionErrorMessage(getAdminUsersErrorMessage(t, error, t("admin_users_action_failed")));
     } finally {
       setPendingUserId(null);
     }
@@ -161,7 +151,7 @@ export function UserManagementPage() {
       setResetPasswordUser(null);
       setActionSuccessMessage(t("admin_users_reset_password_success", { username: resetPasswordUser.username }));
     } catch (error) {
-      setResetPasswordErrorMessage(readErrorMessage(error, t("admin_users_action_failed")));
+      setResetPasswordErrorMessage(getAdminUsersErrorMessage(t, error, t("admin_users_action_failed")));
     } finally {
       setIsResetPasswordSubmitting(false);
     }
@@ -190,7 +180,7 @@ export function UserManagementPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground">{t("admin_users_total", { count: query.data?.total ?? 0 })}</div>
-          {query.error ? <p className="text-sm text-red-500">{readErrorMessage(query.error, t("admin_users_action_failed"))}</p> : null}
+          {query.error ? <p className="text-sm text-red-500">{getAdminUsersErrorMessage(t, query.error, t("admin_users_action_failed"))}</p> : null}
           {actionErrorMessage ? <p className="text-sm text-red-500">{actionErrorMessage}</p> : null}
           {actionSuccessMessage ? <p className="text-sm text-green-600">{actionSuccessMessage}</p> : null}
           <UserTable

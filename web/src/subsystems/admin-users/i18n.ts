@@ -17,3 +17,50 @@ export function formatAdminUserLastLoginAt(t: TFunction<"translation">, language
 
   return new Date(value).toLocaleString(language === "zh-CN" ? "zh-CN" : "en-US", { hour12: false });
 }
+
+export function getAdminUsersErrorMessage(t: TFunction<"translation">, error: unknown, fallbackMessage: string) {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = (error as { response?: { data?: { code?: string; message?: string } } }).response;
+    const code = response?.data?.code;
+    if (code) {
+      const localizedMessage = mapAdminUsersErrorCode(t, code);
+      if (localizedMessage) {
+        return localizedMessage;
+      }
+    }
+    if (response?.data?.message) {
+      return response.data.message;
+    }
+  }
+
+  return error instanceof Error ? error.message : fallbackMessage;
+}
+
+function mapAdminUsersErrorCode(t: TFunction<"translation">, code: string) {
+  switch (code) {
+    case "CANNOT_DELETE_SELF":
+      return t("admin_users_error_cannot_delete_self");
+    case "CANNOT_DISABLE_SELF":
+      return t("admin_users_error_cannot_disable_self");
+    case "DUPLICATE_EMAIL":
+      return t("admin_users_error_duplicate_email");
+    case "DUPLICATE_USERNAME":
+      return t("admin_users_error_duplicate_username");
+    case "EMAIL_REQUIRED":
+      return t("admin_users_validation_email_required");
+    case "INVALID_ROLE":
+      return t("admin_users_error_invalid_role");
+    case "INVALID_STATUS":
+      return t("admin_users_error_invalid_status");
+    case "PASSWORD_CONFIRMATION_MISMATCH":
+      return t("admin_users_validation_password_mismatch");
+    case "PASSWORD_TOO_SHORT":
+      return t("admin_users_validation_password_length");
+    case "USER_NOT_FOUND":
+      return t("admin_users_error_not_found");
+    case "USERNAME_REQUIRED":
+      return t("admin_users_validation_username_required");
+    default:
+      return null;
+  }
+}

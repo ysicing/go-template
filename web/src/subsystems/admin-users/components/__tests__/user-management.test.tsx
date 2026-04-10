@@ -60,11 +60,13 @@ function renderPage() {
 describe("UserManagementPage", () => {
   let users: AdminUser[];
   let createErrorMessage: string | null;
+  let createErrorCode: string | null;
   let resetPasswordErrorMessage: string | null;
 
   beforeEach(() => {
     users = [];
     createErrorMessage = null;
+    createErrorCode = null;
     resetPasswordErrorMessage = null;
     void i18n.changeLanguage("zh-CN");
 
@@ -87,6 +89,7 @@ describe("UserManagementPage", () => {
           return Promise.reject({
             response: {
               data: {
+                code: createErrorCode,
                 message: createErrorMessage
               }
             }
@@ -274,6 +277,20 @@ describe("UserManagementPage", () => {
 
   it("shows api error when create user fails", async () => {
     createErrorMessage = "邮箱已存在";
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "新建用户" }));
+    fireEvent.change(screen.getByLabelText("用户名"), { target: { value: "new-user" } });
+    fireEvent.change(screen.getByLabelText("邮箱"), { target: { value: "duplicated@example.com" } });
+    fireEvent.change(screen.getByLabelText("初始密码"), { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+
+    expect(await screen.findByText("邮箱已存在")).toBeInTheDocument();
+  });
+
+  it("maps backend error codes to localized copy", async () => {
+    createErrorCode = "DUPLICATE_EMAIL";
+    createErrorMessage = "email already exists";
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "新建用户" }));
