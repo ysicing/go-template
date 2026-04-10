@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
 
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-import { formatAdminUserLastLoginAt, getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
-import type { AdminUser, AdminUserStatus } from "../types";
+import { formatAdminUserLastLoginAt, getAdminUserRoleLabel, getAdminUserStatusLabel } from "@/subsystems/admin-users/i18n";
+import type { AdminUser, AdminUserStatus } from "@/subsystems/admin-users/types";
 
 export interface UserTableProps {
   items: AdminUser[];

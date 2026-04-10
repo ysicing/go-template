@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { fetchSystemSettings } from "../api/settings";
-import { SettingsGroupCard } from "../components/settings-group-card";
-import type { SystemSetting } from "../types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchSystemSettings } from "@/subsystems/system-settings/api/settings";
+import { SettingsGroupCard } from "@/subsystems/system-settings/components/settings-group-card";
+import type { SystemSetting } from "@/subsystems/system-settings/types";
 
 const groupOrder = ["database", "cache", "server", "log", "default"] as const;
 

@@ -1,12 +1,12 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Modal } from "./modal";
-import type { AdminUser, ResetAdminUserPasswordPayload } from "../types";
+import type { AdminUser, ResetAdminUserPasswordPayload } from "@/subsystems/admin-users/types";
 
 export interface UserResetPasswordDialogProps {
   open: boolean;

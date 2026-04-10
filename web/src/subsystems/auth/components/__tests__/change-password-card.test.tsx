@@ -1,9 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AppProviders } from "../../../../app/providers";
-import i18n from "../../../../lib/i18n";
-import { ChangePasswordCard } from "../change-password-card";
+import { AppProviders } from "@/app/providers";
+import i18n from "@/lib/i18n";
+import { ChangePasswordCard } from "@/subsystems/auth/components/change-password-card";
 
 const apiMocks = vi.hoisted(() => ({
   changePassword: vi.fn()

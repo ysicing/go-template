@@ -1,14 +1,14 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Modal } from "./modal";
-import { getAdminUserRoleLabel, getAdminUserStatusLabel } from "../i18n";
-import type { AdminUser, UserFormValues } from "../types";
+import { getAdminUserRoleLabel, getAdminUserStatusLabel } from "@/subsystems/admin-users/i18n";
+import type { AdminUser, UserFormValues } from "@/subsystems/admin-users/types";
 
 export interface UserFormDialogProps {
   open: boolean;

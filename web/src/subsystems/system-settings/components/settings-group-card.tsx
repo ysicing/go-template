@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-import type { SystemSetting } from "../types";
+import type { SystemSetting } from "@/subsystems/system-settings/types";
 
 export interface SettingsGroupCardProps {
   title: string;

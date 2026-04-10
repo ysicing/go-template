@@ -2,8 +2,8 @@ import type { PropsWithChildren } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
-import { cn } from "../../lib/utils";
-import type { NavigationItem } from "../../shared/navigation/types";
+import { cn } from "@/lib/utils";
+import type { NavigationItem } from "@/shared/navigation/types";
 
 export interface AdminLayoutProps extends PropsWithChildren {
   title: string;

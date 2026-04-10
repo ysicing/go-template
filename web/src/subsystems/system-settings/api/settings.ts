@@ -1,6 +1,6 @@
-import { api } from "../../../lib/api";
+import { api } from "@/lib/api";
 
-import type { SystemSetting } from "../types";
+import type { SystemSetting } from "@/subsystems/system-settings/types";
 
 export async function fetchSystemSettings() {
   const response = await api.get("/system/settings");

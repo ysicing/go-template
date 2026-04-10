@@ -1,6 +1,6 @@
-import { api } from "../../../lib/api";
+import { api } from "@/lib/api";
 
-import type { AdminUser, CreateAdminUserPayload, ListUsersResponse, ResetAdminUserPasswordPayload, UpdateAdminUserPayload } from "../types";
+import type { AdminUser, CreateAdminUserPayload, ListUsersResponse, ResetAdminUserPasswordPayload, UpdateAdminUserPayload } from "@/subsystems/admin-users/types";
 
 export async function listUsers(params: URLSearchParams) {
   const response = await api.get(`/admin/users?${params.toString()}`);

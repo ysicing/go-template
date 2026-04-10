@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 
-import { Input } from "../../../components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import type { AdminUserRole, AdminUserStatus } from "../types";
+import type { AdminUserRole, AdminUserStatus } from "@/subsystems/admin-users/types";
 
 export interface UserFiltersProps {
   keyword: string;

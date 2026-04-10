@@ -2,10 +2,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AdminLayout } from "../../app/layouts/admin-layout";
-import { AppRouter } from "../../app/router";
-import { AppProviders } from "../../app/providers";
-import i18n from "../../lib/i18n";
+import { AdminLayout } from "@/app/layouts/admin-layout";
+import { AppRouter } from "@/app/router";
+import { AppProviders } from "@/app/providers";
+import i18n from "@/lib/i18n";
 
 const apiMocks = vi.hoisted(() => ({
   clearTokens: vi.fn(),

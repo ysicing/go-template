@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { createUser, deleteUser, disableUser, enableUser, resetUserPassword, updateUser } from "../api/users";
-import { getAdminUsersErrorMessage } from "../i18n";
-import { UserFilters } from "../components/user-filters";
-import { UserFormDialog } from "../components/user-form-dialog";
-import { UserResetPasswordDialog } from "../components/user-reset-password-dialog";
-import { UserTable } from "../components/user-table";
-import { UserViewDialog } from "../components/user-view-dialog";
-import { useUsers } from "../hooks/use-users";
-import type { AdminUser, AdminUserRole, AdminUserStatus, ResetAdminUserPasswordPayload, UserFormValues } from "../types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createUser, deleteUser, disableUser, enableUser, resetUserPassword, updateUser } from "@/subsystems/admin-users/api/users";
+import { getAdminUsersErrorMessage } from "@/subsystems/admin-users/i18n";
+import { UserFilters } from "@/subsystems/admin-users/components/user-filters";
+import { UserFormDialog } from "@/subsystems/admin-users/components/user-form-dialog";
+import { UserResetPasswordDialog } from "@/subsystems/admin-users/components/user-reset-password-dialog";
+import { UserTable } from "@/subsystems/admin-users/components/user-table";
+import { UserViewDialog } from "@/subsystems/admin-users/components/user-view-dialog";
+import { useUsers } from "@/subsystems/admin-users/hooks/use-users";
+import type { AdminUser, AdminUserRole, AdminUserStatus, ResetAdminUserPasswordPayload, UserFormValues } from "@/subsystems/admin-users/types";
 
 export function UserManagementPage() {
   const { t } = useTranslation();

@@ -2,10 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { AppProviders } from "../providers";
-import i18n from "../../lib/i18n";
-import { useAdminNavigation } from "../admin-navigation";
-import { useAdminRouteDefinitions } from "../admin-routes";
+import { AppProviders } from "@/app/providers";
+import i18n from "@/lib/i18n";
+import { useAdminNavigation } from "@/app/admin-navigation";
+import { useAdminRouteDefinitions } from "@/app/admin-routes";
 
 function AdminI18nProbe() {
   const navigation = useAdminNavigation();

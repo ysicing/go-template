@@ -2,13 +2,13 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AppProviders } from "../../app/providers";
-import i18n from "../../lib/i18n";
-import { AdminPage } from "../admin";
-import { HomePage } from "../home";
-import { LoginPage } from "../login";
-import { ProfilePage } from "../profile";
-import { SetupPage } from "../setup";
+import { AppProviders } from "@/app/providers";
+import i18n from "@/lib/i18n";
+import { AdminPage } from "@/pages/admin";
+import { HomePage } from "@/pages/home";
+import { LoginPage } from "@/pages/login";
+import { ProfilePage } from "@/pages/profile";
+import { SetupPage } from "@/pages/setup";
 
 const apiMocks = vi.hoisted(() => ({
   fetchCurrentUser: vi.fn(),

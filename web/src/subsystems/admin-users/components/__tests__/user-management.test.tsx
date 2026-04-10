@@ -1,10 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import i18n from "../../../../lib/i18n";
-import type { AdminUser } from "../../types";
-import { AppProviders } from "../../../../app/providers";
-import { UserManagementPage } from "../../pages/user-management-page";
+import i18n from "@/lib/i18n";
+import type { AdminUser } from "@/subsystems/admin-users/types";
+import { AppProviders } from "@/app/providers";
+import { UserManagementPage } from "@/subsystems/admin-users/pages/user-management-page";
 
 const apiMocks = vi.hoisted(() => ({
   delete: vi.fn(),

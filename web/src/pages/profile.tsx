@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { fetchCurrentUser } from "../lib/api";
-import { ChangePasswordCard } from "../subsystems/auth/components/change-password-card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchCurrentUser } from "@/lib/api";
+import { ChangePasswordCard } from "@/subsystems/auth/components/change-password-card";
 
 function ProfileSummaryCard() {
   const { t } = useTranslation();

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import type { InstallFormValues } from "../pages/setup";
+import type { InstallFormValues } from "@/pages/setup";
 
 export type UserInfo = {
   id: number;

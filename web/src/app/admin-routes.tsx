@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AdminPage } from "../pages/admin";
-import { UserManagementPage } from "../subsystems/admin-users/pages/user-management-page";
-import { SystemSettingsPage } from "../subsystems/system-settings/pages/system-settings-page";
+import { AdminPage } from "@/pages/admin";
+import { UserManagementPage } from "@/subsystems/admin-users/pages/user-management-page";
+import { SystemSettingsPage } from "@/subsystems/system-settings/pages/system-settings-page";
 
 export interface AdminRouteDefinition {
   path: string;

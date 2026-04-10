@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { listUsers } from "../api/users";
-import type { UserQueryFilters } from "../types";
+import { listUsers } from "@/subsystems/admin-users/api/users";
+import type { UserQueryFilters } from "@/subsystems/admin-users/types";
 
 export const adminUsersQueryKey = ["admin-users"] as const;
 

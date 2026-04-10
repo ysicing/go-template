@@ -1,9 +1,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AppProviders } from "../../../../app/providers";
-import i18n from "../../../../lib/i18n";
-import { SystemSettingsPage } from "../../pages/system-settings-page";
+import { AppProviders } from "@/app/providers";
+import i18n from "@/lib/i18n";
+import { SystemSettingsPage } from "@/subsystems/system-settings/pages/system-settings-page";
 
 const settingsApiMocks = vi.hoisted(() => ({
   fetchSystemSettings: vi.fn()

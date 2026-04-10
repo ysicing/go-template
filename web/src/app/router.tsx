@@ -3,17 +3,17 @@ import { Globe, LogOut, MoonStar, Palette, SunMedium } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useAdminRouteDefinitions } from "./admin-routes";
 import { useAdminNavigation } from "./admin-navigation";
 import { AdminLayout } from "./layouts/admin-layout";
-import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "../lib/api";
-import { useTheme } from "../lib/theme";
-import { HomePage } from "../pages/home";
-import { LoginPage } from "../pages/login";
-import { ProfilePage } from "../pages/profile";
-import { SetupPage } from "../pages/setup";
+import { clearTokens, fetchBuildInfo, fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api";
+import { useTheme } from "@/lib/theme";
+import { HomePage } from "@/pages/home";
+import { LoginPage } from "@/pages/login";
+import { ProfilePage } from "@/pages/profile";
+import { SetupPage } from "@/pages/setup";
 
 export function AppRouter() {
   return (
