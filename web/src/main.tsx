@@ -1,15 +1,11 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import "./locales"
+import "./index.css"
+import App from "./App"
 
-import { AppProviders } from "./app/providers";
-import { AppRouter } from "./app/router";
-import "./styles.css";
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <AppProviders>
-      <AppRouter />
-    </AppProviders>
-  </React.StrictMode>
-);
-
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

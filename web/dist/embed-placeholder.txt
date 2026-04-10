@@ -1,1 +1,1 @@
-placeholder file for go:embed on clean checkouts
+frontend assets are generated during build
