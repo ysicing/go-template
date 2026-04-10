@@ -82,7 +82,7 @@ export function SetupPage() {
     <Card className="mx-auto w-full max-w-3xl">
       <CardHeader>
         <CardTitle>{t("setup")}</CardTitle>
-        <CardDescription>类似 Gitea 的首次初始化向导</CardDescription>
+        <CardDescription>{t("setup_description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
@@ -99,22 +99,22 @@ export function SetupPage() {
               onChange={(event) => setValues({ ...values, admin_password: event.target.value })}
             />
           </Field>
-          <Field label="Database Driver">
+          <Field label={t("database_driver")}>
             <Input
               value={values.database.driver}
               onChange={(event) => setValues({ ...values, database: { ...values.database, driver: event.target.value } })}
             />
           </Field>
-          <Field className="md:col-span-2" label="Database DSN">
+          <Field className="md:col-span-2" label={t("database_dsn")}>
             <Input
               value={values.database.dsn}
               onChange={(event) => setValues({ ...values, database: { ...values.database, dsn: event.target.value } })}
             />
           </Field>
-          <Field label="Cache Driver">
+          <Field label={t("cache_driver")}>
             <Input value={values.cache.driver} onChange={(event) => setValues({ ...values, cache: { ...values.cache, driver: event.target.value } })} />
           </Field>
-          <Field label="JWT Secret">
+          <Field label={t("jwt_secret")}>
             <Input value={values.jwt.secret} onChange={(event) => setValues({ ...values, jwt: { ...values.jwt, secret: event.target.value } })} />
           </Field>
           {error ? <p className="text-sm text-red-500 md:col-span-2">{error}</p> : null}

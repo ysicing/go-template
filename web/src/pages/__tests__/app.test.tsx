@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminLayout } from "../../app/layouts/admin-layout";
 import { AppRouter } from "../../app/router";
 import { AppProviders } from "../../app/providers";
+import i18n from "../../lib/i18n";
 
 const apiMocks = vi.hoisted(() => ({
   clearTokens: vi.fn(),
@@ -51,6 +52,7 @@ describe("providers", () => {
       full_version: "master-abc1234-20260410T084512Z"
     });
     window.history.pushState({}, "", "/");
+    void i18n.changeLanguage("zh-CN");
   });
 
   it("renders children", () => {
@@ -115,7 +117,7 @@ describe("providers", () => {
       </AppProviders>
     );
 
-    expect(await screen.findByText("Loading profile...")).toBeInTheDocument();
+    expect(await screen.findByText("正在加载个人信息...")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/admin");
 
     currentUser.resolve({
@@ -125,7 +127,7 @@ describe("providers", () => {
       username: "admin"
     });
 
-    expect(await screen.findByText("Admin")).toBeInTheDocument();
+    expect(await screen.findByText("管理后台")).toBeInTheDocument();
     await waitFor(() => expect(window.location.pathname).toBe("/admin"));
   });
 
@@ -149,7 +151,7 @@ describe("providers", () => {
       </AppProviders>
     );
 
-    expect(await screen.findByRole("button", { name: /login/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "登录" })).toBeInTheDocument();
     expect(apiMocks.fetchCurrentUser).not.toHaveBeenCalled();
 
     accessTokenAvailable = true;
@@ -182,5 +184,20 @@ describe("providers", () => {
     );
 
     expect(await screen.findByText("master-abc1234-20260410T084512Z")).toBeInTheDocument();
+  });
+
+  it("renders localized auth expired message in zh-CN", async () => {
+    apiMocks.hasAccessToken.mockReturnValue(true);
+    apiMocks.fetchSetupStatus.mockResolvedValue({ setup_required: false });
+    apiMocks.fetchCurrentUser.mockRejectedValue(new Error("token expired"));
+    window.history.pushState({}, "", "/");
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>
+    );
+
+    expect(await screen.findByText("认证已过期，请重新登录。")).toBeInTheDocument();
   });
 });

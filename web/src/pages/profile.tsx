@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { fetchCurrentUser } from "../lib/api";
 import { ChangePasswordCard } from "../subsystems/auth/components/change-password-card";
 
 function ProfileSummaryCard() {
+  const { t } = useTranslation();
   const query = useQuery({
     queryKey: ["auth-me"],
     queryFn: fetchCurrentUser
@@ -13,14 +15,14 @@ function ProfileSummaryCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>当前登录用户信息</CardDescription>
+        <CardTitle>{t("profile_summary_title")}</CardTitle>
+        <CardDescription>{t("profile_summary_description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
-        {query.isLoading ? <div className="text-muted-foreground">Loading profile...</div> : null}
-        <div>Username: {query.data?.username ?? "-"}</div>
-        <div>Email: {query.data?.email ?? "-"}</div>
-        <div>Role: {query.data?.role ?? "-"}</div>
+        {query.isLoading ? <div className="text-muted-foreground">{t("profile_loading")}</div> : null}
+        <div>{t("profile_username", { value: query.data?.username ?? "-" })}</div>
+        <div>{t("profile_email", { value: query.data?.email ?? "-" })}</div>
+        <div>{t("profile_role", { value: query.data?.role ?? "-" })}</div>
       </CardContent>
     </Card>
   );

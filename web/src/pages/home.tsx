@@ -16,9 +16,8 @@ export function HomePage() {
         <CardDescription>{t("home_intro")}</CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Fiber v3 + GORM + shadcn/ui + Taskfile + Docker + GitHub Actions
+        {t("home_stack")}
       </CardContent>
     </Card>
   );
 }
-

@@ -30,7 +30,7 @@ export function LoginPage() {
     <Card className="mx-auto w-full max-w-md">
       <CardHeader>
         <CardTitle>{t("login")}</CardTitle>
-        <CardDescription>用户名或邮箱 + 密码</CardDescription>
+        <CardDescription>{t("login_description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -51,4 +51,3 @@ export function LoginPage() {
     </Card>
   );
 }
-

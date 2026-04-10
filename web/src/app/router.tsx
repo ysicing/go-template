@@ -50,7 +50,7 @@ function ApplicationRoutes() {
   });
 
   if (setupQuery.isLoading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center">{t("app_loading")}</div>;
   }
 
   if (setupRequired && location.pathname !== "/setup") {
@@ -107,7 +107,7 @@ function ApplicationRoutes() {
         </div>
       </header>
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
-        {meQuery.error ? <Card className="p-4 text-sm text-red-500">Authentication expired, please login again.</Card> : null}
+        {meQuery.error ? <Card className="p-4 text-sm text-red-500">{t("auth_expired")}</Card> : null}
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/login" element={!setupRequired ? <LoginPage /> : <Navigate replace to="/setup" />} />
@@ -134,7 +134,7 @@ function ApplicationRoutes() {
       </main>
       <footer className="border-t border-border bg-card/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
-          <span>Go Template</span>
+          <span>{t("title")}</span>
           <span>{buildInfoQuery.data?.full_version ?? "version-unavailable"}</span>
         </div>
       </footer>
@@ -175,11 +175,13 @@ function ProtectedRoute({
   isLoading: boolean;
   user?: { role: string };
 }) {
+  const { t } = useTranslation();
+
   if (!hasAccessToken()) {
     return <Navigate replace to="/login" />;
   }
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading profile...</div>;
+    return <div className="text-sm text-muted-foreground">{t("profile_loading")}</div>;
   }
   if (!user) {
     return <Navigate replace to="/login" />;
@@ -196,11 +198,13 @@ function AdminRoute({
   isLoading: boolean;
   user?: { role: string };
 }) {
+  const { t } = useTranslation();
+
   if (!hasAccessToken()) {
     return <Navigate replace to="/login" />;
   }
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading profile...</div>;
+    return <div className="text-sm text-muted-foreground">{t("profile_loading")}</div>;
   }
   if (!user) {
     return <Navigate replace to="/login" />;
