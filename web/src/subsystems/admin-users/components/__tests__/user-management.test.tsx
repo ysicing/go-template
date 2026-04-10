@@ -36,14 +36,14 @@ const baseUser: AdminUser = {
   username: "alice"
 };
 
-function buildListResponse(items: AdminUser[]) {
+function buildListResponse(items: AdminUser[], page = 1, pageSize = 10, total = items.length) {
   return {
     data: {
       data: {
         items,
-        page: 1,
-        page_size: 10,
-        total: items.length
+        page,
+        page_size: pageSize,
+        total
       }
     }
   };
@@ -324,5 +324,42 @@ describe("UserManagementPage", () => {
     );
     expect(await screen.findByText("已重置 alice 的密码")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "重置密码" })).not.toBeInTheDocument());
+  });
+
+  it("paginates user list and requests the selected page", async () => {
+    const paginatedUsers = Array.from({ length: 11 }, (_, index) => ({
+      ...baseUser,
+      email: `user${index + 1}@example.com`,
+      id: index + 1,
+      username: `user${index + 1}`
+    }));
+
+    apiMocks.get.mockImplementation(async (url: string) => {
+      if (url.startsWith("/admin/users?")) {
+        const search = url.split("?")[1] ?? "";
+        const params = new URLSearchParams(search);
+        const page = Number(params.get("page") ?? "1");
+        const pageSize = Number(params.get("page_size") ?? "10");
+        const start = (page - 1) * pageSize;
+        const items = paginatedUsers.slice(start, start + pageSize);
+
+        return buildListResponse(items, page, pageSize, paginatedUsers.length);
+      }
+
+      throw new Error(`Unhandled GET: ${url}`);
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("user1@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("user11@example.com")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
+
+    await waitFor(() =>
+      expect(apiMocks.get).toHaveBeenCalledWith(expect.stringContaining("page=2"))
+    );
+    expect(await screen.findByText("user11@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("user1@example.com")).not.toBeInTheDocument();
   });
 });

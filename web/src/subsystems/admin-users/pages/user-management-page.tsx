@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { createUser, deleteUser, disableUser, enableUser, resetUserPassword, upd
 import { getAdminUsersErrorMessage } from "@/subsystems/admin-users/i18n";
 import { UserFilters } from "@/subsystems/admin-users/components/user-filters";
 import { UserFormDialog } from "@/subsystems/admin-users/components/user-form-dialog";
+import { UserPagination } from "@/subsystems/admin-users/components/user-pagination";
 import { UserResetPasswordDialog } from "@/subsystems/admin-users/components/user-reset-password-dialog";
 import { UserTable } from "@/subsystems/admin-users/components/user-table";
 import { UserViewDialog } from "@/subsystems/admin-users/components/user-view-dialog";
@@ -15,9 +16,11 @@ import type { AdminUser, AdminUserRole, AdminUserStatus, ResetAdminUserPasswordP
 
 export function UserManagementPage() {
   const { t } = useTranslation();
+  const pageSize = 10;
   const [keyword, setKeyword] = useState("");
   const [role, setRole] = useState<AdminUserRole | "">("");
   const [status, setStatus] = useState<AdminUserStatus | "">("");
+  const [page, setPage] = useState(1);
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
@@ -30,7 +33,35 @@ export function UserManagementPage() {
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
-  const query = useUsers({ keyword, role, status, page: 1, pageSize: 10 });
+  const query = useUsers({ keyword, role, status, page, pageSize });
+
+  useEffect(() => {
+    if (!query.data) {
+      return;
+    }
+
+    const total = query.data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, pageSize, query.data?.total]);
+
+  function handleKeywordChange(value: string) {
+    setPage(1);
+    setKeyword(value);
+  }
+
+  function handleRoleChange(value: AdminUserRole | "") {
+    setPage(1);
+    setRole(value);
+  }
+
+  function handleStatusChange(value: AdminUserStatus | "") {
+    setPage(1);
+    setStatus(value);
+  }
 
   function openCreateDialog() {
     setSelectedUser(null);
@@ -165,9 +196,9 @@ export function UserManagementPage() {
             keyword={keyword}
             role={role}
             status={status}
-            onKeywordChange={setKeyword}
-            onRoleChange={setRole}
-            onStatusChange={setStatus}
+            onKeywordChange={handleKeywordChange}
+            onRoleChange={handleRoleChange}
+            onStatusChange={handleStatusChange}
           />
         </div>
         <Button onClick={openCreateDialog}>{t("admin_users_create_title")}</Button>
@@ -192,6 +223,12 @@ export function UserManagementPage() {
             onResetPassword={openResetPasswordDialog}
             onToggleStatus={handleToggleStatus}
             onView={openViewDialog}
+          />
+          <UserPagination
+            currentPage={query.data?.page ?? page}
+            pageSize={query.data?.page_size ?? pageSize}
+            total={query.data?.total ?? 0}
+            onPageChange={setPage}
           />
         </CardContent>
       </Card>
