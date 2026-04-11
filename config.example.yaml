@@ -1,0 +1,35 @@
+server:
+  addr: ":8080"
+  # trusted_proxies:
+  #   - "10.0.0.0/8"
+
+database:
+  driver: "sqlite"
+  dsn: "id.db"
+
+log:
+  level: "info"
+  format: "json"
+
+jwt:
+  secret: "change-me-in-production"
+  issuer: "auth-template"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+  remember_me_ttl: 720h
+
+security:
+  allow_insecure: false
+  # encryption_key: "32-byte-key-for-aes256-gcm"
+  # oidc_secret: "change-me-too"
+
+# Redis 可选；多副本部署时建议启用
+# redis:
+#   addr: "localhost:6379"
+#   password: ""
+#   db: 0
+
+admin:
+  username: "admin"
+  password: "admin123"
+  email: "admin@example.com"

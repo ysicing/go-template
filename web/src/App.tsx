@@ -1,16 +1,79 @@
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect } from "react"
+import axios from "axios"
 import { BrowserRouter } from "react-router-dom"
 import { Toaster } from "@/components/ui/sonner"
-import { AppProviders } from "@/app/providers"
-import { fetchCurrentUser, fetchSetupStatus, hasAccessToken } from "@/lib/api"
-import AppRouter from "@/router"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAppStore } from "@/stores/app"
 import { useAuthStore } from "@/stores/auth"
+import { useTokenRefresh } from "@/hooks/useTokenRefresh"
+import { SiteTitleController } from "@/components/SiteTitleController"
+import { userApi } from "@/api/services"
+import AppRouter from "./router"
 
-function AppInner() {
+export default function App() {
   const { themeMode, applyPrimaryColor } = useAppStore()
   const { setUser, setInitStatus } = useAuthStore()
-  const [ready, setReady] = useState(false)
+
+  // Auto-refresh access token before expiry
+  useTokenRefresh()
+
+  // Initialize user state from cookies on app start
+  useEffect(() => {
+    let cancelled = false
+
+    const initializeAuth = async () => {
+      const maxAttempts = 3
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const res = await userApi.getMe()
+          if (cancelled) {
+            return
+          }
+          if (res.data.user) {
+            setUser(res.data.user)
+          } else {
+            setInitStatus("unauthenticated")
+          }
+          return
+        } catch (err) {
+          if (cancelled) {
+            return
+          }
+
+          if (axios.isAxiosError(err)) {
+            const status = err.response?.status
+            if (status === 401 || status === 403) {
+              setInitStatus("unauthenticated")
+              return
+            }
+            if (status === 404) {
+              setInitStatus("not_found")
+              return
+            }
+            if (status !== undefined && status < 500) {
+              setInitStatus("service_unavailable")
+              return
+            }
+          }
+
+          if (attempt < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, attempt * 800))
+            continue
+          }
+
+          setInitStatus("service_unavailable")
+          return
+        }
+      }
+    }
+
+    void initializeAuth()
+
+    return () => {
+      cancelled = true
+    }
+  }, [setUser, setInitStatus])
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", themeMode === "dark")
@@ -18,72 +81,22 @@ function AppInner() {
 
   useEffect(() => {
     applyPrimaryColor()
-  }, [applyPrimaryColor])
-
-  useEffect(() => {
-    let cancelled = false
-
-    const bootstrap = async () => {
-      try {
-        const setup = await fetchSetupStatus()
-        if (cancelled) return
-        if (setup.setup_required) {
-          setInitStatus("setup_required")
-          setReady(true)
-          return
-        }
-        if (!hasAccessToken()) {
-          setInitStatus("unauthenticated")
-          setReady(true)
-          return
-        }
-        const user = await fetchCurrentUser()
-        if (cancelled) return
-        setUser(user)
-      } catch {
-        if (cancelled) return
-        setInitStatus(hasAccessToken() ? "service_unavailable" : "unauthenticated")
-      } finally {
-        if (!cancelled) {
-          setReady(true)
-        }
-      }
-    }
-
-    void bootstrap()
-    return () => {
-      cancelled = true
-    }
-  }, [setInitStatus, setUser])
-
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    )
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <BrowserRouter>
-      <Suspense
-        fallback={
+      <TooltipProvider>
+        <SiteTitleController />
+        <Suspense fallback={
           <div className="flex min-h-screen items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-        }
-      >
-        <AppRouter />
-      </Suspense>
-      <Toaster richColors position="top-right" />
+        }>
+          <AppRouter />
+        </Suspense>
+        <Toaster richColors position="top-right" />
+      </TooltipProvider>
     </BrowserRouter>
-  )
-}
-
-export default function App() {
-  return (
-    <AppProviders>
-      <AppInner />
-    </AppProviders>
   )
 }

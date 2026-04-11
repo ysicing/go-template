@@ -1,50 +1,57 @@
-version: "3"
+version: '3'
+
+vars:
+  BINARY: id
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+  GIT_COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
+  BUILD_DATE:
+    sh: date -u '+%Y-%m-%dT%H:%M:%SZ'
+  LDFLAGS: -s -w -X main.Version={{.VERSION}} -X main.GitCommit={{.GIT_COMMIT}} -X main.BuildDate={{.BUILD_DATE}}
 
 tasks:
+  default:
+    cmds:
+      - task: build
+
+  fmt:
+    desc: Format code
+    cmds:
+      - gofmt -s -w .
+      - goimports -w .
+      - gci write --skip-generated --custom-order -s standard -s default -s "prefix(github.com/ysicing/go-template)" -s blank -s dot -s alias .
+      - cd web && pnpm run lint --fix
+
+  web:
+    desc: Build frontend
+    cmds:
+      - cd web && pnpm install && pnpm run build
+
+  build:
+    desc: Build backend
+    deps: [web]
+    cmds:
+      - CGO_ENABLED=0 go build -ldflags="{{.LDFLAGS}}" -o {{.BINARY}} .
+
+  image:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.BINARY}} .
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f {{.BINARY}}
+      - rm -rf web/dist web/node_modules
+
+  run:
+    desc: Run backend (dev)
+    cmds:
+      - go run .
+
   dev:
-    cmds:
-      - task: dev:backend
-
-  dev:backend:
-    cmds:
-      - go run ./app/server
-
-  dev:web:
+    desc: Run frontend dev server
     dir: web
     cmds:
-      - pnpm install
-      - pnpm dev --host 0.0.0.0
-
-  dev:full:
-    desc: 前后端分离开发，分别启动 backend 与 web
-    cmds:
-      - echo "run 'task dev:backend' and 'task dev:web' in separate terminals"
-
-  build:web:
-    dir: web
-    cmds:
-      - pnpm install --frozen-lockfile
-      - pnpm build
-
-  docs:swagger:
-    cmds:
-      - ./hack/generate-swagger.sh
-
-  test:go:
-    cmds:
-      - go test ./...
-
-  build:go:
-    cmds:
-      - eval "$(./hack/build-metadata.sh)" && go build -ldflags "$GO_LDFLAGS" -o ./server ./app/server
-
-  docker:build:
-    cmds:
-      - eval "$(./hack/build-metadata.sh)" && docker build --build-arg VERSION="$VERSION" --build-arg COMMIT="$COMMIT" --build-arg BUILD_TIME="$BUILD_TIME" -t go-template:local .
-
-  verify:
-    cmds:
-      - task docs:swagger
-      - go test ./...
-      - task build:web
-      - eval "$(./hack/build-metadata.sh)" && go build -ldflags "$GO_LDFLAGS" ./app/server
+      - pnpm run dev

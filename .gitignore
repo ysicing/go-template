@@ -8,3 +8,9 @@ build
 server
 .DS_Store
 .superpowers
+config.yaml
+*.exe
+web/node_modules/
+web/dist/
+web/.pnpm-store/
+.worktrees/

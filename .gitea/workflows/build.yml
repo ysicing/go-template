@@ -1,0 +1,76 @@
+name: Build and Push Image
+
+on:
+  push:
+    branches: ["*"]
+    tags: ["v*"]
+  pull_request:
+    branches: [master]
+
+env:
+  REGISTRY: hub.ysicing.net
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Docker image build & push ---
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Generate image tags
+        id: tags
+        run: |
+          REGISTRY="${{ env.REGISTRY }}"
+          IMAGE="${{ env.IMAGE_NAME }}"
+          DATE=$(date +%Y%m%d)
+
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            TAGS="${REGISTRY}/${IMAGE}:${TAG}"
+
+            # For semver tags like v1.2.3, also publish v1.2, v1 and latest.
+            if [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              MAJOR="v${BASH_REMATCH[1]}"
+              MINOR="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+              TAGS="${TAGS},${REGISTRY}/${IMAGE}:${MINOR},${REGISTRY}/${IMAGE}:${MAJOR},${REGISTRY}/${IMAGE}:latest"
+            fi
+          else
+            BRANCH="${GITHUB_REF#refs/heads/}"
+            BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            SHORT_SHA=$(git rev-parse --short HEAD)
+
+            TAGS="${REGISTRY}/${IMAGE}:${BRANCH}"
+            TAGS="${TAGS},${REGISTRY}/${IMAGE}:${BRANCH}-${DATE}"
+            TAGS="${TAGS},${REGISTRY}/${IMAGE}:sha-${SHORT_SHA}"
+
+            if [[ "$BRANCH" == "master" ]]; then
+              TAGS="${TAGS},${REGISTRY}/${IMAGE}:latest"
+            fi
+          fi
+
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute build args
+        id: buildargs
+        run: |
+          echo "version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" >> "$GITHUB_OUTPUT"
+          echo "git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          pull: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.buildargs.outputs.version }}
+            GIT_COMMIT=${{ steps.buildargs.outputs.git_commit }}
+            BUILD_DATE=${{ steps.buildargs.outputs.build_date }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

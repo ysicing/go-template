@@ -1,1 +1,0 @@
-frontend assets are generated during build
