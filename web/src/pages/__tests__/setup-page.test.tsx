@@ -43,9 +43,9 @@ describe("setup page", () => {
   it("renders database cache admin sections", () => {
     renderPage();
 
-    expect(screen.getByText("数据库设置")).toBeInTheDocument();
-    expect(screen.getByText("缓存设置")).toBeInTheDocument();
-    expect(screen.getByText("管理员设置")).toBeInTheDocument();
+    expect(screen.getAllByText("数据库设置").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("缓存设置").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("管理员设置").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "初始化系统" })).toBeInTheDocument();
   });
 

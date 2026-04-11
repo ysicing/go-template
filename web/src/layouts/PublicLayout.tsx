@@ -33,7 +33,7 @@ export function PublicLayout({ buildVersion, children, errorMessage }: PublicLay
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="border-b border-border bg-card/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <Link className="text-sm font-medium" to="/login">
             {t("title")}
           </Link>
@@ -47,7 +47,7 @@ export function PublicLayout({ buildVersion, children, errorMessage }: PublicLay
           </div>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-10">
         {errorMessage ? <Card className="p-4 text-sm text-red-500">{errorMessage}</Card> : null}
         <div className="flex flex-1 flex-col">{children}</div>
       </main>
