@@ -1,18 +1,38 @@
 package app
 
-import (
-	"github.com/gofiber/fiber/v3"
-)
+import "github.com/gofiber/fiber/v3"
 
-func registerAppsModule(api fiber.Router, h *builtHandlers, jwtMW, tokenVersionMW, emailVerified, pointsLimiter fiber.Handler) {
-	registerPointsModule(api, h, jwtMW, tokenVersionMW, emailVerified, pointsLimiter)
-}
-
-func registerPointsModule(api fiber.Router, h *builtHandlers, jwtMW, tokenVersionMW, emailVerified, pointsLimiter fiber.Handler) {
-	points := api.Group("/points", jwtMW, tokenVersionMW)
-	points.Get("/", h.points.GetMyPoints)
-	points.Get("/transactions", h.points.GetTransactions)
-	points.Get("/checkin/status", h.points.GetCheckInStatus)
-	points.Post("/checkin", emailVerified, pointsLimiter, h.points.CheckIn)
-	points.Post("/spend", emailVerified, pointsLimiter, h.points.SpendPoints)
+func pointsRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{
+			Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/points", Summary: "Get point balance", Tag: "points", RequiresAuth: true},
+			Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+				return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.points.GetMyPoints}
+			},
+		},
+		{
+			Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/points/transactions", Summary: "List point transactions", Tag: "points", RequiresAuth: true},
+			Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+				return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.points.GetTransactions}
+			},
+		},
+		{
+			Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/points/checkin/status", Summary: "Get checkin status", Tag: "points", RequiresAuth: true},
+			Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+				return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.points.GetCheckInStatus}
+			},
+		},
+		{
+			Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/points/checkin", Summary: "Check in for points", Tag: "points", RequiresAuth: true},
+			Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+				return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.pointsLimiter, rt.handlers.points.CheckIn}
+			},
+		},
+		{
+			Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/points/spend", Summary: "Spend points", Tag: "points", RequiresAuth: true},
+			Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+				return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.pointsLimiter, rt.handlers.points.SpendPoints}
+			},
+		},
+	}
 }

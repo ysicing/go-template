@@ -1,119 +1,135 @@
 package app
 
-import (
-	"encoding/json"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
+import "github.com/gofiber/fiber/v3"
 
-	"github.com/gofiber/fiber/v3"
-
-	"github.com/ysicing/go-template/handler"
-	"github.com/ysicing/go-template/store"
-)
-
-func registerAuthModule(
-	api fiber.Router,
-	d *Deps,
-	h *builtHandlers,
-	jwtMW fiber.Handler,
-	tokenVersionMW fiber.Handler,
-	optionalJWT fiber.Handler,
-) {
-	authLimiter := handler.RateLimiter(handler.RateLimiterConfig{
-		Max: 20, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string { return handler.GetRealIPForRateLimit(c, "auth:") },
-		Cache:        d.Cache,
-	})
-	ts := turnstileMiddleware(d.SettingStore)
-	authGroup := api.Group("/auth", authLimiter)
-
-	authGroup.Get("/config", func(c fiber.Ctx) error {
-		payload := fiber.Map{
-			"register_enabled":           d.SettingStore.GetBool(store.SettingRegisterEnabled, true),
-			"turnstile_site_key":         d.SettingStore.Get(store.SettingTurnstileSiteKey, ""),
-			"email_verification_enabled": d.SettingStore.GetBool(store.SettingEmailVerificationEnabled, false),
-			"site_title":                 d.SettingStore.Get(store.SettingSiteTitle, ""),
-		}
-		return c.JSON(payload)
-	})
-	authGroup.Post("/register", newRegisterLimiter(d.Cache), func(c fiber.Ctx) error {
-		if !d.SettingStore.GetBool(store.SettingRegisterEnabled, true) {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "registration is disabled"})
-		}
-		return c.Next()
-	}, ts, h.auth.Register)
-	authGroup.Post("/login", ts, h.auth.Login)
-	authGroup.Post("/refresh", h.auth.Refresh)
-	authGroup.Post("/oidc-login", h.oidcLogin.LoginSubmit)
-	authGroup.Get("/oidc/consent", h.oidcLogin.ConsentContext)
-	authGroup.Post("/oidc/consent/approve", h.oidcLogin.ConsentApprove)
-	authGroup.Post("/oidc/consent/deny", h.oidcLogin.ConsentDeny)
-	authGroup.Post("/verify-email", h.email.VerifyEmail)
-	authGroup.Post("/mfa/verify", h.mfa.Verify)
-	authGroup.Post("/webauthn/begin", h.webauthn.LoginBegin)
-	authGroup.Post("/webauthn/finish", h.webauthn.LoginFinish)
-	authGroup.Post("/mfa/webauthn/begin", h.webauthn.AuthBegin)
-	authGroup.Post("/mfa/webauthn/finish", h.webauthn.AuthFinish)
-	authGroup.Get("/github", optionalJWT, h.oauth.GitHubLogin)
-	authGroup.Get("/github/callback", h.oauth.GitHubCallback)
-	authGroup.Get("/google", optionalJWT, h.oauth.GoogleLogin)
-	authGroup.Get("/google/callback", h.oauth.GoogleCallback)
-	authGroup.Post("/social/exchange", h.oauth.ExchangeCode)
-	authGroup.Post("/social/confirm-link", h.oauth.ConfirmSocialLink)
-	authGroup.Post("/logout", optionalJWT, h.auth.Logout)
-	authGroup.Post("/resend-verification", jwtMW, tokenVersionMW, h.email.ResendVerification)
+func authRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	routes := make([]managedRouteSpec, 0)
+	routes = append(routes, authPublicRouteSpecs(rt)...)
+	routes = append(routes, authOIDCRouteSpecs(rt)...)
+	routes = append(routes, authMFARouteSpecs(rt)...)
+	routes = append(routes, authSocialRouteSpecs(rt)...)
+	routes = append(routes, authAccountRouteSpecs(rt)...)
+	return routes
 }
 
-func registerGitHubCompatRoutes(app *fiber.App, h *builtHandlers, ghLimiter fiber.Handler) {
-	app.Get("/login/oauth/authorize", ghLimiter, h.ghCompat.Authorize)
-	app.Post("/login/oauth/access_token", ghLimiter, h.ghCompat.AccessToken)
-	app.Get("/api/v3/user", ghLimiter, h.ghCompat.User)
-	app.Get("/api/v3/user/emails", ghLimiter, h.ghCompat.UserEmails)
+func authPublicRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/config", Summary: "Read auth config", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.authConfigHandler}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/register", Summary: "Register local user", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.registerLimiter, rt.registerEnabledMW, rt.turnstile, rt.handlers.auth.Register}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/login", Summary: "Login with password", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.turnstile, rt.handlers.auth.Login}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/refresh", Summary: "Refresh tokens", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.auth.Refresh}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/verify-email", Summary: "Verify email token", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.email.VerifyEmail}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/logout", Summary: "Logout current session", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.optionalJWT, rt.handlers.auth.Logout}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/resend-verification", Summary: "Resend verification email", Tag: "auth", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.jwtMW, rt.tokenVersionMW, rt.handlers.email.ResendVerification}
+		}},
+	}
 }
 
-func turnstileMiddleware(settings *store.SettingStore) fiber.Handler {
-	client := &http.Client{Timeout: 3 * time.Second}
+func authOIDCRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/oidc-login", Summary: "Submit OIDC login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.LoginSubmit}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/oidc/consent", Summary: "Read OIDC consent context", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.ConsentContext}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/oidc/consent/approve", Summary: "Approve OIDC consent", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.ConsentApprove}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/oidc/consent/deny", Summary: "Deny OIDC consent", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.ConsentDeny}
+		}},
+	}
+}
 
-	return func(c fiber.Ctx) error {
-		secretKey := settings.Get(store.SettingTurnstileSecretKey, "")
-		if secretKey == "" {
-			return c.Next()
-		}
+func authMFARouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/mfa/verify", Summary: "Verify MFA code", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.mfa.Verify}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/webauthn/begin", Summary: "Begin WebAuthn login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.webauthn.LoginBegin}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/webauthn/finish", Summary: "Finish WebAuthn login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.webauthn.LoginFinish}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/mfa/webauthn/begin", Summary: "Begin MFA WebAuthn", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.webauthn.AuthBegin}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/mfa/webauthn/finish", Summary: "Finish MFA WebAuthn", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.webauthn.AuthFinish}
+		}},
+	}
+}
 
-		var body struct {
-			TurnstileToken string `json:"turnstile_token"`
-		}
-		if err := json.Unmarshal(c.Body(), &body); err != nil || body.TurnstileToken == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "turnstile verification required"})
-		}
+func authSocialRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/github", Summary: "Start GitHub login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.optionalJWT, rt.handlers.oauth.GitHubLogin}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/github/callback", Summary: "Finish GitHub login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.GitHubCallback}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/google", Summary: "Start Google login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.optionalJWT, rt.handlers.oauth.GoogleLogin}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/google/callback", Summary: "Finish Google login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.GoogleCallback}
+		}},
+	}
+}
 
-		form := url.Values{}
-		form.Set("secret", secretKey)
-		form.Set("response", body.TurnstileToken)
-		form.Set("remoteip", handler.GetRealIP(c))
-		req, err := http.NewRequestWithContext(c.Context(), http.MethodPost,
-			"https://challenges.cloudflare.com/turnstile/v0/siteverify",
-			strings.NewReader(form.Encode()))
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "turnstile verification failed"})
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+func authAccountRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/social/exchange", Summary: "Exchange social code", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.ExchangeCode}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/social/confirm-link", Summary: "Confirm social account link", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.ConfirmSocialLink}
+		}},
+	}
+}
 
-		resp, err := client.Do(req)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "turnstile verification failed"})
-		}
-		defer resp.Body.Close()
+func oauthRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/token", Summary: "OAuth token endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.handlers.clientCredentials.Token}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/introspect", Summary: "OAuth introspection endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.handlers.clientCredentials.Introspect}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/revoke", Summary: "OAuth revoke endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.handlers.clientCredentials.Revoke}
+		}},
+	}
+}
 
-		var result struct {
-			Success bool `json:"success"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || !result.Success {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "turnstile verification failed"})
-		}
-
-		return c.Next()
+func githubCompatRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/login/oauth/authorize", Summary: "GitHub compatible authorize", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.Authorize}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/login/oauth/access_token", Summary: "GitHub compatible token", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.AccessToken}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/v3/user", Summary: "GitHub compatible current user", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.User}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/v3/user/emails", Summary: "GitHub compatible user emails", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.UserEmails}
+		}},
 	}
 }

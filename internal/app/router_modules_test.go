@@ -48,8 +48,8 @@ func TestSetupRoutesRegistersTemplateEndpoints(t *testing.T) {
 	SetupRoutes(app, deps)
 
 	for _, tc := range []struct {
-		method string
-		path   string
+		method  string
+		path    string
 		want404 bool
 	}{
 		{method: http.MethodPost, path: "/api/auth/login"},

@@ -2,7 +2,6 @@ package app
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -174,50 +173,5 @@ func SetupRoutes(app *fiber.App, d *Deps) {
 	app.Use(handler.RequestIDMiddleware())
 	app.Use(handler.AuditContextMiddleware())
 
-	jwtMW := handler.JWTMiddlewareWithServiceAccounts(cfg.JWT.Secret, cfg.JWT.Issuer, nil)
-	tokenVersionMW := handler.TokenVersionMiddleware(d.UserStore, d.Cache)
-	emailVerified := handler.EmailVerifiedMiddleware(d.UserStore, d.SettingStore, d.Cache)
-	optionalJWT := handler.OptionalJWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer)
-
-	api := app.Group("/api")
-	admin := api.Group("/admin")
-
-	app.Post("/oauth/token", h.clientCredentials.Token)
-	app.Post("/oauth/introspect", h.clientCredentials.Introspect)
-	app.Post("/oauth/revoke", h.clientCredentials.Revoke)
-
-	registerAuthModule(api, d, h, jwtMW, tokenVersionMW, optionalJWT)
-	registerUserModule(api, h, jwtMW, tokenVersionMW, emailVerified, d.Cache)
-	registerAppsModule(api, h, jwtMW, tokenVersionMW, emailVerified, newPointsLimiter(d.Cache))
-	registerAdminModule(admin, h, d.UserStore, d.Cache, jwtMW, tokenVersionMW)
-	registerGitHubCompatRoutes(app, h, newGitHubCompatLimiter(d.Cache))
-}
-
-func newPointsLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
-		Max: 10, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string {
-			if uid, _ := c.Locals("user_id").(string); uid != "" {
-				return "points:" + uid
-			}
-			return handler.GetRealIPForRateLimit(c, "points:")
-		},
-		Cache: cache,
-	})
-}
-
-func newGitHubCompatLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
-		Max: 120, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string { return handler.GetRealIPForRateLimit(c, "gh_compat:") },
-		Cache:        cache,
-	})
-}
-
-func newRegisterLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
-		Max: 5, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string { return handler.GetRealIPForRateLimit(c, "register:") },
-		Cache:        cache,
-	})
+	registerManagedRoutes(app, buildManagedRouteRuntime(d, h))
 }

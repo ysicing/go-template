@@ -5,43 +5,79 @@ import (
 
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
-func registerAdminModule(admin fiber.Router, h *builtHandlers, users *store.UserStore, cache store.Cache, jwtMW, tokenVersionMW fiber.Handler) {
-	admin.Get("/stats", jwtMW, tokenVersionMW, handler.RequirePermission(users, cache, model.PermissionAdminStatsRead), h.admin.GetStats)
-	admin.Get("/login-history", jwtMW, tokenVersionMW, handler.RequirePermission(users, cache, model.PermissionAdminLoginHistoryRead), h.admin.GetLoginHistory)
-	admin.Get("/audit-logs", jwtMW, tokenVersionMW, handler.RequirePermission(users, cache, model.PermissionAdminLoginHistoryRead), h.admin.GetAuditLogs)
+func adminRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	routes := make([]managedRouteSpec, 0)
+	routes = append(routes, adminCoreRouteSpecs(rt)...)
+	routes = append(routes, adminUserRouteSpecs(rt)...)
+	routes = append(routes, adminClientRouteSpecs(rt)...)
+	routes = append(routes, adminProviderRouteSpecs(rt)...)
+	routes = append(routes, adminSettingRouteSpecs(rt)...)
+	routes = append(routes, adminPointRouteSpecs(rt)...)
+	return routes
+}
 
-	usersGroup := admin.Group("/users", jwtMW, tokenVersionMW)
-	usersGroup.Post("/", handler.RequirePermission(users, cache, model.PermissionAdminUsersWrite), h.admin.CreateUser)
-	usersGroup.Get("/", handler.RequirePermission(users, cache, model.PermissionAdminUsersRead), h.admin.ListUsers)
-	usersGroup.Get("/:id", handler.RequirePermission(users, cache, model.PermissionAdminUsersRead), h.admin.GetUser)
-	usersGroup.Put("/:id", handler.RequirePermission(users, cache, model.PermissionAdminUsersWrite), h.admin.UpdateUser)
-	usersGroup.Delete("/:id", handler.RequirePermission(users, cache, model.PermissionAdminUsersWrite), h.admin.DeleteUser)
+func adminCoreRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		adminRoute(fiber.MethodGet, "/api/admin/stats", "Get admin stats", model.PermissionAdminStatsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.GetStats }),
+		adminRoute(fiber.MethodGet, "/api/admin/login-history", "Get login history", model.PermissionAdminLoginHistoryRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.GetLoginHistory }),
+		adminRoute(fiber.MethodGet, "/api/admin/audit-logs", "Get audit logs", model.PermissionAdminLoginHistoryRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.GetAuditLogs }),
+	}
+}
 
-	clients := admin.Group("/clients", jwtMW, tokenVersionMW)
-	clients.Post("/", handler.RequirePermission(users, cache, model.PermissionAdminClientsWrite), h.oauthClient.Create)
-	clients.Get("/", handler.RequirePermission(users, cache, model.PermissionAdminClientsRead), h.oauthClient.List)
-	clients.Get("/:id", handler.RequirePermission(users, cache, model.PermissionAdminClientsRead), h.oauthClient.Get)
-	clients.Put("/:id", handler.RequirePermission(users, cache, model.PermissionAdminClientsWrite), h.oauthClient.Update)
-	clients.Delete("/:id", handler.RequirePermission(users, cache, model.PermissionAdminClientsWrite), h.oauthClient.Delete)
+func adminUserRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		adminRoute(fiber.MethodPost, "/api/admin/users", "Create user", model.PermissionAdminUsersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.CreateUser }),
+		adminRoute(fiber.MethodGet, "/api/admin/users", "List users", model.PermissionAdminUsersRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.ListUsers }),
+		adminRoute(fiber.MethodGet, "/api/admin/users/:id", "Get user", model.PermissionAdminUsersRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.GetUser }),
+		adminRoute(fiber.MethodPut, "/api/admin/users/:id", "Update user", model.PermissionAdminUsersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.UpdateUser }),
+		adminRoute(fiber.MethodDelete, "/api/admin/users/:id", "Delete user", model.PermissionAdminUsersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.DeleteUser }),
+	}
+}
 
-	providers := admin.Group("/providers", jwtMW, tokenVersionMW)
-	providers.Get("/", handler.RequirePermission(users, cache, model.PermissionAdminProvidersRead), h.adminProv.List)
-	providers.Get("/:id", handler.RequirePermission(users, cache, model.PermissionAdminProvidersRead), h.adminProv.Get)
-	providers.Post("/", handler.RequirePermission(users, cache, model.PermissionAdminProvidersWrite), h.adminProv.Create)
-	providers.Put("/:id", handler.RequirePermission(users, cache, model.PermissionAdminProvidersWrite), h.adminProv.Update)
-	providers.Delete("/:id", handler.RequirePermission(users, cache, model.PermissionAdminProvidersWrite), h.adminProv.Delete)
+func adminClientRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		adminRoute(fiber.MethodPost, "/api/admin/clients", "Create OAuth client", model.PermissionAdminClientsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Create }),
+		adminRoute(fiber.MethodGet, "/api/admin/clients", "List OAuth clients", model.PermissionAdminClientsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.List }),
+		adminRoute(fiber.MethodGet, "/api/admin/clients/:id", "Get OAuth client", model.PermissionAdminClientsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Get }),
+		adminRoute(fiber.MethodPut, "/api/admin/clients/:id", "Update OAuth client", model.PermissionAdminClientsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Update }),
+		adminRoute(fiber.MethodDelete, "/api/admin/clients/:id", "Delete OAuth client", model.PermissionAdminClientsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Delete }),
+	}
+}
 
-	settings := admin.Group("/settings", jwtMW, tokenVersionMW)
-	settings.Get("/", handler.RequirePermission(users, cache, model.PermissionAdminSettingsRead), h.adminSett.Get)
-	settings.Put("/", handler.RequirePermission(users, cache, model.PermissionAdminSettingsWrite), h.adminSett.Update)
-	settings.Post("/test-email", handler.RequirePermission(users, cache, model.PermissionAdminSettingsWrite), h.adminSett.TestEmail)
+func adminProviderRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		adminRoute(fiber.MethodGet, "/api/admin/providers", "List social providers", model.PermissionAdminProvidersRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminProv.List }),
+		adminRoute(fiber.MethodGet, "/api/admin/providers/:id", "Get social provider", model.PermissionAdminProvidersRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminProv.Get }),
+		adminRoute(fiber.MethodPost, "/api/admin/providers", "Create social provider", model.PermissionAdminProvidersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminProv.Create }),
+		adminRoute(fiber.MethodPut, "/api/admin/providers/:id", "Update social provider", model.PermissionAdminProvidersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminProv.Update }),
+		adminRoute(fiber.MethodDelete, "/api/admin/providers/:id", "Delete social provider", model.PermissionAdminProvidersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminProv.Delete }),
+	}
+}
 
-	adminPoints := admin.Group("/points", jwtMW, tokenVersionMW)
-	adminPoints.Post("/adjust", handler.RequirePermission(users, cache, model.PermissionAdminPointsWrite), h.adminPoints.AdjustPoints)
-	adminPoints.Get("/transactions", handler.RequirePermission(users, cache, model.PermissionAdminPointsRead), h.adminPoints.GetAllTransactions)
-	adminPoints.Get("/leaderboard", handler.RequirePermission(users, cache, model.PermissionAdminPointsRead), h.adminPoints.GetLeaderboard)
-	adminPoints.Get("/:user_id", handler.RequirePermission(users, cache, model.PermissionAdminPointsRead), h.adminPoints.GetUserPoints)
+func adminSettingRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		adminRoute(fiber.MethodGet, "/api/admin/settings", "Get settings", model.PermissionAdminSettingsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminSett.Get }),
+		adminRoute(fiber.MethodPut, "/api/admin/settings", "Update settings", model.PermissionAdminSettingsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminSett.Update }),
+		adminRoute(fiber.MethodPost, "/api/admin/settings/test-email", "Send test email", model.PermissionAdminSettingsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminSett.TestEmail }),
+	}
+}
+
+func adminPointRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
+	return []managedRouteSpec{
+		adminRoute(fiber.MethodPost, "/api/admin/points/adjust", "Adjust user points", model.PermissionAdminPointsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminPoints.AdjustPoints }),
+		adminRoute(fiber.MethodGet, "/api/admin/points/transactions", "List point transactions", model.PermissionAdminPointsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminPoints.GetAllTransactions }),
+		adminRoute(fiber.MethodGet, "/api/admin/points/leaderboard", "Get points leaderboard", model.PermissionAdminPointsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminPoints.GetLeaderboard }),
+		adminRoute(fiber.MethodGet, "/api/admin/points/:user_id", "Get user points", model.PermissionAdminPointsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.adminPoints.GetUserPoints }),
+	}
+}
+
+func adminRoute(method, path, summary, permission string, target func(managedRouteRuntime) fiber.Handler) managedRouteSpec {
+	return managedRouteSpec{
+		Doc: openAPIRoute{Method: method, Path: path, Summary: summary, Tag: "admin", RequiresAuth: true, Permissions: []string{permission}},
+		Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, handler.RequirePermission(rt.deps.UserStore, rt.deps.Cache, permission), target(rt)}
+		},
+	}
 }
