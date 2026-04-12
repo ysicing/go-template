@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/redis/go-redis/v9 v9.18.0
-	github.com/rs/zerolog v1.34.0
+	github.com/rs/zerolog v1.35.0
 	github.com/shirou/gopsutil/v4 v4.26.2
 	github.com/stretchr/testify v1.11.1
 	github.com/zitadel/oidc/v3 v3.45.4
