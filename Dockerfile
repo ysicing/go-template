@@ -9,7 +9,7 @@ COPY web/ .
 RUN pnpm run build
 
 # --- Backend build ---
-FROM golang:1.26.2-alpine AS builder
+FROM ysicing/god AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -31,12 +31,19 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o id .
 
 # --- Runtime ---
-FROM alpine
-RUN apk --no-cache add ca-certificates tzdata && \
-    addgroup -S app && adduser -S -G app app
-WORKDIR /app
+FROM ysicing/debian
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata gosu && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --system app && \
+    useradd --system --gid app --home-dir /data --shell /usr/sbin/nologin app && \
+    mkdir -p /app /data && \
+    chown -R app:app /app /data
+WORKDIR /data
+ENV CONFIG_PATH=/data/config.yaml
 ENV TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12"
-COPY --from=builder --chown=app:app /app/id .
-EXPOSE 8080
-USER app
-CMD ["/app/id"]
+COPY --from=builder --chown=app:app /app/id /app/id
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+VOLUME ["/data"]
+EXPOSE 3206
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

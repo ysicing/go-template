@@ -1,8 +1,13 @@
 .git
 .github
 .superpowers
+.worktrees
+.pnpm-store
+id.db
+config.yaml
 node_modules
 web/node_modules
+web/dist
+web/.pnpm-store
 coverage
 configs/config.yaml
-

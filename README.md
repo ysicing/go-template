@@ -29,6 +29,44 @@ task build
 
 默认启动后访问 `http://localhost:3206`。
 
+## Docker 运行
+
+镜像会先修正 `/data` 权限，再以非 root 用户启动应用，并将运行时数据目录固定在 `/data`：
+
+- 默认 SQLite 数据库：`/data/id.db`
+- 默认配置文件路径：`/data/config.yaml`
+- 默认监听端口：`3206`
+
+最小示例：
+
+```bash
+docker run -d \
+  --name go-template \
+  -p 3206:3206 \
+  -e JWT_SECRET='replace-with-a-long-random-secret' \
+  -v go-template-data:/data \
+  ghcr.io/ysicing/go-template:master
+```
+
+如需挂载配置文件：
+
+```bash
+docker run -d \
+  --name go-template \
+  -p 3206:3206 \
+  -e JWT_SECRET='replace-with-a-long-random-secret' \
+  -v $(pwd)/config.yaml:/data/config.yaml:ro \
+  -v go-template-data:/data \
+  ghcr.io/ysicing/go-template:master
+```
+
+说明：
+
+- 生产环境请始终显式设置 `JWT_SECRET`
+- 若使用默认 SQLite，请务必挂载 `/data`，否则容器重建后数据会丢失
+- 绑定宿主机目录到 `/data` 时，入口脚本会自动修正权限
+- 若改用 MySQL / Postgres，可通过 `/data/config.yaml` 指定数据库连接
+
 ## 模板能力
 
 - 控制台首页：`http://localhost:3206/`
