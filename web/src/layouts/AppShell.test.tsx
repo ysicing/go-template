@@ -54,6 +54,7 @@ describe("AppShell", () => {
     renderShell("/uauth/apps")
 
     expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("UAuth")
+    expect(screen.getByText("v1.0.0 · abc1234")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page")
     expect(screen.queryByRole("link", { name: "UAuth" })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument()

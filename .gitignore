@@ -10,7 +10,7 @@ server
 .superpowers
 config.yaml
 *.exe
+*.db
 web/node_modules/
-web/dist/
 web/.pnpm-store/
 .worktrees/

@@ -132,7 +132,7 @@ func initOIDCProvider(cfg *Config, deps *Deps, log *zerolog.Logger) *op.Provider
 
 func newFiberApp(cfg *Config, log *zerolog.Logger) *fiber.App {
 	app := fiber.New(fiber.Config{
-		AppName:     "xid",
+		AppName:     "go-template",
 		TrustProxy:  len(cfg.Server.TrustedProxies) > 0,
 		ProxyHeader: fiber.HeaderXForwardedFor,
 		TrustProxyConfig: fiber.TrustProxyConfig{

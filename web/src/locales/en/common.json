@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "ID Console",
+    "title": "go-template",
     "dashboard": "Control Center",
     "apps": "Applications",
     "users": "Users",
@@ -246,7 +246,7 @@
     "passwordPolicyEnabledDesc": "Require passwords to be at least 12 characters and include uppercase, lowercase, digit, and special character",
     "siteTitle": "Site Title",
     "siteTitleDesc": "Browser tab title. Leave empty to use default",
-    "siteTitlePlaceholder": "e.g. ID Console",
+    "siteTitlePlaceholder": "e.g. go-template",
     "corsOrigins": "CORS Allowed Origins",
     "corsOriginsDesc": "Comma-separated origins. Leave empty to allow all.",
     "corsOriginsPlaceholder": "https://example.com, https://app.example.com",
@@ -259,7 +259,7 @@
     "webauthnRpId": "RP ID",
     "webauthnRpIdPlaceholder": "example.com",
     "webauthnRpDisplayName": "RP Display Name",
-    "webauthnRpDisplayNamePlaceholder": "ID Service",
+    "webauthnRpDisplayNamePlaceholder": "go-template",
     "webauthnRpOrigins": "RP Origins",
     "webauthnRpOriginsPlaceholder": "https://example.com, https://app.example.com",
     "webauthnRpOriginsDesc": "Comma-separated allowed origins",

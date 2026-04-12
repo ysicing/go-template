@@ -37,7 +37,7 @@ func InitDB(driver, dsn, logLevel string) (*gorm.DB, error) {
 
 	// Register Prometheus plugin for database metrics
 	promConfig := prometheus.Config{
-		DBName:          "xid",
+		DBName:          "go-template",
 		RefreshInterval: 15,
 	}
 

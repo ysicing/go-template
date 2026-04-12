@@ -1,0 +1,1 @@
+This placeholder keeps `web/dist` present for `//go:embed` during clean checkouts.

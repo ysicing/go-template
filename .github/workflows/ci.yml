@@ -44,15 +44,15 @@ jobs:
           echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
           echo "BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
 
-      - name: Run Go tests
-        run: go test ./...
-
       - name: Build Web
         working-directory: web
         run: |
           pnpm install --frozen-lockfile
           pnpm test
           pnpm build
+
+      - name: Run Go tests
+        run: go test ./...
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v4

@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next"
 
 import { authApi, versionApi } from "@/api/services"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { BuildVersion } from "@/components/BuildVersion"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { getBuildVersionDetails, getBuildVersionLabel } from "@/lib/build-version"
 import type { ConsoleModuleID } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { getConsoleCurrentModule, getConsoleModuleEntry, getConsoleModules, getConsoleSidebarSections, isConsoleNavItemActive } from "@/lib/navigation"
@@ -33,6 +35,7 @@ export default function AppShell() {
   const currentModule = getConsoleCurrentModule(location.pathname, user)
   const sidebarSections = getConsoleSidebarSections(currentModule.id, user)
   const currentModuleLabel = t(currentModule.labelKey)
+  const versionLabel = getBuildVersionLabel(versionInfo)
   const activeNavItem = sidebarSections
     .flatMap((section) => section.items)
     .find((item) => isConsoleNavItemActive(item, location.pathname))
@@ -72,19 +75,18 @@ export default function AppShell() {
         >
           <div className="flex h-14 items-center justify-between border-b px-4">
             <span className="font-bold text-lg tracking-tight">
-              {collapsed ? "ID" : t("app.title")}
+              {collapsed ? "GT" : t("app.title")}
             </span>
-            {!collapsed && versionInfo.git_commit && (
+            {!collapsed && versionLabel && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <span className="cursor-help text-[10px] text-muted-foreground">
-                    {versionInfo.git_commit.slice(0, 7)}
-                  </span>
+                  <BuildVersion info={versionInfo} className="cursor-help text-[10px] text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent side="right">
                   <div className="space-y-0.5 text-xs">
-                    <div>{versionInfo.build_date}</div>
-                    <div>Commit: {versionInfo.git_commit}</div>
+                    {getBuildVersionDetails(versionInfo).map((detail) => (
+                      <div key={detail}>{detail}</div>
+                    ))}
                   </div>
                 </TooltipContent>
               </Tooltip>

@@ -58,6 +58,7 @@ describe("LoginPage", () => {
         },
       },
     })
+    versionGetMock.mockResolvedValue({ data: { version: "v1.0.0", git_commit: "abc1234def5678", build_date: "2026-04-12T10:00:00Z" } })
 
     render(
       <MemoryRouter initialEntries={["/login?id=req-1"]}>
@@ -67,6 +68,7 @@ describe("LoginPage", () => {
 
     expect(await screen.findByText("Acme Cloud")).toBeInTheDocument()
     expect(screen.getByText("Secure access for Acme employees")).toBeInTheDocument()
+    expect(screen.getByText("v1.0.0 · abc1234")).toBeInTheDocument()
   })
 
   it("redirects oidc consent flows to consent page", async () => {

@@ -49,15 +49,15 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      - name: Run Go tests
-        run: go test ./...
-
       - name: Build Web
         working-directory: web
         run: |
           pnpm install --frozen-lockfile
           pnpm test
           pnpm build
+
+      - name: Run Go tests
+        run: go test ./...
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v4

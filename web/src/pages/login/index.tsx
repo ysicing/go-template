@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { KeyRound, Loader2, Fingerprint } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { BuildVersion } from "@/components/BuildVersion"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { authApi, versionApi } from "@/api/services"
 import { getErrorMessage } from "@/api/client"
+import { getBuildVersionLabel } from "@/lib/build-version"
 import { useAuthStore, type User } from "@/stores/auth"
 import { useAppStore } from "@/stores/app"
 import { redirectToSameOrigin } from "@/lib/navigation"
@@ -34,7 +36,7 @@ export default function LoginPage() {
   const [turnstileSiteKey, setTurnstileSiteKey] = useState("")
   const [turnstileToken, setTurnstileToken] = useState("")
   const [rememberMe, setRememberMe] = useState(true)
-  const [versionInfo, setVersionInfo] = useState({ git_commit: "", build_date: "" })
+  const [versionInfo, setVersionInfo] = useState({ version: "", git_commit: "", build_date: "" })
   const [branding, setBranding] = useState<null | {
     display_name?: string
     headline?: string
@@ -72,6 +74,7 @@ export default function LoginPage() {
   }, [oidcId])
 
   const brandStyle = branding?.primary_color ? { backgroundColor: branding.primary_color, borderColor: branding.primary_color } : undefined
+  const versionLabel = getBuildVersionLabel(versionInfo)
 
   const renderTurnstile = useCallback(() => {
     if (!turnstileSiteKey || !turnstileRef.current || !window.turnstile) return
@@ -283,9 +286,9 @@ export default function LoginPage() {
       </Card>
       </div>
       {/* Footer with version info */}
-      {versionInfo.git_commit && (
+      {versionLabel && (
         <footer className="py-4 text-center text-xs text-muted-foreground">
-          {versionInfo.build_date} · {versionInfo.git_commit.slice(0, 7)}
+          <BuildVersion info={versionInfo} className="block" />
         </footer>
       )}
     </div>
