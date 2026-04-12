@@ -5,32 +5,57 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    groups:
+      go-version-updates:
+        patterns:
+          - "*"
+      go-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore(deps)"
     labels:
       - dependencies
       - go
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 1
 
   - package-ecosystem: npm
     directory: /web
     schedule:
       interval: weekly
       day: monday
+    groups:
+      web-version-updates:
+        patterns:
+          - "*"
+      web-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore(deps)"
     labels:
       - dependencies
       - javascript
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 1
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    groups:
+      github-actions-version-updates:
+        patterns:
+          - "*"
+      github-actions-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
     commit-message:
       prefix: "chore(deps)"
     labels:
       - dependencies
       - ci
+    open-pull-requests-limit: 1
