@@ -29,6 +29,7 @@ func NewAdminSettingHandler(settings *store.SettingStore, audit *store.AuditLogS
 func (h *AdminSettingHandler) Get(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"register_enabled":           h.settings.GetBool(store.SettingRegisterEnabled, true),
+		"password_policy_enabled":    h.settings.GetBool(store.SettingPasswordPolicyEnabled, false),
 		"site_title":                 h.settings.Get(store.SettingSiteTitle, ""),
 		"cors_origins":               h.settings.Get(store.SettingCORSOrigins, ""),
 		"webauthn_rp_id":             h.settings.Get(store.SettingWebAuthnRPID, ""),
@@ -164,6 +165,7 @@ func (h *AdminSettingHandler) TestEmail(c fiber.Ctx) error {
 func (h *AdminSettingHandler) Update(c fiber.Ctx) error {
 	var req struct {
 		RegisterEnabled          *bool   `json:"register_enabled"`
+		PasswordPolicyEnabled    *bool   `json:"password_policy_enabled"`
 		SiteTitle                *string `json:"site_title"`
 		CORSOrigins              *string `json:"cors_origins"`
 		WebAuthnRPID             *string `json:"webauthn_rp_id"`
@@ -197,6 +199,7 @@ func (h *AdminSettingHandler) Update(c fiber.Ctx) error {
 
 	// Boolean settings
 	setBoolSetting(ctx, h.settings, store.SettingRegisterEnabled, req.RegisterEnabled)
+	setBoolSetting(ctx, h.settings, store.SettingPasswordPolicyEnabled, req.PasswordPolicyEnabled)
 	setBoolSetting(ctx, h.settings, store.SettingSMTPTLS, req.SMTPTLS)
 	setBoolSetting(ctx, h.settings, store.SettingEmailVerificationEnabled, req.EmailVerificationEnabled)
 	setBoolSetting(ctx, h.settings, store.SettingInviteRewardEnabled, req.InviteRewardEnabled)

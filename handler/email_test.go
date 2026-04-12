@@ -534,6 +534,57 @@ func TestRegister_WithoutInviteCode_StillSucceeds(t *testing.T) {
 	}
 }
 
+func TestRegister_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
+	db := setupTestDB(t)
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("db handle: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+
+	users := store.NewUserStore(db)
+	cache := store.NewMemoryCache()
+	settings := store.NewSettingStore(db, cache)
+	audit := store.NewAuditLogStore(db)
+	refreshTokens := store.NewAPIRefreshTokenStore(db)
+
+	authH := NewAuthHandler(AuthDeps{
+		Users:         users,
+		RefreshTokens: refreshTokens,
+		Audit:         audit,
+		Cache:         cache,
+		Settings:      settings,
+		TokenConfig: TokenConfig{
+			Secret:        "test-secret",
+			Issuer:        "test-issuer",
+			AccessTTL:     time.Hour,
+			RefreshTTL:    24 * time.Hour,
+			RememberMeTTL: 30 * 24 * time.Hour,
+		},
+	})
+
+	app := fiber.New()
+	app.Post("/register", authH.Register)
+
+	body, _ := json.Marshal(map[string]string{
+		"username": "weakpassuser",
+		"email":    "weak@example.com",
+		"password": "weak",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusCreated {
+		respBody, _ := readBody(resp)
+		t.Fatalf("expected 201, got %d: %s", resp.StatusCode, string(respBody))
+	}
+}
+
 func TestVerifyEmail_InviteRewardGrantedWhenIPsDiffer(t *testing.T) {
 	defer trustAll(t)()
 

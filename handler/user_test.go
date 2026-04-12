@@ -29,6 +29,7 @@ func setupUserHandler(t *testing.T) (*UserHandler, *store.UserStore, *store.APIR
 	audit := store.NewAuditLogStore(db)
 	consentGrants := store.NewOAuthConsentGrantStore(db)
 	clients := store.NewOAuthClientStore(db)
+	settings := store.NewSettingStore(db, cache)
 	user := createLocalUser(t, db, "profile-user", "profile-user@example.com", "Password123!abcd")
 
 	h := NewUserHandler(UserDeps{
@@ -39,6 +40,7 @@ func setupUserHandler(t *testing.T) (*UserHandler, *store.UserStore, *store.APIR
 		ConsentGrants:   consentGrants,
 		Clients:         clients,
 		Cache:           cache,
+		Settings:        settings,
 	})
 	return h, users, refreshTokens, audit, consentGrants, clients, user, db
 }
@@ -131,6 +133,27 @@ func TestUserHandler_SetPassword_WritesAuditLog(t *testing.T) {
 	}
 
 	assertUserAuditLogByAction(t, db, user.ID, model.AuditPasswordSet, "user")
+}
+
+func TestUserHandler_SetPassword_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
+	h, users, _, _, _, _, user, _ := setupUserHandler(t)
+	app := newUserTestApp(t, h, user.ID)
+
+	user.PasswordHash = ""
+	if err := users.Update(context.Background(), user); err != nil {
+		t.Fatalf("clear password: %v", err)
+	}
+
+	payload, _ := json.Marshal(map[string]string{"password": "weak"})
+	req := httptest.NewRequest(http.MethodPost, "/api/users/me/set-password", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
 }
 
 func TestUserHandler_ChangePassword_BumpsTokenVersionAndClearsSessions(t *testing.T) {

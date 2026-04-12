@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"io"
 	"testing"
 
@@ -27,7 +26,7 @@ func setupUserStoreTest(t *testing.T) *store.UserStore {
 	return store.NewUserStore(db)
 }
 
-func TestSeedAdmin_RejectsWeakPassword(t *testing.T) {
+func TestSeedAdmin_AllowsWeakPasswordByDefault(t *testing.T) {
 	users := setupUserStoreTest(t)
 	log := zerolog.New(io.Discard)
 
@@ -37,9 +36,12 @@ func TestSeedAdmin_RejectsWeakPassword(t *testing.T) {
 		Email:    "admin@example.com",
 	})
 
-	_, err := users.GetByUsername(context.Background(), "admin")
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		t.Fatalf("expected admin not created for weak password, got err=%v", err)
+	user, err := users.GetByUsername(context.Background(), "admin")
+	if err != nil {
+		t.Fatalf("expected admin to be created, got err=%v", err)
+	}
+	if !user.CheckPassword("weak") {
+		t.Fatal("expected seeded admin password to match configured password")
 	}
 }
 

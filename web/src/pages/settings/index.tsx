@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [bootLoading, setBootLoading] = useState(true)
   const [errorKind, setErrorKind] = useState<ApiErrorKind | null>(null)
   const [registerEnabled, setRegisterEnabled] = useState(true)
+  const [passwordPolicyEnabled, setPasswordPolicyEnabled] = useState(false)
   const [siteTitle, setSiteTitle] = useState("")
   const [corsOrigins, setCorsOrigins] = useState("")
   const [webauthnRpId, setWebauthnRpId] = useState("")
@@ -49,6 +50,7 @@ export default function SettingsPage() {
     setErrorKind(null)
     adminSettingsApi.get().then((res) => {
       setRegisterEnabled(res.data.register_enabled ?? true)
+      setPasswordPolicyEnabled(res.data.password_policy_enabled ?? false)
       setSiteTitle(res.data.site_title ?? "")
       setCorsOrigins(res.data.cors_origins ?? "")
       setWebauthnRpId(res.data.webauthn_rp_id ?? "")
@@ -79,6 +81,7 @@ export default function SettingsPage() {
     try {
       const payload: Record<string, unknown> = {
         register_enabled: registerEnabled,
+        password_policy_enabled: passwordPolicyEnabled,
         site_title: siteTitle,
         cors_origins: corsOrigins,
         webauthn_rp_id: webauthnRpId,
@@ -164,6 +167,14 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">{t("settings.registerEnabledDesc")}</p>
                 </div>
                 <Switch checked={registerEnabled} onCheckedChange={setRegisterEnabled} />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>{t("settings.passwordPolicyEnabled")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("settings.passwordPolicyEnabledDesc")}</p>
+                </div>
+                <Switch checked={passwordPolicyEnabled} onCheckedChange={setPasswordPolicyEnabled} />
               </div>
               <Separator />
               <div className="space-y-2">

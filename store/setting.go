@@ -13,12 +13,13 @@ import (
 
 // Well-known setting keys.
 const (
-	SettingRegisterEnabled   = "register_enabled"
-	SettingSiteTitle         = "site_title"
-	SettingCORSOrigins       = "cors_origins"
-	SettingWebAuthnRPID      = "webauthn_rp_id"
-	SettingWebAuthnRPDisplay = "webauthn_rp_display_name"
-	SettingWebAuthnRPOrigins = "webauthn_rp_origins"
+	SettingRegisterEnabled       = "register_enabled"
+	SettingPasswordPolicyEnabled = "password_policy_enabled"
+	SettingSiteTitle             = "site_title"
+	SettingCORSOrigins           = "cors_origins"
+	SettingWebAuthnRPID          = "webauthn_rp_id"
+	SettingWebAuthnRPDisplay     = "webauthn_rp_display_name"
+	SettingWebAuthnRPOrigins     = "webauthn_rp_origins"
 
 	SettingTurnstileSiteKey   = "turnstile_site_key"
 	SettingTurnstileSecretKey = "turnstile_secret_key"

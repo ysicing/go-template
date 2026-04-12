@@ -69,7 +69,7 @@ type AdminSeedConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Addr: ":8080",
+			Addr: ":3206",
 		},
 		Database: DatabaseConfig{
 			Driver: "sqlite",
@@ -102,13 +102,10 @@ func LoadConfig() (*Config, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return cfg, nil
+		if !os.IsNotExist(err) {
+			return nil, err
 		}
-		return nil, err
-	}
-
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	} else if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
 	}
 
@@ -146,6 +143,11 @@ func LoadConfig() (*Config, error) {
 	}
 	if v := os.Getenv("OIDC_SECRET"); v != "" {
 		cfg.Security.OIDCSecret = v
+	}
+	if v := os.Getenv("SECURITY_ALLOW_INSECURE"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Security.AllowInsecure = b
+		}
 	}
 	if v := os.Getenv("ADMIN_USERNAME"); v != "" {
 		cfg.Admin.Username = v

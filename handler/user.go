@@ -234,8 +234,10 @@ func (h *UserHandler) ChangePassword(c fiber.Ctx) error {
 	if user.CheckPassword(req.NewPassword) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "new password must be different from current password"})
 	}
-	if err := model.ValidatePasswordStrength(req.NewPassword); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	if shouldEnforcePasswordPolicy(h.settings) {
+		if err := model.ValidatePasswordStrength(req.NewPassword); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
 	reused, err := h.passwordHistory.IsRecentlyUsed(c.Context(), userID, req.NewPassword, historyKeep)
@@ -501,8 +503,10 @@ func (h *UserHandler) SetPassword(c fiber.Ctx) error {
 	if req.Password == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "password is required"})
 	}
-	if err := model.ValidatePasswordStrength(req.Password); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	if shouldEnforcePasswordPolicy(h.settings) {
+		if err := model.ValidatePasswordStrength(req.Password); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
 	if err := user.SetPassword(req.Password); err != nil {

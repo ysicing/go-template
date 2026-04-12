@@ -47,6 +47,8 @@ tasks:
 
   run:
     desc: Run backend (dev)
+    env:
+      SECURITY_ALLOW_INSECURE: '{{default "true" .SECURITY_ALLOW_INSECURE}}'
     cmds:
       - go run .
 

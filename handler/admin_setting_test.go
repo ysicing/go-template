@@ -58,6 +58,9 @@ func TestAdminSettingGet_IncludesSiteTitle(t *testing.T) {
 	if got, _ := body["site_title"].(string); got != "Acme Console" {
 		t.Fatalf("expected site_title %q, got %q", "Acme Console", got)
 	}
+	if got, ok := body["password_policy_enabled"].(bool); !ok || got {
+		t.Fatalf("expected password_policy_enabled false by default, got %#v", body["password_policy_enabled"])
+	}
 	if _, exists := body["telegram_auto_register_enabled"]; exists {
 		t.Fatal("expected telegram_auto_register_enabled to be removed")
 	}
@@ -97,6 +100,37 @@ func TestAdminSettingUpdate_UpdatesSiteTitle(t *testing.T) {
 	}
 
 	assertAdminSettingAuditLog(t, db, "admin-user", model.AuditSettingUpdate, "setting")
+}
+
+func TestAdminSettingUpdate_UpdatesPasswordPolicyEnabled(t *testing.T) {
+	db := setupTestDB(t)
+	cache := store.NewMemoryCache()
+	settings := store.NewSettingStore(db, cache)
+	audit := store.NewAuditLogStore(db)
+	h := NewAdminSettingHandler(settings, audit, nil)
+
+	app := fiber.New()
+	app.Use(RequestIDMiddleware())
+	app.Use(AuditContextMiddleware())
+	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
+		c.Locals("user_id", "admin-user")
+		return h.Update(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/admin/settings", strings.NewReader(`{"password_policy_enabled":true}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	if got := settings.GetBool(store.SettingPasswordPolicyEnabled, false); !got {
+		t.Fatal("expected password policy setting to be enabled")
+	}
 }
 
 func TestAdminSettingTestEmail_SendsToProvidedRecipient(t *testing.T) {

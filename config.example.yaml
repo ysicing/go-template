@@ -1,5 +1,5 @@
 server:
-  addr: ":8080"
+  addr: ":3206"
   # trusted_proxies:
   #   - "10.0.0.0/8"
 

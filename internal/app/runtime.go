@@ -35,10 +35,6 @@ func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedCon
 		return
 	}
 	password := cfg.Password
-	if err := model.ValidatePasswordStrength(password); err != nil {
-		log.Error().Err(err).Str("username", cfg.Username).Msg("admin seed password does not meet policy, seed aborted")
-		return
-	}
 	user := &model.User{
 		Username: cfg.Username, Email: cfg.Email, IsAdmin: true, Provider: "local", ProviderID: cfg.Username,
 	}

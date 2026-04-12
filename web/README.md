@@ -15,7 +15,7 @@ pnpm build
 ## 本地开发
 
 - `pnpm dev` 在 `http://localhost:3000` 启动前端
-- `/api` 代理到 `http://localhost:8080`
+- `/api` 代理到 `http://localhost:3206`
 - `task build` 会将 `web/dist` 嵌入最终二进制
 
 ## 当前模板前端范围

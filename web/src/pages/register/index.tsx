@@ -142,7 +142,6 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={12}
               />
               <p className="text-xs text-muted-foreground">{t("register.passwordHint")}</p>
             </div>

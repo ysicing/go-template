@@ -200,9 +200,10 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 		}
 	}
 
-	// Password policy check.
-	if err := model.ValidatePasswordStrength(req.Password); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	if shouldEnforcePasswordPolicy(h.settings) {
+		if err := model.ValidatePasswordStrength(req.Password); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
 	var invitedByUserID string

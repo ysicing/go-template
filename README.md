@@ -27,19 +27,19 @@ task build
 ./id
 ```
 
-默认启动后访问 `http://localhost:8080`。
+默认启动后访问 `http://localhost:3206`。
 
 ## 模板能力
 
-- 控制台首页：`http://localhost:8080/`
-- API Base：`http://localhost:8080/api`
-- OIDC Discovery：`http://localhost:8080/.well-known/openid-configuration`
-- Authorization：`http://localhost:8080/authorize`
-- Token：`http://localhost:8080/oauth/token`
-- UserInfo：`http://localhost:8080/oauth/userinfo`
-- JWKS：`http://localhost:8080/oauth/keys`
-- GitHub OAuth Authorize：`http://localhost:8080/login/oauth/authorize`
-- GitHub OAuth Token：`http://localhost:8080/login/oauth/access_token`
+- 控制台首页：`http://localhost:3206/`
+- API Base：`http://localhost:3206/api`
+- OIDC Discovery：`http://localhost:3206/.well-known/openid-configuration`
+- Authorization：`http://localhost:3206/authorize`
+- Token：`http://localhost:3206/oauth/token`
+- UserInfo：`http://localhost:3206/oauth/userinfo`
+- JWKS：`http://localhost:3206/oauth/keys`
+- GitHub OAuth Authorize：`http://localhost:3206/login/oauth/authorize`
+- GitHub OAuth Token：`http://localhost:3206/login/oauth/access_token`
 
 ## 核心配置
 
@@ -69,6 +69,8 @@ task fmt
 go test ./...
 cd web && pnpm test
 ```
+
+`task run` 默认按本地开发模式启动：`Taskfile.yml` 会在未显式设置 `SECURITY_ALLOW_INSECURE` 时默认注入 `true`，便于在没有 `config.yaml` 的情况下直接运行。生产环境请显式配置 `jwt.secret`，并保持 `security.allow_insecure: false`。
 
 ## 文档
 
