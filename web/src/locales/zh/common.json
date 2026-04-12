@@ -25,6 +25,7 @@
     "admin": "管理后台"
   },
   "nav": {
+    "subsystem": "子系统",
     "modules": {
       "home": "首页",
       "uauth": "UAuth",

@@ -7,8 +7,10 @@ import { authApi, versionApi } from "@/api/services"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import type { ConsoleModuleID } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { getConsoleCurrentModule, getConsoleModuleEntry, getConsoleModules, getConsoleSidebarSections, isConsoleNavItemActive } from "@/lib/navigation"
 import { useAppStore } from "@/stores/app"
@@ -30,6 +32,18 @@ export default function AppShell() {
   const modules = getConsoleModules(user)
   const currentModule = getConsoleCurrentModule(location.pathname, user)
   const sidebarSections = getConsoleSidebarSections(currentModule.id, user)
+  const currentModuleLabel = t(currentModule.labelKey)
+  const activeNavItem = sidebarSections
+    .flatMap((section) => section.items)
+    .find((item) => isConsoleNavItemActive(item, location.pathname))
+
+  const handleModuleChange = (moduleID: string) => {
+    const target = getConsoleModuleEntry(moduleID as ConsoleModuleID, user)
+    if (!target || target === location.pathname) {
+      return
+    }
+    navigate(target)
+  }
 
   const handleLogout = async () => {
     try {
@@ -75,6 +89,28 @@ export default function AppShell() {
                 </TooltipContent>
               </Tooltip>
             )}
+          </div>
+
+          <div className="border-b p-2">
+            <Select value={currentModule.id} onValueChange={handleModuleChange}>
+              <SelectTrigger
+                aria-label={t("nav.subsystem")}
+                className={cn("w-full justify-between border-0 bg-muted/50 shadow-none", collapsed && "px-2")}
+              >
+                {collapsed ? (
+                  <span className="truncate text-xs font-medium">{currentModuleLabel}</span>
+                ) : (
+                  <SelectValue placeholder={t("nav.subsystem")} />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                {modules.map((module) => (
+                  <SelectItem key={module.id} value={module.id}>
+                    {t(module.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <nav className="flex-1 p-2">
@@ -160,27 +196,12 @@ export default function AppShell() {
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <header className="flex h-14 items-center justify-between border-b bg-card px-6">
-            <nav className="flex items-center gap-1">
-              {modules.map((module) => {
-                const active = module.id === currentModule.id
-                const target = getConsoleModuleEntry(module.id, user) ?? module.to
-                return (
-                  <Link
-                    key={module.id}
-                    to={target}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                    )}
-                  >
-                    {t(module.labelKey)}
-                  </Link>
-                )
-              })}
-            </nav>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{currentModuleLabel}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {activeNavItem ? t(activeNavItem.labelKey) : currentModuleLabel}
+              </p>
+            </div>
 
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" onClick={toggleLang}>

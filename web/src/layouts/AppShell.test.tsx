@@ -53,8 +53,9 @@ describe("AppShell", () => {
 
     renderShell("/uauth/apps")
 
-    expect(await screen.findByRole("link", { name: "UAuth" })).toHaveAttribute("aria-current", "page")
+    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("UAuth")
     expect(screen.getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page")
+    expect(screen.queryByRole("link", { name: "UAuth" })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument()
   })
 
@@ -73,7 +74,7 @@ describe("AppShell", () => {
 
     renderShell("/account/profile")
 
-    expect(await screen.findByRole("link", { name: "Account" })).toHaveAttribute("aria-current", "page")
+    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("Account")
     expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute("aria-current", "page")
     expect(screen.getByRole("link", { name: "Points Center" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Tools" })).not.toBeInTheDocument()
@@ -97,7 +98,8 @@ describe("AppShell", () => {
 
     renderShell("/admin/tools/points")
 
-    expect(await screen.findByRole("link", { name: "Admin" })).toBeInTheDocument()
+    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("Admin")
+    expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument()
     expect(screen.getAllByText("Tools").length).toBeGreaterThan(0)
     expect(screen.getByRole("link", { name: "Points Management" })).toHaveAttribute("aria-current", "page")
     expect(screen.queryByRole("link", { name: "Quote Moderation" })).not.toBeInTheDocument()

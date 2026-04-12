@@ -25,6 +25,7 @@
     "admin": "Admin"
   },
   "nav": {
+    "subsystem": "Subsystem",
     "modules": {
       "home": "Home",
       "uauth": "UAuth",
