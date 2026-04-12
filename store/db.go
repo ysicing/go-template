@@ -1,11 +1,13 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -63,6 +65,25 @@ func InitDB(driver, dsn, logLevel string) (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+func VerifySQLiteWritable(db *gorm.DB) error {
+	if db == nil || db.Dialector.Name() != "sqlite" {
+		return nil
+	}
+
+	probeID := "__write_probe__" + uuid.NewString()
+	rollbackErr := errors.New("sqlite write probe rollback")
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("INSERT INTO migrations (id) VALUES (?)", probeID).Error; err != nil {
+			return err
+		}
+		return rollbackErr
+	})
+	if err == nil || errors.Is(err, rollbackErr) {
+		return nil
+	}
+	return err
 }
 
 // IsUniqueViolation checks if an error is a database unique constraint violation.

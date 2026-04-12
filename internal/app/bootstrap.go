@@ -34,6 +34,9 @@ func initDBAndCache(ctx context.Context, cfg *Config, log *zerolog.Logger) (*gor
 	if err := model.Migrate(db); err != nil {
 		log.Fatal().Err(err).Msg("migrate")
 	}
+	if err := store.VerifySQLiteWritable(db); err != nil {
+		log.Fatal().Err(err).Msg("sqlite database is not writable; check database.dsn path permissions")
+	}
 
 	cache := initCache(ctx, cfg, log)
 	return db, cache

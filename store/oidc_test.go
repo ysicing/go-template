@@ -25,7 +25,7 @@ func newTestOIDCStorage(t *testing.T) *OIDCStorage {
 	}
 	cache := NewMemoryCache()
 	t.Cleanup(func() { _ = cache.Close() })
-	s, err := NewOIDCStorage(context.Background(), db, cache, NewUserStore(db), NewOAuthClientStore(db), "http://localhost:8080/login", "", 0, 0, 0)
+	s, err := NewOIDCStorage(context.Background(), db, cache, NewUserStore(db), NewOAuthClientStore(db), "http://localhost:3206/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -803,7 +803,7 @@ func TestOidcClient_Methods(t *testing.T) {
 			GrantTypes:   "authorization_code,refresh_token",
 			Scopes:       "openid,profile,email",
 		},
-		loginURL:   "http://localhost:8080/login",
+		loginURL:   "http://localhost:3206/login",
 		idTokenTTL: 5 * time.Minute,
 	}
 
@@ -826,7 +826,7 @@ func TestOidcClient_Methods(t *testing.T) {
 	}
 
 	loginURL := c.LoginURL("req-123")
-	if loginURL != "http://localhost:8080/login?id=req-123" {
+	if loginURL != "http://localhost:3206/login?id=req-123" {
 		t.Errorf("unexpected login URL: %s", loginURL)
 	}
 
