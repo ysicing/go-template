@@ -23,7 +23,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.26.2"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -52,14 +52,11 @@ jobs:
           pnpm test
           pnpm build
 
-      - name: Build Docker image for PR validation
-        if: github.event_name == 'pull_request'
-        run: |
-          docker build \
-            --build-arg VERSION="${VERSION}" \
-            --build-arg GIT_COMMIT="${GIT_COMMIT}" \
-            --build-arg BUILD_DATE="${BUILD_DATE}" \
-            -t ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }} .
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         if: github.event_name == 'push'
@@ -69,20 +66,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Docker Buildx
-        if: github.event_name == 'push'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Push linux/amd64 image
-        if: github.event_name == 'push'
+      - name: Build multi-arch image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64
-          push: true
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
           tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
           build-args: |
             VERSION=${{ env.VERSION }}
             GIT_COMMIT=${{ env.GIT_COMMIT }}
             BUILD_DATE=${{ env.BUILD_DATE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

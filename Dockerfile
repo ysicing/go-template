@@ -9,7 +9,7 @@ COPY web/ .
 RUN pnpm run build
 
 # --- Backend build ---
-FROM golang:1-alpine AS builder
+FROM golang:1.26.2-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
