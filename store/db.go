@@ -7,6 +7,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/plugin/prometheus"
 )
@@ -17,6 +18,8 @@ func InitDB(driver, dsn, logLevel string) (*gorm.DB, error) {
 	switch driver {
 	case "sqlite":
 		dialector = sqlite.Open(dsn)
+	case "postgres":
+		dialector = postgres.Open(dsn)
 	case "mysql":
 		dialector = mysql.Open(dsn)
 	default:

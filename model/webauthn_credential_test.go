@@ -4,14 +4,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/glebarez/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func TestWebAuthnCredential_SQLiteBinaryColumnsUseBlob(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{DisableAutomaticPing: true})
+func TestWebAuthnCredential_PostgresBinaryColumnsUseBytea(t *testing.T) {
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN: "host=localhost user=postgres dbname=postgres sslmode=disable",
+	}), &gorm.Config{DisableAutomaticPing: true})
 	if err != nil {
-		t.Fatalf("open gorm sqlite dialector: %v", err)
+		t.Fatalf("open gorm postgres dialector: %v", err)
 	}
 
 	stmt := &gorm.Statement{DB: db}
@@ -27,8 +29,8 @@ func TestWebAuthnCredential_SQLiteBinaryColumnsUseBlob(t *testing.T) {
 		}
 
 		dataType := strings.ToLower(db.Dialector.DataTypeOf(field))
-		if dataType != "blob" {
-			t.Fatalf("expected %s to map to sqlite blob, got %q", fieldName, dataType)
+		if dataType != "bytea" {
+			t.Fatalf("expected %s to map to postgres bytea, got %q", fieldName, dataType)
 		}
 	}
 }
