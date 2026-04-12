@@ -59,6 +59,9 @@ jobs:
       - name: Run Go tests
         run: go test ./...
 
+      - name: Check OpenAPI coverage
+        run: go test ./internal/app -run TestOpenAPIRoutesCoverRegisteredRoutes -count=1
+
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v4
 

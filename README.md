@@ -70,6 +70,8 @@ docker run -d \
 ## 模板能力
 
 - 控制台首页：`http://localhost:3206/`
+- Swagger UI：`http://localhost:3206/swagger/index.html`
+- OpenAPI JSON：`http://localhost:3206/openapi.json`
 - API Base：`http://localhost:3206/api`
 - OIDC Discovery：`http://localhost:3206/.well-known/openid-configuration`
 - Authorization：`http://localhost:3206/authorize`
@@ -78,6 +80,12 @@ docker run -d \
 - JWKS：`http://localhost:3206/oauth/keys`
 - GitHub OAuth Authorize：`http://localhost:3206/login/oauth/authorize`
 - GitHub OAuth Token：`http://localhost:3206/login/oauth/access_token`
+
+Swagger 文档会按当前登录用户权限动态裁剪：
+
+- 未登录：仅显示公开接口
+- 已登录普通用户：显示公开接口与本人可访问接口
+- 管理员 / 具备对应权限的用户：额外显示相关管理接口
 
 ## 核心配置
 
@@ -104,11 +112,18 @@ task run
 task dev
 task build
 task fmt
+task openapi:check
 go test ./...
 cd web && pnpm test
 ```
 
 `task run` 默认按本地开发模式启动：`Taskfile.yml` 会在未显式设置 `SECURITY_ALLOW_INSECURE` 时默认注入 `true`，便于在没有 `config.yaml` 的情况下直接运行。生产环境请显式配置 `jwt.secret`，并保持 `security.allow_insecure: false`。
+
+OpenAPI 维护约束：
+
+- 新增或修改受管路由后，先运行 `task openapi:check`
+- 需要添加文档元数据时，可用 `task openapi:scaffold METHOD=GET PATH=/api/example SUMMARY='示例接口' TAG=example AUTH=true`
+- 若接口需要权限，可追加 `PERMISSIONS='admin.users.read,admin.stats.read'`
 
 ## 文档
 

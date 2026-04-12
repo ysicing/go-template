@@ -15,6 +15,38 @@ tasks:
     cmds:
       - task: build
 
+  openapi:check:
+    desc: Verify documented OpenAPI routes match registered Fiber routes
+    cmds:
+      - go test ./internal/app -run TestOpenAPIRoutesCoverRegisteredRoutes -count=1
+
+  openapi:scaffold:
+    desc: Print an openAPIRoutes snippet template (METHOD/PATH/SUMMARY/TAG required)
+    requires:
+      vars: [METHOD, PATH, SUMMARY, TAG]
+    silent: true
+    cmds:
+      - |
+        set -eu
+        method_upper="{{.METHOD}}"
+        case "$method_upper" in
+          GET) method_name="Get" ;;
+          POST) method_name="Post" ;;
+          PUT) method_name="Put" ;;
+          DELETE) method_name="Delete" ;;
+          PATCH) method_name="Patch" ;;
+          *) echo "unsupported METHOD: $method_upper" >&2; exit 1 ;;
+        esac
+        requires_auth="{{default "false" .AUTH}}"
+        permissions="{{default "" .PERMISSIONS}}"
+        permissions_block=""
+        if [ -n "$permissions" ]; then
+          permissions_items="$(printf '%s' "$permissions" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | awk '{printf "\"%s\", ", $0}' | sed 's/, $//')"
+          permissions_block=", Permissions: []string{$permissions_items}"
+        fi
+        printf '{Method: fiber.Method%s, Path: "%s", Summary: "%s", Tag: "%s", RequiresAuth: %s%s},\n' \
+          "$method_name" "{{.PATH}}" "{{.SUMMARY}}" "{{.TAG}}" "$requires_auth" "$permissions_block"
+
   fmt:
     desc: Format code
     cmds:

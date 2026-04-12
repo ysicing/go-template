@@ -26,10 +26,11 @@ func Run(ctx context.Context, cfg *Config, webDistFS fs.FS, buildInfo BuildInfo,
 	handler.SetTrustedProxies(cfg.Server.TrustedProxies)
 	fiberApp := newFiberApp(cfg, log)
 	setupMiddlewareChain(fiberApp, deps.SettingStore, log)
-	registerSystemRoutes(fiberApp, buildInfo)
 
 	deps.Config = cfg
 	deps.OIDCHandler = provider
+	registerSystemRoutes(fiberApp, buildInfo)
+	registerDocsRoutes(fiberApp, deps, buildInfo)
 	SetupRoutes(fiberApp, deps)
 	mountOIDCHandler(fiberApp, provider)
 	mountSPA(fiberApp, webDistFS)
