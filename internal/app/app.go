@@ -25,7 +25,7 @@ func Run(ctx context.Context, cfg *Config, webDistFS fs.FS, buildInfo BuildInfo,
 
 	handler.SetTrustedProxies(cfg.Server.TrustedProxies)
 	fiberApp := newFiberApp(cfg, log)
-	setupMiddlewareChain(fiberApp, deps.SettingStore, log)
+	setupMiddlewareChain(fiberApp, cfg, deps.SettingStore, log)
 
 	deps.Config = cfg
 	deps.OIDCHandler = provider

@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -95,5 +96,98 @@ func TestRequestLogMiddleware_SkipsKubeProbeUA(t *testing.T) {
 	}
 	if strings.Contains(buf.String(), "\"message\":\"request\"") || strings.Contains(buf.String(), "request") {
 		t.Fatalf("expected kube-probe request log to be skipped, got %q", buf.String())
+	}
+}
+
+func TestSetupMiddlewareChain_PropagatesTraceContext(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	cfg := DefaultConfig()
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, cfg, settingStore, &log)
+	app.Get("/trace", func(c fiber.Ctx) error {
+		return c.JSON(store.TraceContextFromContext(c.Context()))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/trace", nil)
+	req.Header.Set("X-Request-ID", "req-123")
+	req.Header.Set("Traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.Header.Get("X-Request-ID"); got != "req-123" {
+		t.Fatalf("expected request id header to be preserved, got %q", got)
+	}
+	if got := resp.Header.Get("X-Trace-ID"); got != "4bf92f3577b34da6a3ce929d0e0e4736" {
+		t.Fatalf("expected response trace id header, got %q", got)
+	}
+
+	var trace store.TraceContext
+	if err := json.NewDecoder(resp.Body).Decode(&trace); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if trace.RequestID != "req-123" {
+		t.Fatalf("expected request id in context, got %q", trace.RequestID)
+	}
+	if trace.TraceID != "4bf92f3577b34da6a3ce929d0e0e4736" {
+		t.Fatalf("expected trace id in context, got %q", trace.TraceID)
+	}
+	if trace.SpanID == "" {
+		t.Fatal("expected span id in context")
+	}
+}
+
+func TestSetupMiddlewareChain_RecoversPanics(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	cfg := DefaultConfig()
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, cfg, settingStore, &log)
+	app.Get("/panic", func(c fiber.Ctx) error {
+		panic("boom")
+	})
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/panic", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Fatalf("expected 500 for panic recovery, got %d", resp.StatusCode)
+	}
+}
+
+func TestSetupMiddlewareChain_SetsSessionCookieOnlyForBrowserRoutes(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	cfg := DefaultConfig()
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, cfg, settingStore, &log)
+	app.Get("/", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
+	app.Get("/api/ping", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cookie := resp.Header.Get("Set-Cookie"); !strings.Contains(cookie, "session_id=") {
+		t.Fatalf("expected browser route to issue session cookie, got %q", cookie)
+	}
+
+	apiResp, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/ping", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cookie := apiResp.Header.Get("Set-Cookie"); strings.Contains(cookie, "session_id=") {
+		t.Fatalf("expected api route to skip session cookie, got %q", cookie)
 	}
 }

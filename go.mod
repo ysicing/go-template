@@ -11,6 +11,8 @@ require (
 	github.com/go-webauthn/webauthn v0.16.4
 	github.com/gofiber/contrib/v3/swaggo v1.0.1
 	github.com/gofiber/fiber/v3 v3.1.0
+	github.com/gofiber/storage/memory/v2 v2.1.1
+	github.com/gofiber/storage/redis/v3 v3.4.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/pquerna/otp v1.5.0

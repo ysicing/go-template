@@ -169,9 +169,5 @@ func SetupRoutes(app *fiber.App, d *Deps) {
 
 	h := buildAllHandlers(d, tokenCfg)
 
-	app.Use(handler.PrometheusMiddleware())
-	app.Use(handler.RequestIDMiddleware())
-	app.Use(handler.AuditContextMiddleware())
-
 	registerManagedRoutes(app, buildManagedRouteRuntime(d, h))
 }

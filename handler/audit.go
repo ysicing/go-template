@@ -88,6 +88,22 @@ func recordAuditFromFiber(c fiber.Ctx, audit auditCreator, event AuditEvent) err
 			event.Metadata["request_id"] = requestID
 		}
 	}
+	if traceID, _ := c.Locals("trace_id").(string); traceID != "" {
+		if event.Metadata == nil {
+			event.Metadata = map[string]string{}
+		}
+		if _, ok := event.Metadata["trace_id"]; !ok {
+			event.Metadata["trace_id"] = traceID
+		}
+	}
+	if sessionID, _ := c.Locals("session_id").(string); sessionID != "" {
+		if event.Metadata == nil {
+			event.Metadata = map[string]string{}
+		}
+		if _, ok := event.Metadata["session_id"]; !ok {
+			event.Metadata["session_id"] = sessionID
+		}
+	}
 	return recordAuditEvent(c.Context(), audit, event)
 }
 

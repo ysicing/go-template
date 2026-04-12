@@ -49,3 +49,27 @@ func TestTraceLogger_LogsNormalInfoStatements(t *testing.T) {
 		t.Fatalf("expected normal info sql to be logged, got %q", got)
 	}
 }
+
+func TestTraceLogger_LogsTraceFieldsFromContext(t *testing.T) {
+	buf, restore := captureTraceLogger(t)
+	defer restore()
+
+	ctx := WithTraceContext(context.Background(), TraceContext{
+		RequestID: "req-1",
+		TraceID:   "trace-1",
+		SpanID:    "span-1",
+		SessionID: "sess-1",
+	})
+
+	l := NewTraceLogger("info").(*traceLogger)
+	l.Trace(ctx, time.Now().Add(-10*time.Millisecond), func() (string, int64) {
+		return `SELECT * FROM "users"`, 1
+	}, nil)
+
+	got := buf.String()
+	for _, part := range []string{`"request_id":"req-1"`, `"trace_id":"trace-1"`, `"span_id":"span-1"`, `"session_id":"sess-1"`} {
+		if !strings.Contains(got, part) {
+			t.Fatalf("expected %s in sql trace log, got %q", part, got)
+		}
+	}
+}

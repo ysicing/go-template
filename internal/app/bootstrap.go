@@ -44,7 +44,7 @@ func initDBAndCache(ctx context.Context, cfg *Config, log *zerolog.Logger) (*gor
 
 func initCache(ctx context.Context, cfg *Config, log *zerolog.Logger) store.Cache {
 	if cfg.Redis.Addr == "" {
-		log.Info().Msg("cache backend: memory")
+		log.Info().Msg("cache backend: memory (single-replica/development)")
 		return store.NewMemoryCache()
 	}
 
@@ -52,11 +52,11 @@ func initCache(ctx context.Context, cfg *Config, log *zerolog.Logger) store.Cach
 	if err := redisCache.Ping(ctx); err != nil {
 		log.Error().Err(err).Str("addr", cfg.Redis.Addr).Int("db", cfg.Redis.DB).Msg("cache ping failed, fallback to memory")
 		_ = redisCache.Close()
-		log.Warn().Msg("cache backend: memory (fallback)")
+		log.Warn().Msg("cache backend: memory (fallback, not suitable for multi-replica sharing)")
 		return store.NewMemoryCache()
 	}
 
-	log.Info().Str("addr", cfg.Redis.Addr).Int("db", cfg.Redis.DB).Msg("cache backend: redis")
+	log.Info().Str("addr", cfg.Redis.Addr).Int("db", cfg.Redis.DB).Msg("cache backend: redis (multi-replica ready)")
 	return redisCache
 }
 

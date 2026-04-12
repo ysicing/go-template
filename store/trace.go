@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"strings"
 	"time"
@@ -17,6 +19,18 @@ import (
 type ctxKey int
 
 const requestIDKey ctxKey = iota
+const (
+	traceIDKey ctxKey = iota + 1
+	spanIDKey
+	sessionIDKey
+)
+
+type TraceContext struct {
+	RequestID string `json:"request_id"`
+	TraceID   string `json:"trace_id"`
+	SpanID    string `json:"span_id"`
+	SessionID string `json:"session_id,omitempty"`
+}
 
 // WithRequestID returns a child context carrying the given request ID.
 func WithRequestID(ctx context.Context, id string) context.Context {
@@ -29,6 +43,72 @@ func RequestIDFromContext(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+func WithTraceID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, traceIDKey, id)
+}
+
+func TraceIDFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(traceIDKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func WithSpanID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, spanIDKey, id)
+}
+
+func SpanIDFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(spanIDKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func WithSessionID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, sessionIDKey, id)
+}
+
+func SessionIDFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(sessionIDKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func WithTraceContext(ctx context.Context, trace TraceContext) context.Context {
+	if trace.RequestID != "" {
+		ctx = WithRequestID(ctx, trace.RequestID)
+	}
+	if trace.TraceID != "" {
+		ctx = WithTraceID(ctx, trace.TraceID)
+	}
+	if trace.SpanID != "" {
+		ctx = WithSpanID(ctx, trace.SpanID)
+	}
+	if trace.SessionID != "" {
+		ctx = WithSessionID(ctx, trace.SessionID)
+	}
+	return ctx
+}
+
+func TraceContextFromContext(ctx context.Context) TraceContext {
+	return TraceContext{
+		RequestID: RequestIDFromContext(ctx),
+		TraceID:   TraceIDFromContext(ctx),
+		SpanID:    SpanIDFromContext(ctx),
+		SessionID: SessionIDFromContext(ctx),
+	}
+}
+
+func NewSpanID() string {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(buf)
 }
 
 // traceLogger is a GORM logger that uses zerolog.
@@ -70,6 +150,21 @@ func (l *traceLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
 
 func (l *traceLogger) logEvent(ctx context.Context, lvl zerolog.Level) *zerolog.Event {
 	e := logger.L.WithLevel(lvl)
+	if trace := TraceContextFromContext(ctx); trace != (TraceContext{}) {
+		if trace.RequestID != "" {
+			e = e.Str("request_id", trace.RequestID)
+		}
+		if trace.TraceID != "" {
+			e = e.Str("trace_id", trace.TraceID)
+		}
+		if trace.SpanID != "" {
+			e = e.Str("span_id", trace.SpanID)
+		}
+		if trace.SessionID != "" {
+			e = e.Str("session_id", trace.SessionID)
+		}
+		return e
+	}
 	if id := RequestIDFromContext(ctx); id != "" {
 		e = e.Str("request_id", id)
 	}
