@@ -46,7 +46,7 @@ task build
 从 `config.example.yaml` 开始，优先关注：
 
 - `server.addr`
-- `database.driver`
+- `database.driver`（当前支持 `sqlite` / `mysql`）
 - `database.dsn`
 - `jwt.secret`
 - `jwt.issuer`
