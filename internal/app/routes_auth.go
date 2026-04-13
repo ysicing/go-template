@@ -103,6 +103,12 @@ func authAccountRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/social/confirm-link", Summary: "Confirm social account link", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.ConfirmSocialLink}
 		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/social/confirm-link/webauthn/begin", Summary: "Begin social link WebAuthn verification", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.SocialLinkWebAuthnBegin}
+		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/social/confirm-link/webauthn/finish", Summary: "Finish social link WebAuthn verification", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.oauth.SocialLinkWebAuthnFinish}
+		}},
 	}
 }
 

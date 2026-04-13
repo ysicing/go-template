@@ -127,6 +127,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 		MFA:            d.MFAStore,
 		Cache:          d.Cache,
 		Settings:       d.SettingStore,
+		WebAuthnCreds:  d.WebAuthnStore,
 		TokenConfig:    tokenCfg,
 	})
 

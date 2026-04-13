@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofiber/fiber/v3"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/oauth2"
@@ -49,8 +52,78 @@ type oauthSocialAccountStore interface {
 	Update(ctx context.Context, account *model.SocialAccount) error
 }
 
+type oauthWebAuthnCredStore interface {
+	ListByUserID(ctx context.Context, userID string) ([]model.WebAuthnCredential, error)
+	UpdateSignCount(ctx context.Context, credentialID []byte, signCount uint32) error
+}
+
 type oauthSettingStore interface {
+	Get(key, defaultVal string) string
 	GetBool(key string, defaultVal bool) bool
+}
+
+type oauthWebAuthnManager interface {
+	BeginLogin(user *store.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error)
+	FinishLogin(user *store.WebAuthnUser, session webauthn.SessionData, body []byte) (*webauthn.Credential, error)
+}
+
+type defaultOAuthWebAuthnManager struct {
+	settings oauthSettingStore
+}
+
+func (m defaultOAuthWebAuthnManager) BeginLogin(user *store.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+	wa, err := m.build()
+	if err != nil {
+		return nil, nil, err
+	}
+	return wa.BeginLogin(user)
+}
+
+func (m defaultOAuthWebAuthnManager) FinishLogin(user *store.WebAuthnUser, session webauthn.SessionData, body []byte) (*webauthn.Credential, error) {
+	wa, err := m.build()
+	if err != nil {
+		return nil, err
+	}
+	parsedResponse, err := protocol.ParseCredentialRequestResponseBody(bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	return wa.ValidateLogin(user, session, parsedResponse)
+}
+
+func (m defaultOAuthWebAuthnManager) build() (*webauthn.WebAuthn, error) {
+	if m.settings == nil {
+		return nil, fiber.NewError(fiber.StatusServiceUnavailable, "webauthn not configured")
+	}
+
+	rpID := strings.TrimSpace(m.settings.Get(store.SettingWebAuthnRPID, ""))
+	if rpID == "" {
+		return nil, fiber.NewError(fiber.StatusServiceUnavailable, "webauthn not configured")
+	}
+
+	rpDisplay := m.settings.Get(store.SettingWebAuthnRPDisplay, "ID Service")
+	rpOrigins := m.settings.Get(store.SettingWebAuthnRPOrigins, "")
+	origins := make([]string, 0, 4)
+	for origin := range strings.SplitSeq(rpOrigins, ",") {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+
+	return webauthn.New(&webauthn.Config{
+		RPDisplayName: rpDisplay,
+		RPID:          rpID,
+		RPOrigins:     origins,
+	})
+}
+
+type socialLinkPendingData struct {
+	UserID     string `json:"user_id"`
+	Provider   string `json:"provider"`
+	ProviderID string `json:"provider_id"`
+	Email      string `json:"email"`
+	AvatarURL  string `json:"avatar_url"`
 }
 
 // OAuthDeps aggregates dependencies required by OAuthHandler.
@@ -65,6 +138,7 @@ type OAuthDeps struct {
 	MFA            mfaReader
 	Cache          store.Cache
 	Settings       oauthSettingStore
+	WebAuthnCreds  oauthWebAuthnCredStore
 	TokenConfig    TokenConfig
 }
 
@@ -79,6 +153,8 @@ type OAuthHandler struct {
 	mfa            mfaReader
 	cache          store.Cache
 	settings       oauthSettingStore
+	webAuthnCreds  oauthWebAuthnCredStore
+	webAuthn       oauthWebAuthnManager
 	tokenConfig    TokenConfig
 }
 
@@ -105,6 +181,8 @@ func NewOAuthHandler(deps OAuthDeps) *OAuthHandler {
 		mfa:            deps.MFA,
 		cache:          deps.Cache,
 		settings:       deps.Settings,
+		webAuthnCreds:  deps.WebAuthnCreds,
+		webAuthn:       defaultOAuthWebAuthnManager{settings: deps.Settings},
 		tokenConfig:    deps.TokenConfig,
 	}
 }
@@ -249,6 +327,12 @@ func (h *OAuthHandler) verifyOAuthState(c fiber.Ctx, state string) (bool, string
 
 func oauthStateKey(state string) string     { return "oauth_state:" + state }
 func oauthStateUsedKey(state string) string { return "oauth_state_used:" + state }
+func socialLinkPendingKey(token string) string {
+	return "social_link_pending:" + token
+}
+func socialLinkWebAuthnKey(token string) string {
+	return "social_link_webauthn:" + token
+}
 
 // githubOAuth2Config builds an oauth2.Config for GitHub from a SocialProvider.
 func (h *OAuthHandler) githubOAuth2Config(provider *model.SocialProvider, c fiber.Ctx) *oauth2.Config {
@@ -552,6 +636,86 @@ func (h *OAuthHandler) handleSocialLink(c fiber.Ctx, userID, provider, providerI
 	return c.Redirect().To("/profile?success=account_linked")
 }
 
+func (h *OAuthHandler) loadPendingSocialLink(ctx context.Context, linkToken string) (*socialLinkPendingData, error) {
+	val, err := h.cache.Get(ctx, socialLinkPendingKey(linkToken))
+	if err != nil || val == "" {
+		return nil, errors.New("invalid_or_expired_link_token")
+	}
+
+	var pending socialLinkPendingData
+	if err := json.Unmarshal([]byte(val), &pending); err != nil {
+		return nil, errors.New("invalid_link_data")
+	}
+	return &pending, nil
+}
+
+func (h *OAuthHandler) loadSocialLinkWebAuthnUser(c fiber.Ctx, userID string) (*store.WebAuthnUser, error) {
+	if h.webAuthnCreds == nil {
+		return nil, fiber.NewError(fiber.StatusServiceUnavailable, "webauthn not configured")
+	}
+
+	user, err := h.users.GetByID(c.Context(), userID)
+	if err != nil {
+		return nil, err
+	}
+	creds, err := h.webAuthnCreds.ListByUserID(c.Context(), userID)
+	if err != nil {
+		return nil, err
+	}
+	return &store.WebAuthnUser{User: user, Creds: creds}, nil
+}
+
+func (h *OAuthHandler) completeSocialLink(c fiber.Ctx, user *model.User, pending *socialLinkPendingData, verificationMethod string, cleanupKeys ...string) error {
+	newAccount := &model.SocialAccount{
+		UserID:     user.ID,
+		Provider:   pending.Provider,
+		ProviderID: pending.ProviderID,
+		Email:      pending.Email,
+		AvatarURL:  pending.AvatarURL,
+	}
+	if err := h.socialAccounts.Create(c.Context(), newAccount); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to link social account"})
+	}
+
+	updated := false
+	if user.AvatarURL == "" && pending.AvatarURL != "" {
+		user.AvatarURL = pending.AvatarURL
+		updated = true
+	}
+	if !user.EmailVerified {
+		user.EmailVerified = true
+		updated = true
+	}
+	if updated {
+		_ = h.users.Update(c.Context(), user)
+	}
+
+	for _, key := range cleanupKeys {
+		if key == "" {
+			continue
+		}
+		_ = h.cache.Del(c.Context(), key)
+	}
+
+	clearFailedAuthAttempts(c.Context(), h.cache, user.ID)
+
+	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+		UserID:     user.ID,
+		Action:     model.AuditSocialAccountLink,
+		Resource:   "social_account",
+		ResourceID: newAccount.ID,
+		Status:     "success",
+		Detail:     "social account linked after verification",
+		Metadata: map[string]string{
+			"provider":            pending.Provider,
+			"provider_id":         pending.ProviderID,
+			"verification_method": verificationMethod,
+		},
+	})
+
+	return h.respondWithTokens(c, user, pending.Provider)
+}
+
 // ExchangeCode handles POST /api/auth/social/exchange — exchanges a temporary code for tokens.
 func (h *OAuthHandler) ExchangeCode(c fiber.Ctx) error {
 	var req struct {
@@ -582,14 +746,13 @@ func (h *OAuthHandler) ExchangeCode(c fiber.Ctx) error {
 }
 
 // ConfirmSocialLink handles POST /api/auth/social/confirm-link — confirms linking a social account.
-// Supports three verification methods: password, TOTP, or WebAuthn challenge.
+// Supports password or TOTP verification.
 func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 	var req struct {
 		LinkToken string `json:"link_token"`
-		// Verification methods (provide one)
-		Password  string `json:"password,omitempty"`  // Password verification
-		TOTPCode  string `json:"totp_code,omitempty"` // TOTP verification
-		Challenge string `json:"challenge,omitempty"` // WebAuthn challenge (for future)
+		Password  string `json:"password,omitempty"`
+		TOTPCode  string `json:"totp_code,omitempty"`
+		Challenge string `json:"challenge,omitempty"`
 	}
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
@@ -598,25 +761,23 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 	if req.LinkToken == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "link_token is required"})
 	}
+	if req.Challenge != "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "challenge verification is not supported"})
+	}
 
 	// At least one verification method required
-	if req.Password == "" && req.TOTPCode == "" && req.Challenge == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "verification required: password, totp_code, or challenge"})
+	if req.Password == "" && req.TOTPCode == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "verification required: password or totp_code"})
 	}
 
 	// Retrieve pending link data
-	val, err := h.cache.Get(c.Context(), "social_link_pending:"+req.LinkToken)
-	if err != nil || val == "" {
+	pending, err := h.loadPendingSocialLink(c.Context(), req.LinkToken)
+	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired link token"})
 	}
 
-	var pendingData map[string]string
-	if err := json.Unmarshal([]byte(val), &pendingData); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid link data"})
-	}
-
 	// Verify user exists
-	user, err := h.users.GetByID(c.Context(), pendingData["user_id"])
+	user, err := h.users.GetByID(c.Context(), pending.UserID)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user not found"})
 	}
@@ -687,61 +848,114 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 		}
 	}
 
-	// WebAuthn verification (future enhancement)
-	if !verified && req.Challenge != "" {
-		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-			"error": "webauthn_not_implemented",
-			"hint":  "WebAuthn verification for social linking is not yet implemented. Please use password or TOTP.",
-		})
-	}
-
 	if !verified {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "verification failed"})
 	}
 
-	// Create social account binding
-	newAccount := &model.SocialAccount{
-		UserID:     user.ID,
-		Provider:   pendingData["provider"],
-		ProviderID: pendingData["provider_id"],
-		Email:      pendingData["email"],
-		AvatarURL:  pendingData["avatar_url"],
-	}
-	if err := h.socialAccounts.Create(c.Context(), newAccount); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to link social account"})
-	}
+	return h.completeSocialLink(c, user, pending, verificationMethod, socialLinkPendingKey(req.LinkToken))
+}
 
-	// Update user avatar if empty
-	if user.AvatarURL == "" && pendingData["avatar_url"] != "" {
-		user.AvatarURL = pendingData["avatar_url"]
-		_ = h.users.Update(c.Context(), user)
+// SocialLinkWebAuthnBegin handles POST /api/auth/social/confirm-link/webauthn/begin.
+func (h *OAuthHandler) SocialLinkWebAuthnBegin(c fiber.Ctx) error {
+	var req struct {
+		LinkToken string `json:"link_token"`
+	}
+	if err := c.Bind().JSON(&req); err != nil || req.LinkToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "link_token is required"})
+	}
+	if h.webAuthn == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "webauthn not configured"})
 	}
 
-	// Auto-verify email for social login
-	if !user.EmailVerified {
-		user.EmailVerified = true
-		_ = h.users.Update(c.Context(), user)
+	pending, err := h.loadPendingSocialLink(c.Context(), req.LinkToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired link token"})
+	}
+	if isAccountLocked(c.Context(), h.cache, pending.UserID) {
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
 
-	// Delete pending link token
-	_ = h.cache.Del(c.Context(), "social_link_pending:"+req.LinkToken)
+	waUser, err := h.loadSocialLinkWebAuthnUser(c, pending.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+	}
+	if len(waUser.Creds) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "webauthn_not_enabled",
+			"hint":  "WebAuthn is not enabled for this account. Please use password or TOTP first.",
+		})
+	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-		UserID:     user.ID,
-		Action:     model.AuditSocialAccountLink,
-		Resource:   "social_account",
-		ResourceID: newAccount.ID,
-		Status:     "success",
-		Detail:     "social account linked after verification",
-		Metadata: map[string]string{
-			"provider":            pendingData["provider"],
-			"provider_id":         pendingData["provider_id"],
-			"verification_method": verificationMethod,
-		},
-	})
+	options, session, err := h.webAuthn.BeginLogin(waUser)
+	if err != nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "webauthn not configured"})
+	}
 
-	// Generate tokens for immediate login
-	return h.respondWithTokens(c, user, pendingData["provider"])
+	sessionJSON, _ := json.Marshal(session)
+	if err := h.cache.Set(c.Context(), socialLinkWebAuthnKey(req.LinkToken), string(sessionJSON), 5*time.Minute); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to persist webauthn session"})
+	}
+
+	return c.JSON(fiber.Map{"publicKey": options.Response})
+}
+
+// SocialLinkWebAuthnFinish handles POST /api/auth/social/confirm-link/webauthn/finish.
+func (h *OAuthHandler) SocialLinkWebAuthnFinish(c fiber.Ctx) error {
+	linkToken := c.Query("link_token")
+	if linkToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "link_token query param is required"})
+	}
+	if h.webAuthn == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "webauthn not configured"})
+	}
+
+	pending, err := h.loadPendingSocialLink(c.Context(), linkToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired link token"})
+	}
+	if isAccountLocked(c.Context(), h.cache, pending.UserID) {
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
+	}
+
+	sessionJSON, err := h.cache.Get(c.Context(), socialLinkWebAuthnKey(linkToken))
+	if err != nil || sessionJSON == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no pending authentication"})
+	}
+
+	var session webauthn.SessionData
+	if err := json.Unmarshal([]byte(sessionJSON), &session); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid session"})
+	}
+
+	waUser, err := h.loadSocialLinkWebAuthnUser(c, pending.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+	}
+
+	credential, err := h.webAuthn.FinishLogin(waUser, session, c.Body())
+	if err != nil {
+		recordFailedAuthAttempt(c.Context(), h.cache, pending.UserID)
+		_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+			UserID:   pending.UserID,
+			Action:   model.AuditSocialAccountLink,
+			Resource: "social_account",
+			Status:   "failed",
+			Detail:   "social link verification failed",
+			Metadata: map[string]string{
+				"reason": "invalid_webauthn",
+			},
+		})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication failed"})
+	}
+
+	if h.webAuthnCreds != nil {
+		_ = h.webAuthnCreds.UpdateSignCount(c.Context(), credential.ID, credential.Authenticator.SignCount)
+	}
+
+	return h.completeSocialLink(c, waUser.User, pending, "webauthn",
+		socialLinkPendingKey(linkToken),
+		socialLinkWebAuthnKey(linkToken),
+	)
 }
 
 // respondWithTokens generates JWT tokens and returns them with user info.

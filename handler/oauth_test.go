@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
@@ -301,6 +303,324 @@ func TestConfirmSocialLink_WritesAuditLog(t *testing.T) {
 	if !strings.Contains(auditLog.Detail, "provider=github") {
 		t.Fatalf("expected provider metadata in audit detail, got %q", auditLog.Detail)
 	}
+}
+
+func TestConfirmSocialLink_RequiresPasswordOrTOTP(t *testing.T) {
+	db := setupTestDB(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	h := NewOAuthHandler(OAuthDeps{
+		Users:          store.NewUserStore(db),
+		SocialAccounts: store.NewSocialAccountStore(db),
+		Audit:          store.NewAuditLogStore(db),
+		RefreshTokens:  store.NewAPIRefreshTokenStore(db),
+		Cache:          cache,
+		TokenConfig: TokenConfig{
+			Secret:        "secret",
+			Issuer:        "id",
+			AccessTTL:     time.Hour,
+			RefreshTTL:    24 * time.Hour,
+			RememberMeTTL: 30 * 24 * time.Hour,
+		},
+	})
+
+	app := fiber.New()
+	app.Post("/api/auth/social/confirm-link", h.ConfirmSocialLink)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/social/confirm-link", strings.NewReader(`{"link_token":"link-token"}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := body["error"].(string); got != "verification required: password or totp_code" {
+		t.Fatalf("unexpected error: %v", body["error"])
+	}
+}
+
+func TestConfirmSocialLink_RejectsUnsupportedChallengeVerification(t *testing.T) {
+	db := setupTestDB(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	h := NewOAuthHandler(OAuthDeps{
+		Users:          store.NewUserStore(db),
+		SocialAccounts: store.NewSocialAccountStore(db),
+		Audit:          store.NewAuditLogStore(db),
+		RefreshTokens:  store.NewAPIRefreshTokenStore(db),
+		Cache:          cache,
+		TokenConfig: TokenConfig{
+			Secret:        "secret",
+			Issuer:        "id",
+			AccessTTL:     time.Hour,
+			RefreshTTL:    24 * time.Hour,
+			RememberMeTTL: 30 * 24 * time.Hour,
+		},
+	})
+
+	app := fiber.New()
+	app.Post("/api/auth/social/confirm-link", h.ConfirmSocialLink)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/social/confirm-link", strings.NewReader(`{"link_token":"link-token","challenge":"demo"}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := body["error"].(string); got != "challenge verification is not supported" {
+		t.Fatalf("unexpected error: %v", body["error"])
+	}
+}
+
+func TestSocialLinkWebAuthnBegin_ReturnsOptionsAndStoresSession(t *testing.T) {
+	db := setupTestDB(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	users := store.NewUserStore(db)
+	creds := store.NewWebAuthnStore(db)
+	user := createLocalUser(t, db, "social-passkey", "social-passkey@example.com", "Password123!abcd")
+	if err := creds.Create(context.Background(), &model.WebAuthnCredential{
+		UserID:       user.ID,
+		Name:         "MacBook",
+		CredentialID: []byte("cred-1"),
+		PublicKey:    []byte("public-key"),
+	}); err != nil {
+		t.Fatalf("create webauthn credential: %v", err)
+	}
+
+	pendingData, _ := json.Marshal(map[string]string{
+		"user_id":     user.ID,
+		"provider":    model.SocialProviderGitHub,
+		"provider_id": "gh-passkey",
+		"email":       user.Email,
+		"avatar_url":  "https://example.com/avatar.png",
+	})
+	if err := cache.Set(context.Background(), "social_link_pending:link-token", string(pendingData), 10*time.Minute); err != nil {
+		t.Fatalf("seed link token: %v", err)
+	}
+
+	h := NewOAuthHandler(OAuthDeps{
+		DB:             db,
+		Users:          users,
+		SocialAccounts: store.NewSocialAccountStore(db),
+		Audit:          store.NewAuditLogStore(db),
+		RefreshTokens:  store.NewAPIRefreshTokenStore(db),
+		WebAuthnCreds:  creds,
+		Cache:          cache,
+		TokenConfig: TokenConfig{
+			Secret:        "secret",
+			Issuer:        "id",
+			AccessTTL:     time.Hour,
+			RefreshTTL:    24 * time.Hour,
+			RememberMeTTL: 30 * 24 * time.Hour,
+		},
+	})
+	h.webAuthn = fakeOAuthWebAuthnManager{
+		beginOptions: &protocol.CredentialAssertion{
+			Response: protocol.PublicKeyCredentialRequestOptions{
+				Challenge: []byte("challenge"),
+			},
+		},
+		beginSession: &webauthn.SessionData{
+			Challenge:      "challenge",
+			RelyingPartyID: "example.com",
+			UserID:         []byte(user.ID),
+			Expires:        time.Now().Add(5 * time.Minute),
+		},
+	}
+
+	app := fiber.New()
+	app.Post("/api/auth/social/confirm-link/webauthn/begin", h.SocialLinkWebAuthnBegin)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/social/confirm-link/webauthn/begin", strings.NewReader(`{"link_token":"link-token"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d body=%s", resp.StatusCode, string(body))
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := body["publicKey"]; !ok {
+		t.Fatalf("expected publicKey in response, got %v", body)
+	}
+
+	sessionJSON, err := cache.Get(context.Background(), "social_link_webauthn:link-token")
+	if err != nil || sessionJSON == "" {
+		t.Fatalf("expected webauthn session stored, got %q err=%v", sessionJSON, err)
+	}
+}
+
+func TestSocialLinkWebAuthnFinish_LinksAccountAndWritesAuditLog(t *testing.T) {
+	db := setupTestDB(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	users := store.NewUserStore(db)
+	creds := store.NewWebAuthnStore(db)
+	socialAccounts := store.NewSocialAccountStore(db)
+	audit := store.NewAuditLogStore(db)
+	refreshTokens := store.NewAPIRefreshTokenStore(db)
+
+	user := createLocalUser(t, db, "social-passkey-finish", "social-passkey-finish@example.com", "Password123!abcd")
+	if err := creds.Create(context.Background(), &model.WebAuthnCredential{
+		UserID:       user.ID,
+		Name:         "MacBook",
+		CredentialID: []byte("cred-finish"),
+		PublicKey:    []byte("public-key"),
+		SignCount:    1,
+	}); err != nil {
+		t.Fatalf("create webauthn credential: %v", err)
+	}
+
+	pendingData, _ := json.Marshal(map[string]string{
+		"user_id":     user.ID,
+		"provider":    model.SocialProviderGitHub,
+		"provider_id": "gh-passkey-finish",
+		"email":       user.Email,
+		"avatar_url":  "https://example.com/avatar-finish.png",
+	})
+	if err := cache.Set(context.Background(), "social_link_pending:link-token", string(pendingData), 10*time.Minute); err != nil {
+		t.Fatalf("seed link token: %v", err)
+	}
+	sessionJSON, _ := json.Marshal(webauthn.SessionData{
+		Challenge:      "challenge",
+		RelyingPartyID: "example.com",
+		UserID:         []byte(user.ID),
+		Expires:        time.Now().Add(5 * time.Minute),
+	})
+	if err := cache.Set(context.Background(), "social_link_webauthn:link-token", string(sessionJSON), 5*time.Minute); err != nil {
+		t.Fatalf("seed webauthn session: %v", err)
+	}
+
+	h := NewOAuthHandler(OAuthDeps{
+		DB:             db,
+		Users:          users,
+		SocialAccounts: socialAccounts,
+		Audit:          audit,
+		RefreshTokens:  refreshTokens,
+		WebAuthnCreds:  creds,
+		Cache:          cache,
+		TokenConfig: TokenConfig{
+			Secret:        "secret",
+			Issuer:        "id",
+			AccessTTL:     time.Hour,
+			RefreshTTL:    24 * time.Hour,
+			RememberMeTTL: 30 * 24 * time.Hour,
+		},
+	})
+	h.webAuthn = fakeOAuthWebAuthnManager{
+		finishCredential: &webauthn.Credential{
+			ID: []byte("cred-finish"),
+			Authenticator: webauthn.Authenticator{
+				SignCount: 9,
+			},
+		},
+	}
+
+	app := fiber.New()
+	app.Use(RequestIDMiddleware())
+	app.Use(AuditContextMiddleware())
+	app.Post("/api/auth/social/confirm-link/webauthn/finish", h.SocialLinkWebAuthnFinish)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/social/confirm-link/webauthn/finish?link_token=link-token", strings.NewReader(`{"id":"ignored"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d body=%s", resp.StatusCode, string(body))
+	}
+
+	account, err := socialAccounts.GetByProviderAndID(context.Background(), model.SocialProviderGitHub, "gh-passkey-finish")
+	if err != nil {
+		t.Fatalf("expected social account created: %v", err)
+	}
+	if account.UserID != user.ID {
+		t.Fatalf("expected linked user %s, got %s", user.ID, account.UserID)
+	}
+
+	cred, err := creds.GetByID(context.Background(), firstWebAuthnCredentialID(t, db, user.ID))
+	if err != nil {
+		t.Fatalf("load credential: %v", err)
+	}
+	if cred.SignCount != 9 {
+		t.Fatalf("expected sign count updated to 9, got %d", cred.SignCount)
+	}
+
+	if val, _ := cache.Get(context.Background(), "social_link_pending:link-token"); val != "" {
+		t.Fatalf("expected pending link removed, got %q", val)
+	}
+	if val, _ := cache.Get(context.Background(), "social_link_webauthn:link-token"); val != "" {
+		t.Fatalf("expected webauthn session removed, got %q", val)
+	}
+
+	var auditLog model.AuditLog
+	if err := db.WithContext(context.Background()).
+		Where("user_id = ? AND action = ? AND resource = ?", user.ID, model.AuditSocialAccountLink, "social_account").
+		Order("created_at DESC").
+		First(&auditLog).Error; err != nil {
+		t.Fatalf("expected social account audit log: %v", err)
+	}
+	if !strings.Contains(auditLog.Detail, "verification_method=webauthn") {
+		t.Fatalf("expected webauthn verification metadata in audit detail, got %q", auditLog.Detail)
+	}
+}
+
+func firstWebAuthnCredentialID(t *testing.T, db *gorm.DB, userID string) string {
+	t.Helper()
+	var cred model.WebAuthnCredential
+	if err := db.WithContext(context.Background()).
+		Where("user_id = ?", userID).
+		Order("created_at ASC").
+		First(&cred).Error; err != nil {
+		t.Fatalf("query webauthn credential: %v", err)
+	}
+	return cred.ID
+}
+
+type fakeOAuthWebAuthnManager struct {
+	beginOptions     *protocol.CredentialAssertion
+	beginSession     *webauthn.SessionData
+	beginErr         error
+	finishCredential *webauthn.Credential
+	finishErr        error
+}
+
+func (f fakeOAuthWebAuthnManager) BeginLogin(*store.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+	return f.beginOptions, f.beginSession, f.beginErr
+}
+
+func (f fakeOAuthWebAuthnManager) FinishLogin(*store.WebAuthnUser, webauthn.SessionData, []byte) (*webauthn.Credential, error) {
+	return f.finishCredential, f.finishErr
 }
 
 func TestGoogleCallback_NotConfigured(t *testing.T) {
