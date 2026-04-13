@@ -53,7 +53,21 @@
     "webauthn": "Sign in with security key",
     "webauthnFailed": "Security key verification failed",
     "usernameRequired": "Please enter your username or email first",
-    "rememberMe": "Remember me"
+    "rememberMe": "Remember me",
+    "linkTitle": "Confirm {{provider}} link",
+    "linkAlertTitle": "Additional verification required",
+    "linkAlertDescription": "We detected an existing account for this email. Verify your identity before linking this social account.",
+    "linkMethodPassword": "Password",
+    "linkMethodTotp": "TOTP",
+    "linkMethodPasskey": "Passkey",
+    "linkPasswordLabel": "Confirm with password",
+    "linkTotpLabel": "Confirm with TOTP code",
+    "linkPasskeyDescription": "Use your registered Passkey or security key to verify and complete the link.",
+    "linkConfirmButton": "Confirm and link {{provider}}",
+    "backToLogin": "Back to sign in",
+    "linkExpired": "This link request has expired. Please start social sign-in again.",
+    "linkConfirmFailed": "Unable to verify and link this social account",
+    "passkeyUnavailable": "Passkey is not available in this browser"
   },
   "consent": {
     "title": "Review the access request",

@@ -53,7 +53,21 @@
     "webauthn": "使用安全密钥登录",
     "webauthnFailed": "安全密钥验证失败",
     "usernameRequired": "请先输入用户名或邮箱",
-    "rememberMe": "记住我"
+    "rememberMe": "记住我",
+    "linkTitle": "确认绑定 {{provider}}",
+    "linkAlertTitle": "需要额外验证身份",
+    "linkAlertDescription": "检测到该邮箱已存在账号，请先验证身份后再绑定当前社交账号。",
+    "linkMethodPassword": "密码",
+    "linkMethodTotp": "TOTP",
+    "linkMethodPasskey": "Passkey",
+    "linkPasswordLabel": "使用密码确认",
+    "linkTotpLabel": "使用 TOTP 验证码确认",
+    "linkPasskeyDescription": "使用已注册的 Passkey 或安全密钥完成身份验证并绑定账号。",
+    "linkConfirmButton": "确认并绑定 {{provider}}",
+    "backToLogin": "返回普通登录",
+    "linkExpired": "绑定请求已过期，请重新发起社交登录。",
+    "linkConfirmFailed": "无法完成身份验证并绑定该社交账号",
+    "passkeyUnavailable": "当前浏览器不支持 Passkey"
   },
   "consent": {
     "title": "确认授权请求",

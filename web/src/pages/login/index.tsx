@@ -2,14 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import { KeyRound, Loader2, Fingerprint } from "lucide-react"
+import { AlertCircle, Fingerprint, KeyRound, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BuildVersion } from "@/components/BuildVersion"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { authApi, versionApi } from "@/api/services"
 import { getErrorMessage } from "@/api/client"
 import { getBuildVersionLabel } from "@/lib/build-version"
@@ -32,10 +34,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [webauthnLoading, setWebauthnLoading] = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
   const [registerEnabled, setRegisterEnabled] = useState(false)
   const [turnstileSiteKey, setTurnstileSiteKey] = useState("")
   const [turnstileToken, setTurnstileToken] = useState("")
   const [rememberMe, setRememberMe] = useState(true)
+  const [linkRequired, setLinkRequired] = useState(false)
+  const [linkToken, setLinkToken] = useState("")
+  const [linkProvider, setLinkProvider] = useState("")
+  const [linkMethod, setLinkMethod] = useState<"password" | "totp" | "webauthn">("password")
+  const [linkPassword, setLinkPassword] = useState("")
+  const [linkTotpCode, setLinkTotpCode] = useState("")
   const [versionInfo, setVersionInfo] = useState({ version: "", git_commit: "", build_date: "" })
   const [branding, setBranding] = useState<null | {
     display_name?: string
@@ -53,6 +62,7 @@ export default function LoginPage() {
 
   // OIDC auth request id (present when redirected from OIDC flow)
   const oidcId = searchParams.get("id")
+  const linkProviderLabel = formatProviderName(linkProvider)
 
   // Show error from social login redirect (e.g. email_required, account_locked)
   useEffect(() => {
@@ -63,6 +73,26 @@ export default function LoginPage() {
       toast.error(t("login.accountLocked"))
     }
   }, [searchParams, t])
+
+  useEffect(() => {
+    const required = searchParams.get("link_required") === "true"
+    const token = searchParams.get("link_token") || ""
+    const provider = searchParams.get("provider") || ""
+
+    if (required && token) {
+      setLinkRequired(true)
+      setLinkToken(token)
+      setLinkProvider(provider)
+      setLinkMethod("password")
+      return
+    }
+
+    setLinkRequired(false)
+    setLinkToken("")
+    setLinkProvider("")
+    setLinkPassword("")
+    setLinkTotpCode("")
+  }, [searchParams])
 
   useEffect(() => {
     authApi.config(oidcId || undefined).then((res) => {
@@ -121,6 +151,16 @@ export default function LoginPage() {
     navigate("/")
   }
 
+  const handleAuthResult = (data: { user?: User; mfa_required?: boolean; mfa_token?: string }) => {
+    if (data.mfa_required && data.mfa_token) {
+      navigate(`/mfa-verify?mfa_token=${encodeURIComponent(data.mfa_token)}`)
+      return
+    }
+    if (data.user) {
+      handleLogin({ user: data.user })
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -143,11 +183,7 @@ export default function LoginPage() {
         return
       }
       const res = await authApi.login(username, password, turnstileToken || undefined, rememberMe)
-      if (res.data.mfa_required) {
-        navigate(`/mfa-verify?mfa_token=${encodeURIComponent(res.data.mfa_token)}`)
-        return
-      }
-      handleLogin(res.data)
+      handleAuthResult(res.data)
     } catch (error) {
       toast.error(getErrorMessage(error, t("login.error")))
     } finally {
@@ -166,34 +202,59 @@ export default function LoginPage() {
       const beginRes = await authApi.webauthnLoginBegin(username)
       const { publicKey, webauthn_token } = beginRes.data
 
-      publicKey.challenge = base64urlToBuffer(publicKey.challenge)
-      if (publicKey.allowCredentials) {
-        for (const cred of publicKey.allowCredentials) {
-          cred.id = base64urlToBuffer(cred.id)
-        }
-      }
-
-      const credential = await navigator.credentials.get({ publicKey }) as PublicKeyCredential
-      const response = credential.response as AuthenticatorAssertionResponse
-
-      const body = {
-        id: credential.id,
-        rawId: bufferToBase64url(credential.rawId),
-        type: credential.type,
-        response: {
-          authenticatorData: bufferToBase64url(response.authenticatorData),
-          clientDataJSON: bufferToBase64url(response.clientDataJSON),
-          signature: bufferToBase64url(response.signature),
-          userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : "",
-        },
-      }
-
+      const body = await getWebAuthnAssertionBody(publicKey)
       const finishRes = await authApi.webauthnLoginFinish(webauthn_token, body)
-      handleLogin(finishRes.data)
+      handleAuthResult(finishRes.data)
     } catch (error) {
       toast.error(getErrorMessage(error, t("login.webauthnFailed")))
     } finally {
       setWebauthnLoading(false)
+    }
+  }
+
+  const exitLinkMode = () => {
+    setLinkRequired(false)
+    setLinkToken("")
+    setLinkProvider("")
+    setLinkMethod("password")
+    setLinkPassword("")
+    setLinkTotpCode("")
+    navigate("/login", { replace: true })
+  }
+
+  const handleLinkConfirm = async () => {
+    if (!linkToken) {
+      toast.error(t("login.linkExpired"))
+      return
+    }
+
+    setLinkLoading(true)
+    try {
+      if (linkMethod === "password") {
+        const res = await authApi.confirmSocialLink(linkToken, { password: linkPassword })
+        handleAuthResult(res.data)
+        return
+      }
+
+      if (linkMethod === "totp") {
+        const res = await authApi.confirmSocialLink(linkToken, { totp_code: linkTotpCode })
+        handleAuthResult(res.data)
+        return
+      }
+
+      if (!navigator.credentials || !window.PublicKeyCredential) {
+        toast.error(t("login.passkeyUnavailable"))
+        return
+      }
+
+      const beginRes = await authApi.socialLinkWebAuthnBegin(linkToken)
+      const body = await getWebAuthnAssertionBody(beginRes.data.publicKey)
+      const finishRes = await authApi.socialLinkWebAuthnFinish(linkToken, body)
+      handleAuthResult(finishRes.data)
+    } catch (error) {
+      toast.error(getErrorMessage(error, t("login.linkConfirmFailed")))
+    } finally {
+      setLinkLoading(false)
     }
   }
 
@@ -210,77 +271,141 @@ export default function LoginPage() {
             )}
           </div>
           <h1 className="text-xl font-semibold">{branding?.display_name || t("app.title")}</h1>
-          <p className="text-sm text-muted-foreground">{branding?.headline || t("login.title")}</p>
+          <p className="text-sm text-muted-foreground">
+            {linkRequired ? t("login.linkTitle", { provider: linkProviderLabel }) : (branding?.headline || t("login.title"))}
+          </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">{t("login.username")}</Label>
-              <Input
-                id="username"
-                placeholder={t("login.username")}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("login.password")}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="rememberMe"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
-              />
-              <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">
-                {t("login.rememberMe")}
-              </Label>
-            </div>
-            {turnstileSiteKey && (
-              <div ref={turnstileRef} className="flex justify-center" />
-            )}
-            <Button type="submit" className="w-full" style={brandStyle} disabled={loading || (!!turnstileSiteKey && !turnstileToken)}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("login.submit")}
-            </Button>
-          </form>
-
-          {!oidcId && (
+          {linkRequired ? (
             <>
-              <div className="relative my-4">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  {t("login.or")}
-                </span>
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("login.linkAlertTitle")}</AlertTitle>
+                <AlertDescription>{t("login.linkAlertDescription")}</AlertDescription>
+              </Alert>
+              <Tabs value={linkMethod} onValueChange={(value) => setLinkMethod(value as "password" | "totp" | "webauthn")} className="space-y-4">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="password">{t("login.linkMethodPassword")}</TabsTrigger>
+                  <TabsTrigger value="totp">{t("login.linkMethodTotp")}</TabsTrigger>
+                  <TabsTrigger value="webauthn">{t("login.linkMethodPasskey")}</TabsTrigger>
+                </TabsList>
+                <TabsContent value="password" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="link-password">{t("login.linkPasswordLabel")}</Label>
+                    <Input
+                      id="link-password"
+                      type="password"
+                      value={linkPassword}
+                      onChange={(e) => setLinkPassword(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="totp" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="link-totp">{t("login.linkTotpLabel")}</Label>
+                    <Input
+                      id="link-totp"
+                      value={linkTotpCode}
+                      onChange={(e) => setLinkTotpCode(e.target.value)}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="webauthn" className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{t("login.linkPasskeyDescription")}</p>
+                </TabsContent>
+              </Tabs>
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  className="w-full"
+                  style={brandStyle}
+                  onClick={handleLinkConfirm}
+                  disabled={linkLoading || (linkMethod === "password" && !linkPassword) || (linkMethod === "totp" && !linkTotpCode)}
+                >
+                  {linkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (linkMethod === "webauthn" ? <Fingerprint className="mr-2 h-4 w-4" /> : null)}
+                  {t("login.linkConfirmButton", { provider: linkProviderLabel })}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={exitLinkMode}>
+                  {t("login.backToLogin")}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleWebAuthn}
-                disabled={webauthnLoading}
-              >
-                {webauthnLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
-                {t("login.webauthn")}
-              </Button>
             </>
-          )}
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">{t("login.username")}</Label>
+                  <Input
+                    id="username"
+                    placeholder={t("login.username")}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t("login.password")}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  />
+                  <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">
+                    {t("login.rememberMe")}
+                  </Label>
+                </div>
+                {turnstileSiteKey && (
+                  <div ref={turnstileRef} className="flex justify-center" />
+                )}
+                <Button type="submit" className="w-full" style={brandStyle} disabled={loading || (!!turnstileSiteKey && !turnstileToken)}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {t("login.submit")}
+                </Button>
+              </form>
 
-          {registerEnabled && !oidcId && (
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              {t("login.noAccount")}{" "}
-              <Link to="/register" className="text-primary hover:underline">
-                {t("login.register")}
-              </Link>
-            </p>
+              {!oidcId && (
+                <>
+                  <div className="relative my-4">
+                    <Separator />
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                      {t("login.or")}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleWebAuthn}
+                    disabled={webauthnLoading}
+                  >
+                    {webauthnLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
+                    {t("login.webauthn")}
+                  </Button>
+                </>
+              )}
+
+              {registerEnabled && !oidcId && (
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  {t("login.noAccount")}{" "}
+                  <Link to="/register" className="text-primary hover:underline">
+                    {t("login.register")}
+                  </Link>
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -293,6 +418,59 @@ export default function LoginPage() {
       )}
     </div>
   )
+}
+
+async function getWebAuthnAssertionBody(publicKey: {
+  challenge: string
+  allowCredentials?: Array<{ id: string } & Record<string, unknown>>
+} & Record<string, unknown>) {
+  const normalizedPublicKey = normalizeAssertionOptions(publicKey)
+  const credential = await navigator.credentials.get({ publicKey: normalizedPublicKey }) as PublicKeyCredential
+  return credentialToAssertionBody(credential)
+}
+
+function normalizeAssertionOptions(publicKey: {
+  challenge: string
+  allowCredentials?: Array<{ id: string; type?: PublicKeyCredentialType; transports?: AuthenticatorTransport[] } & Record<string, unknown>>
+} & Record<string, unknown>): PublicKeyCredentialRequestOptions {
+  const normalized: PublicKeyCredentialRequestOptions = {
+    ...publicKey,
+    challenge: base64urlToBuffer(publicKey.challenge),
+    allowCredentials: publicKey.allowCredentials?.map((cred) => ({
+      ...cred,
+      id: base64urlToBuffer(cred.id),
+      type: cred.type ?? "public-key",
+    })),
+  }
+  return normalized
+}
+
+function credentialToAssertionBody(credential: PublicKeyCredential) {
+  const response = credential.response as AuthenticatorAssertionResponse
+  return {
+    id: credential.id,
+    rawId: bufferToBase64url(credential.rawId),
+    type: credential.type,
+    response: {
+      authenticatorData: bufferToBase64url(response.authenticatorData),
+      clientDataJSON: bufferToBase64url(response.clientDataJSON),
+      signature: bufferToBase64url(response.signature),
+      userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : "",
+    },
+  }
+}
+
+function formatProviderName(provider: string) {
+  if (!provider) {
+    return "Social"
+  }
+  if (provider.toLowerCase() === "github") {
+    return "GitHub"
+  }
+  if (provider.toLowerCase() === "google") {
+    return "Google"
+  }
+  return provider.charAt(0).toUpperCase() + provider.slice(1)
 }
 
 function base64urlToBuffer(base64url: string): ArrayBuffer {

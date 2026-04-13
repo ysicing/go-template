@@ -27,6 +27,12 @@ export const authApi = {
     api.post(`/auth/mfa/webauthn/finish?mfa_token=${mfa_token}`, body),
   socialExchange: (code: string) =>
     api.post("/auth/social/exchange", { code }),
+  confirmSocialLink: (link_token: string, payload: { password?: string; totp_code?: string }) =>
+    api.post("/auth/social/confirm-link", { link_token, ...payload }),
+  socialLinkWebAuthnBegin: (link_token: string) =>
+    api.post("/auth/social/confirm-link/webauthn/begin", { link_token }),
+  socialLinkWebAuthnFinish: (link_token: string, body: unknown) =>
+    api.post(`/auth/social/confirm-link/webauthn/finish?link_token=${encodeURIComponent(link_token)}`, body),
   verifyEmail: (token: string) => api.post("/auth/verify-email", { token }),
   resendVerification: () => api.post("/auth/resend-verification"),
 }
