@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/pkg/crypto"
 )
 
 // Well-known setting keys.
@@ -47,13 +48,49 @@ const (
 
 // SettingStore handles persistence for system settings.
 type SettingStore struct {
-	db    *gorm.DB
-	cache Cache
+	db            *gorm.DB
+	cache         Cache
+	encPassphrase string
 }
 
 // NewSettingStore creates a SettingStore.
-func NewSettingStore(db *gorm.DB, cache Cache) *SettingStore {
-	return &SettingStore{db: db, cache: cache}
+func NewSettingStore(db *gorm.DB, cache Cache, encryptionKey ...string) *SettingStore {
+	store := &SettingStore{db: db, cache: cache}
+	if len(encryptionKey) > 0 {
+		store.encPassphrase = encryptionKey[0]
+	}
+	return store
+}
+
+func isSecretSettingKey(key string) bool {
+	switch key {
+	case SettingTurnstileSecretKey, SettingSMTPPassword:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *SettingStore) decryptSettingValue(key, value string) string {
+	if s.encPassphrase == "" || value == "" || !isSecretSettingKey(key) {
+		return value
+	}
+	dec, err := crypto.DecryptOrPlaintext(s.encPassphrase, value)
+	if err != nil {
+		return value
+	}
+	return dec
+}
+
+func (s *SettingStore) encryptSettingValue(key, value string) string {
+	if s.encPassphrase == "" || value == "" || !isSecretSettingKey(key) || crypto.IsEncrypted(value) {
+		return value
+	}
+	enc, err := crypto.Encrypt(s.encPassphrase, value)
+	if err != nil {
+		return value
+	}
+	return enc
 }
 
 // Get retrieves a setting value by key. Returns defaultVal if not found.
@@ -70,7 +107,7 @@ func (s *SettingStore) GetWithContext(ctx context.Context, key, defaultVal strin
 		if v == settingMissValue { // cached miss
 			return defaultVal
 		}
-		return v
+		return s.decryptSettingValue(key, v)
 	}
 
 	// Fall back to DB.
@@ -83,15 +120,16 @@ func (s *SettingStore) GetWithContext(ctx context.Context, key, defaultVal strin
 
 	// Cache the value.
 	_ = s.cache.Set(ctx, cacheKey, setting.Value, settingCacheTTL)
-	return setting.Value
+	return s.decryptSettingValue(key, setting.Value)
 }
 
 // Set creates or updates a setting.
 func (s *SettingStore) Set(ctx context.Context, key, value string) error {
-	setting := model.Setting{Key: key, Value: value}
-	err := s.db.WithContext(ctx).Where("key = ?", key).Assign(model.Setting{Value: value}).FirstOrCreate(&setting).Error
+	storedValue := s.encryptSettingValue(key, value)
+	setting := model.Setting{Key: key, Value: storedValue}
+	err := s.db.WithContext(ctx).Where("key = ?", key).Assign(model.Setting{Value: storedValue}).FirstOrCreate(&setting).Error
 	if err == nil {
-		_ = s.cache.Set(ctx, "setting:"+key, value, settingCacheTTL)
+		_ = s.cache.Set(ctx, "setting:"+key, storedValue, settingCacheTTL)
 	}
 	return err
 }

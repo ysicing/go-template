@@ -363,3 +363,28 @@ func TestRedisScripts_RequireMatchingValue(t *testing.T) {
 		t.Fatalf("delIfValueScriptSource must require exact value match: %q", delIfValueScriptSource)
 	}
 }
+
+func TestMemoryCache_EvictsWhenCapacityExceeded(t *testing.T) {
+	c := NewMemoryCacheWithCapacity(2)
+	t.Cleanup(func() { _ = c.Close() })
+	ctx := context.Background()
+
+	if err := c.Set(ctx, "k1", "v1", time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Set(ctx, "k2", "v2", time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Set(ctx, "k3", "v3", time.Minute); err != nil {
+		t.Fatal(err)
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if len(c.entries) > 2 {
+		t.Fatalf("expected cache to cap entries at 2, got %d", len(c.entries))
+	}
+	if entry, ok := c.entries["k3"]; !ok || entry.value != "v3" {
+		t.Fatal("expected newest entry to remain in cache")
+	}
+}

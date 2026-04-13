@@ -21,6 +21,7 @@ type authUserStore interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetByUsernameOrEmail(ctx context.Context, identity string) (*model.User, error)
 	GetByInviteCode(ctx context.Context, inviteCode string) (*model.User, error)
+	Update(ctx context.Context, user *model.User) error
 }
 
 type authRefreshTokenStore interface {
@@ -405,6 +406,49 @@ func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "tokens refreshed",
 	})
+}
+
+// SetupPassword handles POST /api/auth/setup-password for one-time password setup tokens.
+func (h *AuthHandler) SetupPassword(c fiber.Ctx) error {
+	var req struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	req.Token = strings.TrimSpace(req.Token)
+	if req.Token == "" || req.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "token and password are required"})
+	}
+	if shouldEnforcePasswordPolicy(h.settings) {
+		if err := model.ValidatePasswordStrength(req.Password); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
+
+	ephemeral := store.NewEphemeralTokenStore(h.cache)
+	userID, err := ephemeral.ConsumeString(c.Context(), "password_setup", "user", req.Token)
+	if err != nil || userID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
+	}
+
+	user, err := h.users.GetByID(c.Context(), userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "user not found"})
+	}
+	if user.PasswordHash != "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "password already set"})
+	}
+	if err := user.SetPassword(req.Password); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to hash password"})
+	}
+	if err := h.users.Update(c.Context(), user); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to set password"})
+	}
+
+	h.recordAudit(c, user.ID, model.AuditPasswordSet, "user", user.ID, "success", "password set via setup token")
+	return c.JSON(fiber.Map{"message": "password set successfully"})
 }
 
 // Logout handles POST /api/auth/logout.

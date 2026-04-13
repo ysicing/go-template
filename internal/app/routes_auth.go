@@ -29,6 +29,9 @@ func authPublicRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/verify-email", Summary: "Verify email token", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.authLimiter, rt.handlers.email.VerifyEmail}
 		}},
+		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/setup-password", Summary: "Set password with one-time token", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
+			return []fiber.Handler{rt.authLimiter, rt.handlers.auth.SetupPassword}
+		}},
 		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/logout", Summary: "Logout current session", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.authLimiter, rt.optionalJWT, rt.handlers.auth.Logout}
 		}},

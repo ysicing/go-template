@@ -348,6 +348,72 @@ func TestRegister_WithEmailVerification_SendQueuedWhenSMTPMissing(t *testing.T) 
 	}
 }
 
+func TestAuthSetupPassword_ConsumesSetupToken(t *testing.T) {
+	db := setupTestDB(t)
+	users := store.NewUserStore(db)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+	settings := store.NewSettingStore(db, cache)
+	audit := store.NewAuditLogStore(db)
+	refreshTokens := store.NewAPIRefreshTokenStore(db)
+
+	user := &model.User{
+		Username:   "setup-user",
+		Email:      "setup@example.com",
+		Provider:   "local",
+		ProviderID: "setup-user",
+	}
+	if err := users.Create(context.Background(), user); err != nil {
+		t.Fatalf("create setup user: %v", err)
+	}
+
+	token := "setup-token"
+	ephemeral := store.NewEphemeralTokenStore(cache)
+	if err := ephemeral.IssueString(context.Background(), "password_setup", "user", token, user.ID, time.Hour); err != nil {
+		t.Fatalf("issue setup token: %v", err)
+	}
+
+	authH := NewAuthHandler(AuthDeps{
+		Users:         users,
+		RefreshTokens: refreshTokens,
+		Audit:         audit,
+		Cache:         cache,
+		Settings:      settings,
+		TokenConfig: TokenConfig{
+			Secret:        "test-secret",
+			Issuer:        "test-issuer",
+			AccessTTL:     time.Hour,
+			RefreshTTL:    24 * time.Hour,
+			RememberMeTTL: 30 * 24 * time.Hour,
+		},
+	})
+
+	app := fiber.New()
+	app.Post("/setup-password", authH.SetupPassword)
+
+	req := httptest.NewRequest(http.MethodPost, "/setup-password", strings.NewReader(`{"token":"setup-token","password":"StrongPass123!@#"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		respBody, _ := readBody(resp)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	updated, err := users.GetByID(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("reload user: %v", err)
+	}
+	if updated.PasswordHash == "" || !updated.CheckPassword("StrongPass123!@#") {
+		t.Fatal("expected password to be set from setup token")
+	}
+	if _, err := ephemeral.LoadString(context.Background(), "password_setup", "user", token); err == nil {
+		t.Fatal("expected setup token to be consumed")
+	}
+}
+
 func TestRegister_WithInviteCode_BindsInviterAndInviteIP(t *testing.T) {
 	defer trustAll(t)()
 

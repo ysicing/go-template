@@ -37,7 +37,10 @@ type adminAuditLogStore interface {
 }
 
 type adminCache interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key, value string, ttl time.Duration) error
 	Del(ctx context.Context, key string) error
+	DelIfValue(ctx context.Context, key, value string) (bool, error)
 }
 
 // AdminDeps aggregates dependencies required by AdminHandler.
@@ -108,19 +111,15 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
 	}
 
-	password := GeneratePassword(16)
-
 	user := &model.User{
-		Username: req.Username,
-		Email:    req.Email,
-		Provider: "local",
-		IsAdmin:  req.IsAdmin,
+		Username:   req.Username,
+		Email:      req.Email,
+		Provider:   "local",
+		ProviderID: req.Username,
+		IsAdmin:    req.IsAdmin,
 	}
 	if req.IsAdmin {
 		user.SetPermissions(model.AllAdminPermissions())
-	}
-	if err := user.SetPassword(password); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to hash password"})
 	}
 
 	if err := h.users.Create(c.Context(), user); err != nil {
@@ -137,7 +136,16 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 		IP: ip, UserAgent: ua, Status: "success",
 	})
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"user": user, "password": password})
+	setupToken := store.GenerateRandomToken()
+	if err := store.NewEphemeralTokenStore(h.cache).IssueString(c.Context(), "password_setup", "user", setupToken, user.ID, 24*time.Hour); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create password setup token"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"user":                      user,
+		"password_setup_token":      setupToken,
+		"password_setup_expires_at": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339),
+	})
 }
 
 // ListUsers handles GET /api/admin/users.

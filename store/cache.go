@@ -45,20 +45,29 @@ func (e memEntry) expired() bool {
 
 // MemoryCache is an in-process cache backed by a map with TTL support.
 type MemoryCache struct {
-	mu      sync.RWMutex
-	entries map[string]memEntry
+	mu         sync.RWMutex
+	entries    map[string]memEntry
+	maxEntries int
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
 	doneCh   chan struct{}
 }
 
+const defaultMemoryCacheMaxEntries = 10000
+
 // NewMemoryCache creates a MemoryCache.
 func NewMemoryCache() *MemoryCache {
+	return NewMemoryCacheWithCapacity(defaultMemoryCacheMaxEntries)
+}
+
+// NewMemoryCacheWithCapacity creates a MemoryCache with a hard entry cap.
+func NewMemoryCacheWithCapacity(maxEntries int) *MemoryCache {
 	m := &MemoryCache{
-		entries: make(map[string]memEntry),
-		stopCh:  make(chan struct{}),
-		doneCh:  make(chan struct{}),
+		entries:    make(map[string]memEntry),
+		maxEntries: maxEntries,
+		stopCh:     make(chan struct{}),
+		doneCh:     make(chan struct{}),
 	}
 	go m.cleanupExpiredLoop(1 * time.Minute)
 	return m
@@ -91,12 +100,30 @@ func (m *MemoryCache) cleanupExpiredLoop(interval time.Duration) {
 func (m *MemoryCache) cleanupExpired() {
 	now := time.Now()
 	m.mu.Lock()
+	m.cleanupExpiredLocked(now)
+	m.mu.Unlock()
+}
+
+func (m *MemoryCache) cleanupExpiredLocked(now time.Time) {
 	for key, e := range m.entries {
 		if !e.expiresAt.IsZero() && now.After(e.expiresAt) {
 			delete(m.entries, key)
 		}
 	}
-	m.mu.Unlock()
+}
+
+func (m *MemoryCache) ensureCapacityLocked() {
+	if m.maxEntries <= 0 || len(m.entries) < m.maxEntries {
+		return
+	}
+	m.cleanupExpiredLocked(time.Now())
+	if len(m.entries) < m.maxEntries {
+		return
+	}
+	for key := range m.entries {
+		delete(m.entries, key)
+		return
+	}
 }
 
 func (m *MemoryCache) Get(_ context.Context, key string) (string, error) {
@@ -116,6 +143,9 @@ func (m *MemoryCache) Set(_ context.Context, key, value string, ttl time.Duratio
 		exp = time.Now().Add(ttl)
 	}
 	m.mu.Lock()
+	if _, exists := m.entries[key]; !exists {
+		m.ensureCapacityLocked()
+	}
 	m.entries[key] = memEntry{value: value, expiresAt: exp}
 	m.mu.Unlock()
 	return nil
@@ -138,6 +168,7 @@ func (m *MemoryCache) SetNX(_ context.Context, key, value string, ttl time.Durat
 	if ttl > 0 {
 		exp = time.Now().Add(ttl)
 	}
+	m.ensureCapacityLocked()
 	m.entries[key] = memEntry{value: value, expiresAt: exp}
 	return true, nil
 }
@@ -179,6 +210,7 @@ func (m *MemoryCache) Incr(_ context.Context, key string, ttl time.Duration) (in
 	defer m.mu.Unlock()
 	var count int64
 	var exp time.Time
+	_, exists := m.entries[key]
 	if e, ok := m.entries[key]; ok && !e.expired() {
 		n, err := strconv.ParseInt(e.value, 10, 64)
 		if err == nil {
@@ -189,6 +221,9 @@ func (m *MemoryCache) Incr(_ context.Context, key string, ttl time.Duration) (in
 	count++
 	if count == 1 && ttl > 0 {
 		exp = time.Now().Add(ttl) // only set TTL on first increment
+	}
+	if !exists {
+		m.ensureCapacityLocked()
 	}
 	m.entries[key] = memEntry{value: strconv.FormatInt(count, 10), expiresAt: exp}
 	return count, nil

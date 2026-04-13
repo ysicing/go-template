@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
@@ -80,5 +82,61 @@ func TestAdminHandler_ListUsers_IncludesSocialProviders(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected user %q in response", user.ID)
+	}
+}
+
+func TestAdminHandler_CreateUser_ReturnsSetupTokenInsteadOfPassword(t *testing.T) {
+	db := setupTestDB(t)
+	userStore := store.NewUserStore(db)
+	clientStore := store.NewOAuthClientStore(db)
+	auditStore := store.NewAuditLogStore(db)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	h := NewAdminHandler(AdminDeps{
+		Users:   userStore,
+		Clients: clientStore,
+		Audit:   auditStore,
+		Cache:   cache,
+		DB:      db,
+	})
+
+	app := fiber.New()
+	app.Post("/api/admin/users", func(c fiber.Ctx) error {
+		c.Locals("user_id", "admin-user")
+		return h.CreateUser(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/users", strings.NewReader(`{"username":"new-admin-user","email":"new-admin@example.com","is_admin":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusCreated {
+		t.Fatalf("expected 201, got %d", resp.StatusCode)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := body["password"]; exists {
+		t.Fatalf("expected plaintext password to be omitted, got %#v", body["password"])
+	}
+	token, _ := body["password_setup_token"].(string)
+	if token == "" {
+		t.Fatal("expected password_setup_token in response")
+	}
+
+	created, err := userStore.GetByEmail(context.Background(), "new-admin@example.com")
+	if err != nil {
+		t.Fatalf("get created user: %v", err)
+	}
+	if created.PasswordHash != "" {
+		t.Fatal("expected created user to require password setup")
+	}
+	if !created.IsAdmin {
+		t.Fatal("expected created user to be admin")
 	}
 }

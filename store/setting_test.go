@@ -2,17 +2,19 @@ package store
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/pkg/crypto"
 )
 
 func newSettingStoreTest(t *testing.T) (*SettingStore, *gorm.DB, Cache) {
 	t.Helper()
 
-	db, err := InitDB("sqlite", "file::memory:?cache=shared", "error")
+	db, err := InitDB("sqlite", filepath.Join(t.TempDir(), "settings.db"), "error")
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
@@ -29,6 +31,28 @@ func newSettingStoreTest(t *testing.T) (*SettingStore, *gorm.DB, Cache) {
 	})
 
 	return NewSettingStore(db, cache), db, cache
+}
+
+func newEncryptedSettingStoreTest(t *testing.T, key string) (*SettingStore, *gorm.DB, Cache) {
+	t.Helper()
+
+	db, err := InitDB("sqlite", filepath.Join(t.TempDir(), "settings-encrypted.db"), "error")
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := model.Migrate(db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cache := NewMemoryCache()
+	t.Cleanup(func() {
+		_ = cache.Close()
+		if sqlDB, err := db.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	})
+
+	return NewSettingStore(db, cache, key), db, cache
 }
 
 func TestSettingStore_SetWritesThroughCache(t *testing.T) {
@@ -65,5 +89,28 @@ func TestSettingStore_DeleteCachesMiss(t *testing.T) {
 	got := settings.GetWithContext(ctx, SettingTurnstileSiteKey, "")
 	if got != "" {
 		t.Fatalf("expected cached miss after delete, got %q", got)
+	}
+}
+
+func TestSettingStore_EncryptsSecretValuesAtRest(t *testing.T) {
+	settings, db, _ := newEncryptedSettingStoreTest(t, "encryption-key")
+	ctx := context.Background()
+
+	if err := settings.Set(ctx, SettingSMTPPassword, "smtp-secret"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+
+	var raw model.Setting
+	if err := db.WithContext(ctx).Where("key = ?", SettingSMTPPassword).First(&raw).Error; err != nil {
+		t.Fatalf("query raw setting: %v", err)
+	}
+	if raw.Value == "smtp-secret" {
+		t.Fatal("expected smtp password to be encrypted at rest")
+	}
+	if !crypto.IsEncrypted(raw.Value) {
+		t.Fatalf("expected encrypted value prefix, got %q", raw.Value)
+	}
+	if got := settings.GetWithContext(ctx, SettingSMTPPassword, ""); got != "smtp-secret" {
+		t.Fatalf("expected decrypted smtp password, got %q", got)
 	}
 }
