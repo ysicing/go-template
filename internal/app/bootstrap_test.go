@@ -13,7 +13,7 @@ import (
 func TestInitDeps_SetsCache(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Database.Driver = "sqlite"
-	cfg.Database.DSN = "file::memory:?cache=shared"
+	cfg.Database.DSN = testSQLiteDSN(t)
 
 	log := zerolog.New(io.Discard)
 	ctx := context.Background()
@@ -39,7 +39,7 @@ func TestInitDeps_SetsCache(t *testing.T) {
 func TestInitDepsInitializesTemplateModules(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Database.Driver = "sqlite"
-	cfg.Database.DSN = "file::memory:?cache=shared"
+	cfg.Database.DSN = testSQLiteDSN(t)
 
 	log := zerolog.New(io.Discard)
 	ctx := context.Background()

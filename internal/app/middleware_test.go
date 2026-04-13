@@ -24,7 +24,7 @@ func newTestSettingStore(t *testing.T) *store.SettingStore {
 
 	cfg := DefaultConfig()
 	cfg.Database.Driver = "sqlite"
-	cfg.Database.DSN = "file::memory:?cache=shared"
+	cfg.Database.DSN = testSQLiteDSN(t)
 
 	log := zerolog.New(io.Discard)
 	db, cache := initDBAndCache(context.Background(), cfg, &log)

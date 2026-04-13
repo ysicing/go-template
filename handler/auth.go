@@ -29,6 +29,7 @@ type authRefreshTokenStore interface {
 	ConsumeToken(ctx context.Context, hash string) (*model.APIRefreshToken, error)
 	DeleteByFamily(ctx context.Context, family string) error
 	DeleteByTokenHash(ctx context.Context, hash string) error
+	GetUsedFamily(ctx context.Context, hash string) (string, error)
 }
 
 // AuthDeps aggregates dependencies required by AuthHandler.
@@ -368,13 +369,18 @@ func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 
 	tokenHash := store.HashToken(refreshToken)
 
+	if family, err := h.refreshTokens.GetUsedFamily(c.Context(), tokenHash); err == nil && family != "" {
+		_ = h.refreshTokens.DeleteByFamily(c.Context(), family)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid refresh token"})
+	}
+
 	// Atomically consume the refresh token (get + delete in transaction)
 	// This prevents concurrent refresh requests from reusing the same token
 	rt, err := h.refreshTokens.ConsumeToken(c.Context(), tokenHash)
 	if err != nil {
 		// Token not found or already consumed — possible replay attack
 		// Check if we have a cached family for this hash
-		if family, cacheErr := h.cache.Get(c.Context(), "rt_used:"+tokenHash); cacheErr == nil && family != "" {
+		if family, cacheErr := h.refreshTokens.GetUsedFamily(c.Context(), tokenHash); cacheErr == nil && family != "" {
 			// Replay detected: revoke the entire token family
 			_ = h.refreshTokens.DeleteByFamily(c.Context(), family)
 		}
@@ -386,9 +392,6 @@ func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 	}
 
 	family := rt.Family
-
-	// Cache hash→family for replay detection
-	_ = h.cache.Set(c.Context(), "rt_used:"+tokenHash, family, h.tokenConfig.RememberMeTTL)
 
 	user, err := h.users.GetByID(c.Context(), rt.UserID)
 	if err != nil {

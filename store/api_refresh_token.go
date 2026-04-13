@@ -15,12 +15,46 @@ import (
 
 // APIRefreshTokenStore handles persistence for API refresh tokens.
 type APIRefreshTokenStore struct {
-	db *gorm.DB
+	db    *gorm.DB
+	cache Cache
 }
 
 // NewAPIRefreshTokenStore creates an APIRefreshTokenStore.
-func NewAPIRefreshTokenStore(db *gorm.DB) *APIRefreshTokenStore {
-	return &APIRefreshTokenStore{db: db}
+func NewAPIRefreshTokenStore(db *gorm.DB, cache ...Cache) *APIRefreshTokenStore {
+	store := &APIRefreshTokenStore{db: db}
+	if len(cache) > 0 {
+		store.cache = cache[0]
+	}
+	return store
+}
+
+func refreshTokenUsedKey(hash string) string { return "rt_used:" + hash }
+
+func refreshTokenUsedTTL(expiresAt time.Time) time.Duration {
+	ttl := time.Until(expiresAt)
+	if ttl <= 0 {
+		return 0
+	}
+	return ttl
+}
+
+func (s *APIRefreshTokenStore) rememberUsedToken(ctx context.Context, rt *model.APIRefreshToken) {
+	if s.cache == nil || rt == nil || rt.TokenHash == "" || rt.Family == "" {
+		return
+	}
+	ttl := refreshTokenUsedTTL(rt.ExpiresAt)
+	if ttl <= 0 {
+		return
+	}
+	_ = s.cache.Set(ctx, refreshTokenUsedKey(rt.TokenHash), rt.Family, ttl)
+}
+
+// GetUsedFamily returns the cached token family for a consumed refresh token.
+func (s *APIRefreshTokenStore) GetUsedFamily(ctx context.Context, hash string) (string, error) {
+	if s.cache == nil {
+		return "", ErrCacheMiss
+	}
+	return s.cache.Get(ctx, refreshTokenUsedKey(hash))
 }
 
 // HashToken returns SHA-256 hex hash of a token string.
@@ -67,6 +101,7 @@ func (s *APIRefreshTokenStore) ConsumeToken(ctx context.Context, hash string) (*
 	if err != nil {
 		return nil, err
 	}
+	s.rememberUsedToken(ctx, &rt)
 	return &rt, nil
 }
 

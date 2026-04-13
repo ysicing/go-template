@@ -24,7 +24,7 @@ func testRouteDeps(t *testing.T) *Deps {
 
 	cfg := DefaultConfig()
 	cfg.Database.Driver = "sqlite"
-	cfg.Database.DSN = "file::memory:?cache=shared"
+	cfg.Database.DSN = testSQLiteDSN(t)
 
 	log := zerolog.New(io.Discard)
 	db, cache := initDBAndCache(context.Background(), cfg, &log)
@@ -39,6 +39,31 @@ func testRouteDeps(t *testing.T) *Deps {
 	deps := initDeps(context.Background(), db, cache, cfg, &log)
 	deps.Config = cfg
 	return deps
+}
+
+func TestTestRouteDeps_IsolatesDatabasePerTestHelper(t *testing.T) {
+	first := testRouteDeps(t)
+	second := testRouteDeps(t)
+
+	client := &model.OAuthClient{
+		Name:         "Isolation Client",
+		ClientID:     "client-isolation-check",
+		GrantTypes:   "client_credentials",
+		Scopes:       "read",
+		RedirectURIs: "https://example.com/callback",
+	}
+	secret := "isolation-secret"
+	if err := client.SetSecret(secret); err != nil {
+		t.Fatalf("set client secret: %v", err)
+	}
+	if err := first.ClientStore.Create(context.Background(), client); err != nil {
+		t.Fatalf("create oauth client in first deps: %v", err)
+	}
+
+	got, err := second.ClientStore.GetByClientID(context.Background(), client.ClientID)
+	if err == nil && got != nil {
+		t.Fatalf("expected second deps database to be isolated, but found client %q", client.ClientID)
+	}
 }
 
 func TestSetupRoutesRegistersTemplateEndpoints(t *testing.T) {
