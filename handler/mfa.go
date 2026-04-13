@@ -435,7 +435,12 @@ func (h *MFAHandler) Verify(c fiber.Ctx) error {
 		IP: ip, UserAgent: ua, Status: "success", Detail: "local",
 	})
 
-	issuedSession, err := issueBrowserSession(c, h.sessions, user, refreshTTL)
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+		User:       user,
+		IP:         ip,
+		UserAgent:  ua,
+		RefreshTTL: refreshTTL,
+	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}

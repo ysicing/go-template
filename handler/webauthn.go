@@ -381,7 +381,13 @@ func (h *WebAuthnHandler) LoginFinish(c fiber.Ctx) error {
 		IP: waLoginIP, UserAgent: waLoginUA, Status: "success", Detail: "webauthn",
 	})
 
-	issuedSession, err := issueBrowserSession(c, h.sessions, user, h.tokenConfig.RefreshTTL)
+	ip, ua := GetRealIPAndUA(c)
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+		User:       user,
+		IP:         ip,
+		UserAgent:  ua,
+		RefreshTTL: h.tokenConfig.RefreshTTL,
+	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
@@ -515,7 +521,13 @@ func (h *WebAuthnHandler) AuthFinish(c fiber.Ctx) error {
 		IP: waVerifyIP, UserAgent: waVerifyUA, Status: "success", Detail: "webauthn",
 	})
 
-	issuedSession, err := issueBrowserSession(c, h.sessions, user, refreshTTL)
+	ip, ua := GetRealIPAndUA(c)
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+		User:       user,
+		IP:         ip,
+		UserAgent:  ua,
+		RefreshTTL: refreshTTL,
+	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}

@@ -221,7 +221,7 @@ func EmailVerifiedMiddleware(users *store.UserStore, settings *store.SettingStor
 	}
 }
 
-// GenerateAccessToken creates a single JWT access token.
+// GenerateAccessToken creates a standalone access token for tests and narrow helper flows.
 func GenerateAccessToken(userID string, isAdmin bool, permissions []string, tokenVersion int64, secret, issuer string, accessTTL time.Duration) (string, error) {
 	now := time.Now()
 	if tokenVersion < 1 {

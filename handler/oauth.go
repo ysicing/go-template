@@ -124,11 +124,16 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		},
 	})
 
-	issuedSession, err := issueBrowserSession(c, h.sessions, user, h.tokenConfig.RefreshTTL)
+	ip, ua := GetRealIPAndUA(c)
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+		User:       user,
+		IP:         ip,
+		UserAgent:  ua,
+		RefreshTTL: h.tokenConfig.RefreshTTL,
+	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
-
 	// Set tokens in cookies for web clients
 	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
