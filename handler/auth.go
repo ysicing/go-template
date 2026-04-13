@@ -9,7 +9,6 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
@@ -103,39 +102,6 @@ func (h *AuthHandler) SetEmailHandler(eh *EmailHandler) {
 }
 
 func rtRememberKey(tokenHash string) string { return "rt_remember:" + tokenHash }
-
-const (
-	lockoutThreshold = 5
-	lockoutTTL       = 15 * time.Minute
-)
-
-// dummyHash is a pre-computed bcrypt hash used for constant-time comparison
-// when a user is not found, preventing timing-based user enumeration.
-var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-password-for-timing"), 12)
-
-func loginFailKey(userID string) string { return "login_fail:" + userID }
-func loginLockKey(userID string) string { return "login_lock:" + userID }
-
-// isAccountLocked checks if a user account is locked.
-func isAccountLocked(ctx context.Context, cache store.Cache, userID string) bool {
-	val, err := cache.Get(ctx, loginLockKey(userID))
-	return err == nil && val != ""
-}
-
-// recordFailedAuthAttempt atomically increments the failure counter and locks if threshold reached.
-func recordFailedAuthAttempt(ctx context.Context, cache store.Cache, userID string) {
-	key := loginFailKey(userID)
-	count, _ := cache.Incr(ctx, key, lockoutTTL)
-	if count >= int64(lockoutThreshold) {
-		_ = cache.Set(ctx, loginLockKey(userID), "1", lockoutTTL)
-	}
-}
-
-// clearFailedAuthAttempts resets the failure counter on successful login.
-func clearFailedAuthAttempts(ctx context.Context, cache store.Cache, userID string) {
-	_ = cache.Del(ctx, loginFailKey(userID))
-	_ = cache.Del(ctx, loginLockKey(userID))
-}
 
 // isValidEmail performs basic email format validation.
 func isValidEmail(email string) bool {
@@ -252,12 +218,19 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 		"user": user,
 	}
 
+	emailVerificationRequired := h.settings != nil && h.settings.GetBool(store.SettingEmailVerificationEnabled, false)
+	if emailVerificationRequired {
+		resp["email_verification_required"] = true
+	}
+
 	// Send verification email if enabled.
-	if h.settings != nil && h.settings.GetBool(store.SettingEmailVerificationEnabled, false) && h.emailHandler != nil {
+	if emailVerificationRequired && h.emailHandler != nil {
 		baseURL := c.Protocol() + "://" + c.Hostname()
 		// Email is sent asynchronously, so this won't block the response
 		_ = h.emailHandler.SendVerificationEmail(c, user, baseURL)
-		resp["email_verification_required"] = true
+	}
+	if emailVerificationRequired {
+		return c.Status(fiber.StatusCreated).JSON(resp)
 	}
 
 	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{

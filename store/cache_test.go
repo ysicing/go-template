@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -345,5 +346,20 @@ func TestMemoryCache_DelIfValue_Mismatch(t *testing.T) {
 	}
 	if v, err := c.Get(ctx, "leader"); err != nil || v != "owner-a" {
 		t.Fatalf("expected key to remain unchanged, value=%q err=%v", v, err)
+	}
+}
+
+func TestRedisScripts_RequireMatchingValue(t *testing.T) {
+	if strings.Contains(refreshIfValueScriptSource, "~= ARGV[1]") {
+		t.Fatalf("refreshIfValueScriptSource must not use mismatch operator: %q", refreshIfValueScriptSource)
+	}
+	if !strings.Contains(refreshIfValueScriptSource, "== ARGV[1]") {
+		t.Fatalf("refreshIfValueScriptSource must require exact value match: %q", refreshIfValueScriptSource)
+	}
+	if strings.Contains(delIfValueScriptSource, "~= ARGV[1]") {
+		t.Fatalf("delIfValueScriptSource must not use mismatch operator: %q", delIfValueScriptSource)
+	}
+	if !strings.Contains(delIfValueScriptSource, "== ARGV[1]") {
+		t.Fatalf("delIfValueScriptSource must require exact value match: %q", delIfValueScriptSource)
 	}
 }

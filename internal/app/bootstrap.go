@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
@@ -106,10 +107,15 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 }
 
 func initOIDCProvider(cfg *Config, deps *Deps, log *zerolog.Logger) *op.Provider {
-	oidcSecretSource := cfg.Security.OIDCSecret
-	if oidcSecretSource == "" {
-		oidcSecretSource = cfg.JWT.Secret + ":oidc"
-		log.Warn().Msg("security.oidc_secret not set, deriving from JWT secret with salt")
+	oidcSecretSource, mode, err := resolveOIDCSecretSource(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("resolve oidc secret")
+	}
+	switch mode {
+	case oidcSecretModeEncryptionKey:
+		log.Warn().Msg("security.oidc_secret not set, deriving from security.encryption_key with salt")
+	case oidcSecretModeJWTSecret:
+		log.Warn().Msg("security.oidc_secret not set, deriving from jwt.secret with salt because security.allow_insecure=true")
 	}
 	cryptoKey := sha256.Sum256([]byte(oidcSecretSource))
 	opOpts := []op.Option{}
@@ -127,6 +133,25 @@ func initOIDCProvider(cfg *Config, deps *Deps, log *zerolog.Logger) *op.Provider
 		log.Fatal().Err(err).Msg("create oidc provider")
 	}
 	return provider
+}
+
+const (
+	oidcSecretModeExplicit      = "explicit"
+	oidcSecretModeEncryptionKey = "encryption_key"
+	oidcSecretModeJWTSecret     = "jwt_secret"
+)
+
+func resolveOIDCSecretSource(cfg *Config) (string, string, error) {
+	switch {
+	case cfg.Security.OIDCSecret != "":
+		return cfg.Security.OIDCSecret, oidcSecretModeExplicit, nil
+	case cfg.Security.EncryptionKey != "":
+		return cfg.Security.EncryptionKey + ":oidc", oidcSecretModeEncryptionKey, nil
+	case cfg.Security.AllowInsecure:
+		return cfg.JWT.Secret + ":oidc", oidcSecretModeJWTSecret, nil
+	default:
+		return "", "", errors.New("security.oidc_secret is required in secure mode when security.encryption_key is unset")
+	}
 }
 
 func newFiberApp(cfg *Config, log *zerolog.Logger) *fiber.App {

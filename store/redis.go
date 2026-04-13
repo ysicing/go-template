@@ -50,17 +50,20 @@ func (r *redisCache) SetNX(ctx context.Context, key, value string, ttl time.Dura
 	return r.client.SetNX(ctx, key, value, ttl).Result()
 }
 
-var refreshIfValueScript = redis.NewScript(`
-if redis.call('GET', KEYS[1]) ~= ARGV[1] then
-    return 0
+const refreshIfValueScriptSource = `
+local current = redis.call('GET', KEYS[1])
+if current == ARGV[1] then
+    if tonumber(ARGV[2]) > 0 then
+        redis.call('PEXPIRE', KEYS[1], ARGV[2])
+    else
+        redis.call('PERSIST', KEYS[1])
+    end
+    return 1
 end
-if tonumber(ARGV[2]) > 0 then
-    redis.call('PEXPIRE', KEYS[1], ARGV[2])
-else
-    redis.call('PERSIST', KEYS[1])
-end
-return 1
-`)
+return 0
+`
+
+var refreshIfValueScript = redis.NewScript(refreshIfValueScriptSource)
 
 func (r *redisCache) RefreshIfValue(ctx context.Context, key, value string, ttl time.Duration) (bool, error) {
 	ttlMS := int64(ttl / time.Millisecond)
@@ -74,13 +77,16 @@ func (r *redisCache) RefreshIfValue(ctx context.Context, key, value string, ttl 
 	return res == 1, nil
 }
 
-var delIfValueScript = redis.NewScript(`
-if redis.call('GET', KEYS[1]) ~= ARGV[1] then
-    return 0
+const delIfValueScriptSource = `
+local current = redis.call('GET', KEYS[1])
+if current == ARGV[1] then
+    redis.call('DEL', KEYS[1])
+    return 1
 end
-redis.call('DEL', KEYS[1])
-return 1
-`)
+return 0
+`
+
+var delIfValueScript = redis.NewScript(delIfValueScriptSource)
 
 func (r *redisCache) DelIfValue(ctx context.Context, key, value string) (bool, error) {
 	res, err := delIfValueScript.Run(ctx, r.client, []string{key}, value).Int()

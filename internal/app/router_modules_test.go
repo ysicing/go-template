@@ -25,6 +25,7 @@ func testRouteDeps(t *testing.T) *Deps {
 	cfg := DefaultConfig()
 	cfg.Database.Driver = "sqlite"
 	cfg.Database.DSN = testSQLiteDSN(t)
+	cfg.Security.OIDCSecret = "test-oidc-secret"
 
 	log := zerolog.New(io.Discard)
 	db, cache := initDBAndCache(context.Background(), cfg, &log)

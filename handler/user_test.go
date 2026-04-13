@@ -83,6 +83,22 @@ func TestUserHandler_UpdateMe_WritesAuditLog(t *testing.T) {
 	assertUserAuditLogByAction(t, db, user.ID, model.AuditUserUpdate, "user")
 }
 
+func TestUserHandler_UpdateMe_RejectsInvalidEmailWithoutDomain(t *testing.T) {
+	h, _, _, _, _, _, user, _ := setupUserHandler(t)
+	app := newUserTestApp(t, h, user.ID)
+
+	payload, _ := json.Marshal(map[string]string{"email": "invalid@local"})
+	req := httptest.NewRequest(http.MethodPut, "/api/users/me", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
 func TestUserHandler_RevokeSession_WritesAuditLog(t *testing.T) {
 	h, _, refreshTokens, _, _, _, user, db := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)

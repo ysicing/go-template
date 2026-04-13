@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
@@ -70,7 +69,7 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 	}
 	if err != nil {
 		// Perform a dummy bcrypt compare to prevent timing-based user enumeration.
-		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(req.Password))
+		compareWithDummyHash(req.Password)
 		return c.Status(fiber.StatusUnauthorized).
 			JSON(fiber.Map{"error": "invalid credentials"})
 	}

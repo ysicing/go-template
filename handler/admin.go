@@ -104,7 +104,7 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 	if len(req.Username) < 3 || len(req.Username) > 32 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username must be 3-32 characters"})
 	}
-	if !strings.Contains(req.Email, "@") {
+	if !isValidEmail(req.Email) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
 	}
 

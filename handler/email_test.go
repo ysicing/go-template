@@ -325,11 +325,26 @@ func TestRegister_WithEmailVerification_SendQueuedWhenSMTPMissing(t *testing.T) 
 	if result["email_verification_required"] != true {
 		t.Fatalf("expected email_verification_required=true, got %#v", result["email_verification_required"])
 	}
-	// Note: In pure Cookie mode, tokens are NOT in JSON response
-	// They are set via HttpOnly cookies instead
-	// Check that user object is present
-	if _, ok := result["user"]; !ok {
+	userResp, ok := result["user"].(map[string]any)
+	if !ok {
 		t.Fatal("expected user object in register response")
+	}
+	if _, exists := userResp["invite_code"]; exists {
+		t.Fatalf("expected invite_code to be omitted from register response, got %#v", userResp["invite_code"])
+	}
+	if got := resp.Header.Values("Set-Cookie"); len(got) != 0 {
+		t.Fatalf("expected no session cookies when email verification is required, got %#v", got)
+	}
+	created, err := users.GetByEmail(context.Background(), "new@example.com")
+	if err != nil {
+		t.Fatalf("get registered user: %v", err)
+	}
+	tokens, err := refreshTokens.ListByUserID(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("list refresh tokens: %v", err)
+	}
+	if len(tokens) != 0 {
+		t.Fatalf("expected no refresh tokens before email verification, got %d", len(tokens))
 	}
 }
 

@@ -126,7 +126,7 @@ func (h *UserHandler) UpdateMe(c fiber.Ctx) error {
 	}
 	if req.Email != nil {
 		e := strings.TrimSpace(*req.Email)
-		if !strings.Contains(e, "@") {
+		if !isValidEmail(e) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
 		}
 		if e != user.Email {

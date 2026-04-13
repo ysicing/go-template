@@ -1,11 +1,17 @@
 package app
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestDefaultConfigUsesPort3206(t *testing.T) {
 	cfg := DefaultConfig()
 	if cfg.Server.Addr != ":3206" {
 		t.Fatalf("expected default server addr %q, got %q", ":3206", cfg.Server.Addr)
+	}
+	if cfg.JWT.AccessTokenTTL != 15*time.Minute {
+		t.Fatalf("expected default access token ttl %s, got %s", 15*time.Minute, cfg.JWT.AccessTokenTTL)
 	}
 	if cfg.Log.File.Enabled {
 		t.Fatal("expected file logging disabled by default")

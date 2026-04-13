@@ -88,7 +88,7 @@ func DefaultConfig() *Config {
 		JWT: JWTConfig{
 			Secret:          "change-me-in-production",
 			Issuer:          "go-template",
-			AccessTokenTTL:  1 * time.Hour,       // Access token valid for 1 hour
+			AccessTokenTTL:  15 * time.Minute,    // Access token valid for 15 minutes
 			RefreshTokenTTL: 7 * 24 * time.Hour,  // Refresh token valid for 7 days
 			RememberMeTTL:   30 * 24 * time.Hour, // Remember me: 30 days
 		},
