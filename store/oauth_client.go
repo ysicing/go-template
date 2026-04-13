@@ -60,58 +60,6 @@ func (s *OAuthClientStore) Count(ctx context.Context) (int64, error) {
 	return total, nil
 }
 
-// ListByUserID returns a paginated list of personal OAuth clients owned by the given user.
-func (s *OAuthClientStore) ListByUserID(ctx context.Context, userID string, page, pageSize int) ([]model.OAuthClient, int64, error) {
-	var clients []model.OAuthClient
-	var total int64
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 20
-	}
-
-	q := s.db.WithContext(ctx).
-		Model(&model.OAuthClient{}).
-		Where("user_id = ? AND (organization_id = '' OR organization_id IS NULL)", userID)
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	offset := (page - 1) * pageSize
-	if err := q.Offset(offset).Limit(pageSize).Find(&clients).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return clients, total, nil
-}
-
-// GetByIDAndUserID retrieves a personal OAuth client only if it belongs to the given user.
-func (s *OAuthClientStore) GetByIDAndUserID(ctx context.Context, id, userID string) (*model.OAuthClient, error) {
-	var client model.OAuthClient
-	if err := s.db.WithContext(ctx).
-		Where("id = ? AND user_id = ? AND (organization_id = '' OR organization_id IS NULL)", id, userID).
-		First(&client).Error; err != nil {
-		return nil, err
-	}
-	return &client, nil
-}
-
-// DeleteByIDAndUserID soft-deletes a personal OAuth client only if it belongs to the given user.
-func (s *OAuthClientStore) DeleteByIDAndUserID(ctx context.Context, id, userID string) error {
-	result := s.db.WithContext(ctx).
-		Where("id = ? AND user_id = ? AND (organization_id = '' OR organization_id IS NULL)", id, userID).
-		Delete(&model.OAuthClient{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
-}
-
 // List returns a paginated list of OAuth clients and the total count.
 func (s *OAuthClientStore) List(ctx context.Context, page, pageSize int) ([]model.OAuthClient, int64, error) {
 	var clients []model.OAuthClient

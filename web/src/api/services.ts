@@ -110,18 +110,6 @@ export const adminClientApi = {
   delete: (id: string) => api.delete(`/admin/clients/${id}`),
 }
 
-export const userAppApi = {
-  list: (page = 1, pageSize = 20) =>
-    api.get("/apps", { params: { page, page_size: pageSize } }),
-  get: (id: string) => api.get(`/apps/${id}`),
-  create: (data: Record<string, unknown>) => api.post("/apps", data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/apps/${id}`, data),
-  delete: (id: string) => api.delete(`/apps/${id}`),
-  rotateSecret: (id: string) => api.post(`/apps/${id}/rotate-secret`),
-  operatorIntrospect: (id: string, data: { token: string }) => api.post(`/apps/${id}/operator/introspect`, data),
-  operatorRevoke: (id: string, data: { token: string }) => api.post(`/apps/${id}/operator/revoke`, data),
-}
-
 export const adminProviderApi = {
   list: () => api.get("/admin/providers"),
   get: (id: string) => api.get(`/admin/providers/${id}`),
@@ -138,7 +126,6 @@ export const adminSettingsApi = {
 
 export const statsApi = {
   admin: () => api.get("/admin/stats"),
-  user: () => api.get("/apps/stats"),
 }
 
 export const versionApi = {

@@ -70,9 +70,6 @@ func TestInitDepsInitializesTemplateModules(t *testing.T) {
 	if deps.OIDCStorage == nil {
 		t.Fatal("expected oidc storage to be initialized")
 	}
-	if deps.Services.Applications == nil {
-		t.Fatal("expected application service to be initialized")
-	}
 	if deps.Services.ClientCredentials == nil {
 		t.Fatal("expected client credentials service to be initialized")
 	}

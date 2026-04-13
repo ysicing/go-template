@@ -53,9 +53,10 @@ func TestSetupRoutesRegistersTemplateEndpoints(t *testing.T) {
 		want404 bool
 	}{
 		{method: http.MethodPost, path: "/api/auth/login"},
-		{method: http.MethodGet, path: "/api/apps"},
+		{method: http.MethodGet, path: "/api/apps", want404: true},
 		{method: http.MethodGet, path: "/api/points"},
 		{method: http.MethodGet, path: "/api/admin/users"},
+		{method: http.MethodGet, path: "/api/admin/clients"},
 		{method: http.MethodGet, path: "/api/admin/settings"},
 		{method: http.MethodGet, path: "/api/organizations/test", want404: true},
 		{method: http.MethodGet, path: "/api/workspace-plans", want404: true},

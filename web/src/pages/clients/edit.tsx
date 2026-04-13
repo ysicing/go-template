@@ -32,6 +32,9 @@ export default function ClientEditPage() {
       onUpdate={async (clientId, data: OAuthClientFormData) => {
         await adminClientApi.update(clientId, data as unknown as Record<string, string>)
       }}
+      showCreatedClientId
+      showExistingClientId
+      showEndpointInfo
     />
   )
 }

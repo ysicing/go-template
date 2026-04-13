@@ -44,7 +44,7 @@ interface OAuthClientGetResponse {
 }
 
 interface OAuthClientEditorProps {
-  namespace: "apps" | "clients"
+  namespace: "clients"
   id?: string
   backPath: string
   onCreate: (data: OAuthClientFormData) => Promise<OAuthClientMutationResponse>
@@ -184,7 +184,7 @@ export default function OAuthClientEditor({
             {showEndpointInfo && (
               <>
                 <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("apps.oidcEndpoints")}</p>
+                  <p className="text-sm font-medium">{t("clients.oidcEndpoints")}</p>
                   <div className="space-y-1 font-mono text-xs text-muted-foreground">
                     <p>Discovery: {baseUrl}/.well-known/openid-configuration</p>
                     <p>Authorization: {baseUrl}/authorize</p>
@@ -194,8 +194,8 @@ export default function OAuthClientEditor({
                   </div>
                 </div>
                 <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("apps.githubCompat")}</p>
-                  <p className="text-xs text-muted-foreground">{t("apps.githubCompatDesc")}</p>
+                  <p className="text-sm font-medium">{t("clients.githubCompat")}</p>
+                  <p className="text-xs text-muted-foreground">{t("clients.githubCompatDesc")}</p>
                   <div className="space-y-1 font-mono text-xs text-muted-foreground">
                     <p>Authorization: {baseUrl}/login/oauth/authorize</p>
                     <p>Token: {baseUrl}/login/oauth/access_token</p>
@@ -287,8 +287,8 @@ export default function OAuthClientEditor({
             {!isNew && showEndpointInfo && (
               <>
                 <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("apps.oidcEndpoints")}</p>
-                  <p className="text-xs text-muted-foreground">{t("apps.oidcEndpointsDesc")}</p>
+                  <p className="text-sm font-medium">{t("clients.oidcEndpoints")}</p>
+                  <p className="text-xs text-muted-foreground">{t("clients.oidcEndpointsDesc")}</p>
                   <div className="space-y-1 font-mono text-xs text-muted-foreground">
                     <p>Discovery: {baseUrl}/.well-known/openid-configuration</p>
                     <p>Authorization: {baseUrl}/authorize</p>
@@ -298,8 +298,8 @@ export default function OAuthClientEditor({
                   </div>
                 </div>
                 <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("apps.githubCompat")}</p>
-                  <p className="text-xs text-muted-foreground">{t("apps.githubCompatDesc")}</p>
+                  <p className="text-sm font-medium">{t("clients.githubCompat")}</p>
+                  <p className="text-xs text-muted-foreground">{t("clients.githubCompatDesc")}</p>
                   <div className="space-y-1 font-mono text-xs text-muted-foreground">
                     <p>Authorization: {baseUrl}/login/oauth/authorize</p>
                     <p>Token: {baseUrl}/login/oauth/access_token</p>

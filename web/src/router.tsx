@@ -17,9 +17,6 @@ const ClientEditPage = lazy(() => import("@/pages/clients/edit"))
 const ProvidersPage = lazy(() => import("@/pages/providers"))
 const ProviderEditPage = lazy(() => import("@/pages/providers/edit"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
-const AppsPage = lazy(() => import("@/pages/apps"))
-const AppEditPage = lazy(() => import("@/pages/apps/edit"))
-const AppViewPage = lazy(() => import("@/pages/apps/view"))
 const AdminAuditLogsPage = lazy(() => import("@/pages/admin-audit-logs"))
 const ProfilePage = lazy(() => import("@/pages/profile"))
 const PointsPage = lazy(() => import("@/pages/points"))
@@ -95,13 +92,6 @@ export default function AppRouter() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="uauth">
-          <Route index element={<Navigate to="apps" replace />} />
-          <Route path="apps" element={<AppsPage />} />
-          <Route path="apps/new" element={<AppEditPage />} />
-          <Route path="apps/:id/view" element={<AppViewPage />} />
-          <Route path="apps/:id" element={<AppEditPage />} />
-        </Route>
         <Route path="account">
           <Route index element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<ProfilePage />} />

@@ -38,7 +38,7 @@ describe("AppShell", () => {
     useAppStore.setState({ themeMode: "light", language: "en", primaryColor: "#3b82f6" })
   })
 
-  it("shows uauth navigation for application pages", async () => {
+  it("falls back to home navigation for removed uauth paths", async () => {
     useAuthStore.setState({
       user: {
         id: "user-1",
@@ -53,10 +53,11 @@ describe("AppShell", () => {
 
     renderShell("/uauth/apps")
 
-    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("UAuth")
+    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("Home")
     expect(screen.getByText("v1.0.0 · abc1234")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page")
-    expect(screen.queryByRole("link", { name: "UAuth" })).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Control Center" })).toHaveAttribute("href", "/")
+    expect(screen.queryByRole("link", { name: "Applications" })).not.toBeInTheDocument()
+    expect(screen.queryByText("UAuth")).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument()
   })
 

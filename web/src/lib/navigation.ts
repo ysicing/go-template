@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react"
 import {
-  AppWindow,
   Coins,
   History,
   Home,
@@ -14,7 +13,7 @@ import {
 import { adminPermissions, hasAnyAdminPermission, hasPermission } from "@/lib/permissions"
 import type { User } from "@/stores/auth"
 
-export type ConsoleModuleID = "home" | "uauth" | "account" | "admin"
+export type ConsoleModuleID = "home" | "account" | "admin"
 
 export type ConsoleNavItem = {
   key: string
@@ -66,20 +65,6 @@ export const consoleModules: ConsoleModule[] = [
             to: "/",
             matches: ["/"],
           },
-        ],
-      },
-    ],
-  },
-  {
-    id: "uauth",
-    labelKey: "nav.modules.uauth",
-    to: "/uauth/apps",
-    isVisible: alwaysVisible,
-    sections: [
-      {
-        key: "uauth-core",
-        items: [
-          { key: "uauth-apps", labelKey: "app.apps", icon: AppWindow, to: "/uauth/apps", matches: ["/uauth/apps"] },
         ],
       },
     ],
@@ -141,7 +126,6 @@ export function getConsoleModules(user: User | null): ConsoleModule[] {
 
 export function getConsoleModuleByPathname(pathname: string): ConsoleModuleID {
   if (pathname === "/") return "home"
-  if (pathname.startsWith("/uauth")) return "uauth"
   if (pathname.startsWith("/account")) return "account"
   if (pathname.startsWith("/admin")) return "admin"
   return "home"

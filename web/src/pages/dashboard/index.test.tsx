@@ -5,12 +5,14 @@ import DashboardPage from "@/pages/dashboard"
 import { useAuthStore } from "@/stores/auth"
 import { adminPermissions } from "@/lib/permissions"
 
-const userMock = vi.fn()
+const authorizedAppsMock = vi.fn()
 const adminMock = vi.fn()
 
 vi.mock("@/api/services", () => ({
+  userApi: {
+    listAuthorizedApps: (...args: unknown[]) => authorizedAppsMock(...args),
+  },
   statsApi: {
-    user: (...args: unknown[]) => userMock(...args),
     admin: (...args: unknown[]) => adminMock(...args),
   },
 }))
@@ -29,15 +31,15 @@ describe("DashboardPage", () => {
       initStatus: "ready",
     })
 
-    userMock.mockReset()
+    authorizedAppsMock.mockReset()
     adminMock.mockReset()
   })
 
-  it("shows a setup-first control center for regular users", async () => {
-    userMock.mockResolvedValue({
+  it("shows account-focused quick access for regular users", async () => {
+    authorizedAppsMock.mockResolvedValue({
       data: {
-        my_login_count: 0,
-        app_stats: [],
+        apps: [],
+        total: 0,
       },
     })
 
@@ -48,11 +50,12 @@ describe("DashboardPage", () => {
     )
 
     expect(await screen.findByRole("heading", { name: "Identity control center" })).toBeInTheDocument()
-    expect(screen.getByText("Quick access")).toBeInTheDocument()
-    expect(screen.getByText("Create your first application")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Create application" })).toHaveAttribute("href", "/uauth/apps/new")
-    expect(screen.getByRole("link", { name: /Profile/ })).toHaveAttribute("href", "/account/profile")
-    expect(screen.getByRole("link", { name: /Points/ })).toHaveAttribute("href", "/account/points")
+    expect(screen.getAllByText("Quick access").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Authorized Apps").length).toBeGreaterThan(0)
+    expect(screen.getAllByRole("link", { name: /Profile/ }).some((node) => node.getAttribute("href") === "/account/profile")).toBe(true)
+    expect(screen.getAllByRole("link", { name: /Points/ }).some((node) => node.getAttribute("href") === "/account/points")).toBe(true)
+    expect(screen.queryByRole("link", { name: "Create application" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Applications/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Quotes/ })).not.toBeInTheDocument()
     expect(screen.queryByText("Organizations")).not.toBeInTheDocument()
     expect(screen.queryByText("Service Accounts")).not.toBeInTheDocument()
@@ -75,10 +78,10 @@ describe("DashboardPage", () => {
       initStatus: "ready",
     })
 
-    userMock.mockResolvedValue({
+    authorizedAppsMock.mockResolvedValue({
       data: {
-        my_login_count: 4,
-        app_stats: [{ client_id: "client-1", app_name: "Portal", login_count: 4 }],
+        apps: [{ id: "grant-1", client_id: "client-1", client_name: "Portal", scopes: "openid", granted_at: "2026-04-12T00:00:00Z" }],
+        total: 1,
       },
     })
     adminMock.mockResolvedValue({
@@ -99,7 +102,8 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("Platform snapshot")).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Admin/ })).not.toBeInTheDocument()
     expect(screen.getByText("Total users")).toBeInTheDocument()
-    expect(screen.getByText("Application sign-ins")).toBeInTheDocument()
+    expect(screen.getAllByText("Authorized Apps").length).toBeGreaterThan(0)
+    expect(screen.getByText("Portal")).toBeInTheDocument()
     expect(screen.queryByText("Monitoring")).not.toBeInTheDocument()
     expect(adminMock).toHaveBeenCalledTimes(1)
   })

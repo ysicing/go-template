@@ -20,8 +20,8 @@ describe("OAuthClientEditor", () => {
     render(
       <MemoryRouter>
         <OAuthClientEditor
-          namespace="apps"
-          backPath="/uauth/apps"
+          namespace="clients"
+          backPath="/admin/clients"
           onCreate={createMock}
           onGet={vi.fn()}
           onUpdate={vi.fn()}
@@ -47,8 +47,8 @@ describe("OAuthClientEditor", () => {
     render(
       <MemoryRouter>
         <OAuthClientEditor
-          namespace="apps"
-          backPath="/uauth/apps"
+          namespace="clients"
+          backPath="/admin/clients"
           onCreate={createMock}
           onGet={vi.fn()}
           onUpdate={vi.fn()}
@@ -63,8 +63,8 @@ describe("OAuthClientEditor", () => {
     render(
       <MemoryRouter>
         <OAuthClientEditor
-          namespace="apps"
-          backPath="/uauth/apps"
+          namespace="clients"
+          backPath="/admin/clients"
           onCreate={createMock}
           onGet={vi.fn()}
           onUpdate={vi.fn()}

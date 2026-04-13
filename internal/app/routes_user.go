@@ -7,7 +7,6 @@ func userRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 	routes = append(routes, currentUserRouteSpecs(rt)...)
 	routes = append(routes, sessionRouteSpecs(rt)...)
 	routes = append(routes, mfaRouteSpecs(rt)...)
-	routes = append(routes, appRouteSpecs(rt)...)
 	return routes
 }
 
@@ -85,32 +84,6 @@ func mfaRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		}},
 		{Doc: openAPIRoute{Method: fiber.MethodDelete, Path: "/api/mfa/webauthn/credentials/:id", Summary: "Delete WebAuthn credential", Tag: "mfa", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.webauthn.DeleteCredential}
-		}},
-	}
-}
-
-func appRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
-	return []managedRouteSpec{
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/apps/stats", Summary: "Get app stats", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.app.Stats}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/apps", Summary: "Create app", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.app.Create}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/apps", Summary: "List apps", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.app.List}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/apps/:id", Summary: "Get app", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.app.Get}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPut, Path: "/api/apps/:id", Summary: "Update app", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.app.Update}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodDelete, Path: "/api/apps/:id", Summary: "Delete app", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.app.Delete}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/apps/:id/rotate-secret", Summary: "Rotate app secret", Tag: "app", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.app.RotateSecret}
 		}},
 	}
 }

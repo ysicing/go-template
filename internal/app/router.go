@@ -13,7 +13,6 @@ import (
 
 // Services groups application-level services shared across handlers.
 type Services struct {
-	Applications      *service.ApplicationService
 	ClientCredentials *service.ClientCredentialsService
 	Sessions          *service.SessionService
 	Auth              *service.AuthService
@@ -52,7 +51,6 @@ type builtHandlers struct {
 	oauth             *handler.OAuthHandler
 	oidcLogin         *handler.OIDCLoginHandler
 	socialAcct        *handler.SocialAccountHandler
-	app               *handler.AppHandler
 	oauthClient       *handler.OAuthClientHandler
 	admin             *handler.AdminHandler
 	adminProv         *handler.AdminProviderHandler
@@ -131,7 +129,6 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 
 	h.oidcLogin = handler.NewOIDCLoginHandler(d.OIDCStorage, d.ClientStore, d.OAuthConsentGrantStore, d.UserStore, d.MFAStore, d.AuditLogStore, d.Cache)
 	h.socialAcct = handler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
-	h.app = handler.NewAppHandler(d.Services.Applications, d.AuditLogStore)
 	h.oauthClient = handler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
 	h.points = handler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
 
