@@ -248,7 +248,7 @@
     "siteTitleDesc": "Browser tab title. Leave empty to use default",
     "siteTitlePlaceholder": "e.g. go-template",
     "corsOrigins": "CORS Allowed Origins",
-    "corsOriginsDesc": "Comma-separated origins. Leave empty to allow all.",
+    "corsOriginsDesc": "Comma-separated origins. Leave empty to deny cross-origin requests.",
     "corsOriginsPlaceholder": "https://example.com, https://app.example.com",
     "saved": "Settings saved",
     "save": "Save Settings",

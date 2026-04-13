@@ -101,7 +101,7 @@ func DefaultConfig() *Config {
 			File: LogFileConfig{
 				MaxSizeMB:  100,
 				MaxBackups: 10,
-				MaxAgeDays: 7,
+				MaxAgeDays: 30,
 			},
 		},
 	}

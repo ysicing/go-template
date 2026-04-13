@@ -1,6 +1,7 @@
 package app
 
 import (
+	"net/url"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -13,8 +14,6 @@ import (
 	fiberrecover "github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	fibersession "github.com/gofiber/fiber/v3/middleware/session"
-	fibermemory "github.com/gofiber/storage/memory/v2"
-	fiberredis "github.com/gofiber/storage/redis/v3"
 	"github.com/rs/zerolog"
 
 	"github.com/ysicing/go-template/handler"
@@ -22,7 +21,7 @@ import (
 	"github.com/ysicing/go-template/store"
 )
 
-func setupMiddlewareChain(app *fiber.App, cfg *Config, settingStore *store.SettingStore, log *zerolog.Logger) {
+func setupMiddlewareChain(app *fiber.App, settingStore *store.SettingStore, sessionStorage fiber.Storage, log *zerolog.Logger) {
 	app.Use(fiberrecover.New(fiberrecover.Config{
 		EnableStackTrace: true,
 		StackTraceHandler: func(c fiber.Ctx, err any) {
@@ -38,7 +37,7 @@ func setupMiddlewareChain(app *fiber.App, cfg *Config, settingStore *store.Setti
 	}))
 	app.Use(requestid.New())
 	app.Use(fibersession.New(fibersession.Config{
-		Storage:         newSessionStorage(cfg),
+		Storage:         sessionStorage,
 		CookieHTTPOnly:  true,
 		CookieSameSite:  "Lax",
 		IdleTimeout:     30 * time.Minute,
@@ -48,29 +47,13 @@ func setupMiddlewareChain(app *fiber.App, cfg *Config, settingStore *store.Setti
 		},
 	}))
 	app.Use(traceContextMiddleware())
+	app.Use(cookieCSRFMiddleware())
 	app.Use(requestLogMiddleware())
 	app.Use(handler.PrometheusMiddleware())
 	app.Use(buildCORSMiddleware(settingStore, log))
 	app.Use(compress.New())
 	app.Use(securityHeadersMiddleware(settingStore))
 	app.Use(handler.AuditContextMiddleware())
-}
-
-func newSessionStorage(cfg *Config) fiber.Storage {
-	if cfg != nil && cfg.Redis.Addr != "" {
-		redisCfg := fiberredis.Config{
-			Password: cfg.Redis.Password,
-			Database: cfg.Redis.DB,
-		}
-		if strings.Contains(cfg.Redis.Addr, "://") {
-			redisCfg.URL = cfg.Redis.Addr
-		} else {
-			redisCfg.Addrs = []string{cfg.Redis.Addr}
-		}
-		return fiberredis.New(redisCfg)
-	}
-
-	return fibermemory.New()
 }
 
 func shouldSkipSession(c fiber.Ctx) bool {
@@ -106,6 +89,60 @@ func traceContextMiddleware() fiber.Handler {
 	}
 }
 
+func cookieCSRFMiddleware() fiber.Handler {
+	return func(c fiber.Ctx) error {
+		if isSafeMethod(c.Method()) || !hasAuthCookies(c) {
+			return c.Next()
+		}
+		if isSameOriginRequest(c) {
+			return c.Next()
+		}
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "csrf validation failed"})
+	}
+}
+
+func isSafeMethod(method string) bool {
+	switch method {
+	case fiber.MethodGet, fiber.MethodHead, fiber.MethodOptions:
+		return true
+	default:
+		return false
+	}
+}
+
+func hasAuthCookies(c fiber.Ctx) bool {
+	return c.Cookies("access_token") != "" || c.Cookies("refresh_token") != ""
+}
+
+func isSameOriginRequest(c fiber.Ctx) bool {
+	expectedScheme := strings.ToLower(c.Scheme())
+	expectedHost := strings.ToLower(c.Get("Host"))
+	if expectedHost == "" {
+		expectedHost = strings.ToLower(c.Hostname())
+	}
+	for _, raw := range []string{c.Get("Origin"), c.Get("Referer")} {
+		if raw == "" {
+			continue
+		}
+		if matchesOrigin(raw, expectedScheme, expectedHost) {
+			return true
+		}
+		return false
+	}
+	return false
+}
+
+func matchesOrigin(raw, expectedScheme, expectedHost string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(parsed.Scheme, expectedScheme) {
+		return false
+	}
+	return strings.EqualFold(parsed.Host, expectedHost)
+}
+
 func resolveTraceID(headerTraceID, traceparent, requestID string) string {
 	if tid := strings.TrimSpace(headerTraceID); tid != "" {
 		return tid
@@ -113,6 +150,10 @@ func resolveTraceID(headerTraceID, traceparent, requestID string) string {
 	parts := strings.Split(strings.TrimSpace(traceparent), "-")
 	if len(parts) == 4 && len(parts[1]) == 32 {
 		return strings.ToLower(parts[1])
+	}
+	traceID := store.NewTraceID()
+	if traceID != "" {
+		return traceID
 	}
 	return requestID
 }

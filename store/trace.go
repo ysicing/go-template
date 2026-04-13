@@ -103,6 +103,14 @@ func TraceContextFromContext(ctx context.Context) TraceContext {
 	}
 }
 
+func NewTraceID() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(buf)
+}
+
 func NewSpanID() string {
 	buf := make([]byte, 8)
 	if _, err := rand.Read(buf); err != nil {

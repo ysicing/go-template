@@ -53,8 +53,18 @@ jobs:
         working-directory: web
         run: |
           pnpm install --frozen-lockfile
+          pnpm lint
           pnpm test
           pnpm build
+
+      - name: Check Go formatting
+        run: |
+          files=$(find . -name '*.go' -not -path './web/*')
+          unformatted=$(gofmt -l $files)
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
 
       - name: Run Go tests
         run: go test ./...

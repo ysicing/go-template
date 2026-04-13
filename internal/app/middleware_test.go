@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+	fibermemory "github.com/gofiber/storage/memory/v2"
 	"github.com/rs/zerolog"
 
 	pkglogger "github.com/ysicing/go-template/pkg/logger"
@@ -101,13 +102,10 @@ func TestRequestLogMiddleware_SkipsKubeProbeUA(t *testing.T) {
 
 func TestSetupMiddlewareChain_PropagatesTraceContext(t *testing.T) {
 	settingStore := newTestSettingStore(t)
-	cache := store.NewMemoryCache()
-	t.Cleanup(func() { _ = cache.Close() })
 
-	cfg := DefaultConfig()
 	app := fiber.New()
 	log := zerolog.New(io.Discard)
-	setupMiddlewareChain(app, cfg, settingStore, &log)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
 	app.Get("/trace", func(c fiber.Ctx) error {
 		return c.JSON(store.TraceContextFromContext(c.Context()))
 	})
@@ -141,15 +139,50 @@ func TestSetupMiddlewareChain_PropagatesTraceContext(t *testing.T) {
 	}
 }
 
-func TestSetupMiddlewareChain_RecoversPanics(t *testing.T) {
+func TestSetupMiddlewareChain_GeneratesIndependentTraceAndSpanIDs(t *testing.T) {
 	settingStore := newTestSettingStore(t)
-	cache := store.NewMemoryCache()
-	t.Cleanup(func() { _ = cache.Close() })
 
-	cfg := DefaultConfig()
 	app := fiber.New()
 	log := zerolog.New(io.Discard)
-	setupMiddlewareChain(app, cfg, settingStore, &log)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
+	app.Get("/trace", func(c fiber.Ctx) error {
+		return c.JSON(store.TraceContextFromContext(c.Context()))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/trace", nil)
+	req.Header.Set("X-Request-ID", "req-123")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var trace store.TraceContext
+	if err := json.NewDecoder(resp.Body).Decode(&trace); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if trace.RequestID != "req-123" {
+		t.Fatalf("expected request id in context, got %q", trace.RequestID)
+	}
+	if trace.TraceID == "" || trace.TraceID == trace.RequestID {
+		t.Fatalf("expected independent trace id, got %q", trace.TraceID)
+	}
+	if len(trace.TraceID) != 32 {
+		t.Fatalf("expected 32-char trace id, got %q", trace.TraceID)
+	}
+	if trace.SpanID == "" || trace.SpanID == trace.TraceID || trace.SpanID == trace.RequestID {
+		t.Fatalf("expected independent span id, got %q", trace.SpanID)
+	}
+	if len(trace.SpanID) != 16 {
+		t.Fatalf("expected 16-char span id, got %q", trace.SpanID)
+	}
+}
+
+func TestSetupMiddlewareChain_RecoversPanics(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
 	app.Get("/panic", func(c fiber.Ctx) error {
 		panic("boom")
 	})
@@ -165,13 +198,10 @@ func TestSetupMiddlewareChain_RecoversPanics(t *testing.T) {
 
 func TestSetupMiddlewareChain_SetsSessionCookieOnlyForBrowserRoutes(t *testing.T) {
 	settingStore := newTestSettingStore(t)
-	cache := store.NewMemoryCache()
-	t.Cleanup(func() { _ = cache.Close() })
 
-	cfg := DefaultConfig()
 	app := fiber.New()
 	log := zerolog.New(io.Discard)
-	setupMiddlewareChain(app, cfg, settingStore, &log)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
 	app.Get("/", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
 	app.Get("/api/ping", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
 
@@ -189,5 +219,61 @@ func TestSetupMiddlewareChain_SetsSessionCookieOnlyForBrowserRoutes(t *testing.T
 	}
 	if cookie := apiResp.Header.Get("Set-Cookie"); strings.Contains(cookie, "session_id=") {
 		t.Fatalf("expected api route to skip session cookie, got %q", cookie)
+	}
+}
+
+func TestCookieCSRFMiddleware_RejectsCookieBackedUnsafeRequestWithoutOrigin(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
+	app.Post("/api/auth/refresh", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", nil)
+	req.Header.Set("Cookie", "refresh_token=test-refresh")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusForbidden {
+		t.Fatalf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+func TestCookieCSRFMiddleware_AllowsSameOriginCookieRequest(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
+	app.Post("/api/auth/refresh", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", nil)
+	req.Host = "app.example.com"
+	req.Header.Set("Cookie", "refresh_token=test-refresh")
+	req.Header.Set("Origin", "http://app.example.com")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestCookieCSRFMiddleware_AllowsBearerRequestWithoutCookie(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
+	app.Post("/api/admin/settings", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/settings", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 }

@@ -115,7 +115,7 @@ func mountSPA(app *fiber.App, webDistFS fs.FS) {
 	})
 }
 
-func runServer(app *fiber.App, cache store.Cache, addr string, buildInfo BuildInfo, log *zerolog.Logger) {
+func runServer(app *fiber.App, resources runtimeResources, addr string, buildInfo BuildInfo, log *zerolog.Logger) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -131,7 +131,30 @@ func runServer(app *fiber.App, cache store.Cache, addr string, buildInfo BuildIn
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	_ = app.ShutdownWithContext(shutdownCtx)
-	_ = cache.Close()
+	resources.close(log)
+}
+
+func (r runtimeResources) close(log *zerolog.Logger) {
+	if err := r.sessionStorage.Close(); err != nil && log != nil {
+		log.Error().Err(err).Msg("close session storage")
+	}
+	if r.cache != nil {
+		if err := r.cache.Close(); err != nil && log != nil {
+			log.Error().Err(err).Msg("close cache")
+		}
+	}
+	if r.db != nil {
+		sqlDB, err := r.db.DB()
+		if err != nil {
+			if log != nil {
+				log.Error().Err(err).Msg("resolve sql db")
+			}
+			return
+		}
+		if err := sqlDB.Close(); err != nil && log != nil {
+			log.Error().Err(err).Msg("close db")
+		}
+	}
 }
 
 func cleanupAPIRefreshTokens(ctx context.Context, log *zerolog.Logger, s *store.APIRefreshTokenStore) {

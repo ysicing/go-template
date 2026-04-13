@@ -1,6 +1,6 @@
-# Auth Template
+# go-template
 
-`Auth Template` 是一个面向个人项目和团队内部脚手架的 `Go + React` 全栈模板。
+`go-template` 是一个面向个人项目和团队内部脚手架的 `Go + React` 全栈模板。
 
 它保留了开箱即用的认证与控制台底座：
 
@@ -33,8 +33,9 @@ task build
 
 镜像会先修正 `/data` 权限，再以非 root 用户启动应用，并将运行时数据目录固定在 `/data`：
 
-- 默认 SQLite 数据库：`/data/id.db`
+- 默认 SQLite 数据库：`/data/go-template.db`
 - 默认配置文件路径：`/data/config.yaml`
+- 可选文件日志：`/data/logs/go-template/app.log`
 - 默认监听端口：`3206`
 
 最小示例：
@@ -96,6 +97,8 @@ Swagger 文档会按当前登录用户权限动态裁剪：
 - `database.dsn`
 - `jwt.secret`
 - `jwt.issuer`
+- `log.file.enabled`
+- `log.file.path`
 - `security.allow_insecure`
 - `security.encryption_key`
 - `security.oidc_secret`
@@ -125,8 +128,7 @@ OpenAPI 维护约束：
 - 需要添加文档元数据时，可用 `task openapi:scaffold METHOD=GET PATH=/api/example SUMMARY='示例接口' TAG=example AUTH=true`
 - 若接口需要权限，可追加 `PERMISSIONS='admin.users.read,admin.stats.read'`
 
-## 文档
+## 参考
 
-- 快速启动：`docs/QUICKSTART.md`
+- 示例配置：`config.example.yaml`
 - 前端说明：`web/README.md`
-- 前端错误态约束：`docs/FRONTEND_ERROR_HANDLING.md`

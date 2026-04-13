@@ -248,7 +248,7 @@
     "siteTitleDesc": "浏览器标签页显示的标题，留空使用默认值",
     "siteTitlePlaceholder": "例如：go-template",
     "corsOrigins": "CORS 允许来源",
-    "corsOriginsDesc": "逗号分隔的来源地址，留空表示允许所有",
+    "corsOriginsDesc": "逗号分隔的来源地址，留空表示拒绝跨域请求",
     "corsOriginsPlaceholder": "https://example.com, https://app.example.com",
     "saved": "设置已保存",
     "save": "保存设置",
