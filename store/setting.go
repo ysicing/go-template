@@ -82,15 +82,15 @@ func (s *SettingStore) decryptSettingValue(key, value string) string {
 	return dec
 }
 
-func (s *SettingStore) encryptSettingValue(key, value string) string {
+func (s *SettingStore) encryptSettingValue(key, value string) (string, error) {
 	if s.encPassphrase == "" || value == "" || !isSecretSettingKey(key) || crypto.IsEncrypted(value) {
-		return value
+		return value, nil
 	}
 	enc, err := crypto.Encrypt(s.encPassphrase, value)
 	if err != nil {
-		return value
+		return "", err
 	}
-	return enc
+	return enc, nil
 }
 
 // Get retrieves a setting value by key. Returns defaultVal if not found.
@@ -125,9 +125,12 @@ func (s *SettingStore) GetWithContext(ctx context.Context, key, defaultVal strin
 
 // Set creates or updates a setting.
 func (s *SettingStore) Set(ctx context.Context, key, value string) error {
-	storedValue := s.encryptSettingValue(key, value)
+	storedValue, err := s.encryptSettingValue(key, value)
+	if err != nil {
+		return err
+	}
 	setting := model.Setting{Key: key, Value: storedValue}
-	err := s.db.WithContext(ctx).Where("key = ?", key).Assign(model.Setting{Value: storedValue}).FirstOrCreate(&setting).Error
+	err = s.db.WithContext(ctx).Where("key = ?", key).Assign(model.Setting{Value: storedValue}).FirstOrCreate(&setting).Error
 	if err == nil {
 		_ = s.cache.Set(ctx, "setting:"+key, storedValue, settingCacheTTL)
 	}

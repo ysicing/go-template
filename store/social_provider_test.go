@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -10,7 +11,15 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
+
+	crand "crypto/rand"
 )
+
+type failingReader struct{}
+
+func (failingReader) Read(_ []byte) (int, error) {
+	return 0, errors.New("entropy unavailable")
+}
 
 func setupSocialTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -197,5 +206,34 @@ func TestSocialProviderStore_PlaintextFallback(t *testing.T) {
 	}
 	if got.ClientSecret != "plain-secret" {
 		t.Fatalf("expected plaintext fallback %q, got %q", "plain-secret", got.ClientSecret)
+	}
+}
+
+func TestSocialProviderStore_UpsertFailsWhenSecretEncryptionFails(t *testing.T) {
+	db := setupSocialTestDB(t)
+	s := NewSocialProviderStore(db, "encryption-key")
+	ctx := context.Background()
+
+	originalReader := crand.Reader
+	crand.Reader = failingReader{}
+	t.Cleanup(func() { crand.Reader = originalReader })
+
+	err := s.Upsert(ctx, &model.SocialProvider{
+		Name:         "broken-github",
+		ClientID:     "cid",
+		ClientSecret: "super-secret",
+		RedirectURL:  "http://localhost/cb",
+		Enabled:      true,
+	})
+	if err == nil {
+		t.Fatal("expected encryption failure to be returned")
+	}
+
+	var count int64
+	if db.WithContext(ctx).Model(&model.SocialProvider{}).Where("name = ?", "broken-github").Count(&count).Error != nil {
+		t.Fatal("failed to count rows")
+	}
+	if count != 0 {
+		t.Fatal("expected provider not to be persisted when encryption fails")
 	}
 }

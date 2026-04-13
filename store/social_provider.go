@@ -21,15 +21,15 @@ func NewSocialProviderStore(db *gorm.DB, encryptionKey string) *SocialProviderSt
 	return &SocialProviderStore{db: db, encPassphrase: encryptionKey}
 }
 
-func (s *SocialProviderStore) encryptSecret(plaintext string) string {
+func (s *SocialProviderStore) encryptSecret(plaintext string) (string, error) {
 	if s.encPassphrase == "" || plaintext == "" {
-		return plaintext
+		return plaintext, nil
 	}
 	enc, err := crypto.Encrypt(s.encPassphrase, plaintext)
 	if err != nil {
-		return plaintext // fallback to plaintext on error
+		return "", err
 	}
-	return enc
+	return enc, nil
 }
 
 func (s *SocialProviderStore) decryptSecret(stored string) string {
@@ -69,10 +69,13 @@ func (s *SocialProviderStore) GetByID(ctx context.Context, id string) (*model.So
 
 // Upsert creates or updates a social provider by name.
 func (s *SocialProviderStore) Upsert(ctx context.Context, provider *model.SocialProvider) error {
-	encSecret := s.encryptSecret(provider.ClientSecret)
+	encSecret, err := s.encryptSecret(provider.ClientSecret)
+	if err != nil {
+		return err
+	}
 	var existing model.SocialProvider
 	d := s.db.WithContext(ctx)
-	err := d.Where("name = ?", provider.Name).First(&existing).Error
+	err = d.Where("name = ?", provider.Name).First(&existing).Error
 	if err == nil {
 		existing.ClientID = provider.ClientID
 		existing.ClientSecret = encSecret

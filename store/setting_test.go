@@ -9,6 +9,8 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
+
+	crand "crypto/rand"
 )
 
 func newSettingStoreTest(t *testing.T) (*SettingStore, *gorm.DB, Cache) {
@@ -112,5 +114,27 @@ func TestSettingStore_EncryptsSecretValuesAtRest(t *testing.T) {
 	}
 	if got := settings.GetWithContext(ctx, SettingSMTPPassword, ""); got != "smtp-secret" {
 		t.Fatalf("expected decrypted smtp password, got %q", got)
+	}
+}
+
+func TestSettingStore_SetFailsWhenSecretEncryptionFails(t *testing.T) {
+	settings, db, _ := newEncryptedSettingStoreTest(t, "encryption-key")
+	ctx := context.Background()
+
+	originalReader := crand.Reader
+	crand.Reader = failingReader{}
+	t.Cleanup(func() { crand.Reader = originalReader })
+
+	err := settings.Set(ctx, SettingSMTPPassword, "smtp-secret")
+	if err == nil {
+		t.Fatal("expected encryption failure to be returned")
+	}
+
+	var count int64
+	if err := db.WithContext(ctx).Model(&model.Setting{}).Where("key = ?", SettingSMTPPassword).Count(&count).Error; err != nil {
+		t.Fatalf("count setting rows: %v", err)
+	}
+	if count != 0 {
+		t.Fatal("expected setting not to be persisted when encryption fails")
 	}
 }

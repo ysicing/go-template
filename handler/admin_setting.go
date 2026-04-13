@@ -70,17 +70,19 @@ func isMasked(s string) bool {
 }
 
 // setBoolSetting sets a boolean setting if the value is not nil.
-func setBoolSetting(ctx context.Context, s *store.SettingStore, key string, val *bool) {
+func setBoolSetting(ctx context.Context, s *store.SettingStore, key string, val *bool) error {
 	if val != nil {
-		s.Set(ctx, key, strconv.FormatBool(*val))
+		return s.Set(ctx, key, strconv.FormatBool(*val))
 	}
+	return nil
 }
 
 // setStringSetting sets a string setting if the value is not nil and not masked.
-func setStringSetting(ctx context.Context, s *store.SettingStore, key string, val *string, skipMasked bool) {
+func setStringSetting(ctx context.Context, s *store.SettingStore, key string, val *string, skipMasked bool) error {
 	if val != nil && (!skipMasked || !isMasked(*val)) {
-		s.Set(ctx, key, *val)
+		return s.Set(ctx, key, *val)
 	}
+	return nil
 }
 
 func parseInviteRewardValue(v string) (int, error) {
@@ -198,32 +200,76 @@ func (h *AdminSettingHandler) Update(c fiber.Ctx) error {
 	}
 
 	// Boolean settings
-	setBoolSetting(ctx, h.settings, store.SettingRegisterEnabled, req.RegisterEnabled)
-	setBoolSetting(ctx, h.settings, store.SettingPasswordPolicyEnabled, req.PasswordPolicyEnabled)
-	setBoolSetting(ctx, h.settings, store.SettingSMTPTLS, req.SMTPTLS)
-	setBoolSetting(ctx, h.settings, store.SettingEmailVerificationEnabled, req.EmailVerificationEnabled)
-	setBoolSetting(ctx, h.settings, store.SettingInviteRewardEnabled, req.InviteRewardEnabled)
+	if err := setBoolSetting(ctx, h.settings, store.SettingRegisterEnabled, req.RegisterEnabled); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setBoolSetting(ctx, h.settings, store.SettingPasswordPolicyEnabled, req.PasswordPolicyEnabled); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setBoolSetting(ctx, h.settings, store.SettingSMTPTLS, req.SMTPTLS); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setBoolSetting(ctx, h.settings, store.SettingEmailVerificationEnabled, req.EmailVerificationEnabled); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setBoolSetting(ctx, h.settings, store.SettingInviteRewardEnabled, req.InviteRewardEnabled); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
 
 	// String settings (no masking)
-	setStringSetting(ctx, h.settings, store.SettingSiteTitle, req.SiteTitle, false)
-	setStringSetting(ctx, h.settings, store.SettingCORSOrigins, req.CORSOrigins, false)
-	setStringSetting(ctx, h.settings, store.SettingWebAuthnRPID, req.WebAuthnRPID, false)
-	setStringSetting(ctx, h.settings, store.SettingWebAuthnRPDisplay, req.WebAuthnRPDisplay, false)
-	setStringSetting(ctx, h.settings, store.SettingWebAuthnRPOrigins, req.WebAuthnRPOrigins, false)
-	setStringSetting(ctx, h.settings, store.SettingTurnstileSiteKey, req.TurnstileSiteKey, false)
-	setStringSetting(ctx, h.settings, store.SettingSMTPHost, req.SMTPHost, false)
-	setStringSetting(ctx, h.settings, store.SettingSMTPPort, req.SMTPPort, false)
-	setStringSetting(ctx, h.settings, store.SettingSMTPUsername, req.SMTPUsername, false)
-	setStringSetting(ctx, h.settings, store.SettingSMTPFromAddress, req.SMTPFromAddress, false)
-	setStringSetting(ctx, h.settings, store.SettingEmailDomainMode, req.EmailDomainMode, false)
-	setStringSetting(ctx, h.settings, store.SettingEmailDomainWhitelist, req.EmailDomainWhitelist, false)
-	setStringSetting(ctx, h.settings, store.SettingEmailDomainBlacklist, req.EmailDomainBlacklist, false)
-	setStringSetting(ctx, h.settings, store.SettingInviteRewardMin, req.InviteRewardMin, false)
-	setStringSetting(ctx, h.settings, store.SettingInviteRewardMax, req.InviteRewardMax, false)
+	if err := setStringSetting(ctx, h.settings, store.SettingSiteTitle, req.SiteTitle, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingCORSOrigins, req.CORSOrigins, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingWebAuthnRPID, req.WebAuthnRPID, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingWebAuthnRPDisplay, req.WebAuthnRPDisplay, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingWebAuthnRPOrigins, req.WebAuthnRPOrigins, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingTurnstileSiteKey, req.TurnstileSiteKey, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingSMTPHost, req.SMTPHost, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingSMTPPort, req.SMTPPort, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingSMTPUsername, req.SMTPUsername, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingSMTPFromAddress, req.SMTPFromAddress, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingEmailDomainMode, req.EmailDomainMode, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingEmailDomainWhitelist, req.EmailDomainWhitelist, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingEmailDomainBlacklist, req.EmailDomainBlacklist, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingInviteRewardMin, req.InviteRewardMin, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingInviteRewardMax, req.InviteRewardMax, false); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
 
 	// Secret settings (skip if masked)
-	setStringSetting(ctx, h.settings, store.SettingTurnstileSecretKey, req.TurnstileSecret, true)
-	setStringSetting(ctx, h.settings, store.SettingSMTPPassword, req.SMTPPassword, true)
+	if err := setStringSetting(ctx, h.settings, store.SettingTurnstileSecretKey, req.TurnstileSecret, true); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
+	if err := setStringSetting(ctx, h.settings, store.SettingSMTPPassword, req.SMTPPassword, true); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
+	}
 
 	settingUserID, _ := c.Locals("user_id").(string)
 	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
