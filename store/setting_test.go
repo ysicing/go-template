@@ -138,3 +138,35 @@ func TestSettingStore_SetFailsWhenSecretEncryptionFails(t *testing.T) {
 		t.Fatal("expected setting not to be persisted when encryption fails")
 	}
 }
+
+func TestSettingStore_GetReturnsEmptySecretWhenDecryptFails(t *testing.T) {
+	writer, _, _ := newEncryptedSettingStoreTest(t, "writer-key")
+	ctx := context.Background()
+
+	if err := writer.Set(ctx, SettingSMTPPassword, "smtp-secret"); err != nil {
+		t.Fatalf("seed encrypted setting: %v", err)
+	}
+
+	reader, _, _ := newEncryptedSettingStoreTest(t, "wrong-reader-key")
+	reader.db = writer.db
+	reader.cache = NewMemoryCache()
+	t.Cleanup(func() { _ = reader.cache.Close() })
+
+	if got := reader.GetWithContext(ctx, SettingSMTPPassword, ""); got != "" {
+		t.Fatalf("expected empty secret on decrypt failure, got %q", got)
+	}
+}
+
+func TestSettingStore_GetReturnsEmptySecretForPlaintextLegacyValue(t *testing.T) {
+	writer, db, _ := newEncryptedSettingStoreTest(t, "writer-key")
+	ctx := context.Background()
+
+	if err := db.WithContext(ctx).Create(&model.Setting{Key: SettingSMTPPassword, Value: "legacy-plain-secret"}).Error; err != nil {
+		t.Fatalf("seed plaintext setting: %v", err)
+	}
+
+	reader := NewSettingStore(db, writer.cache, "reader-key")
+	if got := reader.GetWithContext(ctx, SettingSMTPPassword, ""); got != "" {
+		t.Fatalf("expected empty secret for legacy plaintext value, got %q", got)
+	}
+}

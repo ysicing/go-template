@@ -187,7 +187,7 @@ func TestSocialProviderStore_EncryptionRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSocialProviderStore_PlaintextFallback(t *testing.T) {
+func TestSocialProviderStore_GetByNameReturnsEmptySecretForPlaintextLegacyValue(t *testing.T) {
 	db := setupSocialTestDB(t)
 	ctx := context.Background()
 
@@ -198,14 +198,39 @@ func TestSocialProviderStore_PlaintextFallback(t *testing.T) {
 	}
 	db.Create(legacy)
 
-	// Read with encryption enabled — should return plaintext as-is.
+	// Read with encryption enabled — plaintext legacy secrets are no longer accepted.
 	s := NewSocialProviderStore(db, "some-key")
 	got, err := s.GetByName(ctx, "legacy-google")
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if got.ClientSecret != "plain-secret" {
-		t.Fatalf("expected plaintext fallback %q, got %q", "plain-secret", got.ClientSecret)
+	if got.ClientSecret != "" {
+		t.Fatalf("expected empty secret for legacy plaintext value, got %q", got.ClientSecret)
+	}
+}
+
+func TestSocialProviderStore_GetByNameReturnsEmptySecretWhenDecryptFails(t *testing.T) {
+	db := setupSocialTestDB(t)
+	ctx := context.Background()
+
+	writer := NewSocialProviderStore(db, "writer-key")
+	if err := writer.Upsert(ctx, &model.SocialProvider{
+		Name:         "github",
+		ClientID:     "cid",
+		ClientSecret: "top-secret",
+		RedirectURL:  "https://example.com/callback",
+		Enabled:      true,
+	}); err != nil {
+		t.Fatalf("seed encrypted provider: %v", err)
+	}
+
+	reader := NewSocialProviderStore(db, "wrong-reader-key")
+	got, err := reader.GetByName(ctx, "github")
+	if err != nil {
+		t.Fatalf("get provider with wrong key: %v", err)
+	}
+	if got.ClientSecret != "" {
+		t.Fatalf("expected empty secret on decrypt failure, got %q", got.ClientSecret)
 	}
 }
 

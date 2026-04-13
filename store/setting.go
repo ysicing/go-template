@@ -75,9 +75,12 @@ func (s *SettingStore) decryptSettingValue(key, value string) string {
 	if s.encPassphrase == "" || value == "" || !isSecretSettingKey(key) {
 		return value
 	}
+	if !crypto.IsEncrypted(value) {
+		return ""
+	}
 	dec, err := crypto.DecryptOrPlaintext(s.encPassphrase, value)
 	if err != nil {
-		return value
+		return ""
 	}
 	return dec
 }

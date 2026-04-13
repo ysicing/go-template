@@ -36,9 +36,12 @@ func (s *SocialProviderStore) decryptSecret(stored string) string {
 	if s.encPassphrase == "" || stored == "" {
 		return stored
 	}
+	if !crypto.IsEncrypted(stored) {
+		return ""
+	}
 	dec, err := crypto.DecryptOrPlaintext(s.encPassphrase, stored)
 	if err != nil {
-		return stored // fallback to raw value on error
+		return ""
 	}
 	return dec
 }
