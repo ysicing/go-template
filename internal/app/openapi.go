@@ -3,12 +3,13 @@ package app
 import (
 	"strings"
 
-	fiberSwagger "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	fiberSwagger "github.com/gofiber/contrib/v3/swaggo"
 )
 
 type openAPIRoute struct {
@@ -123,7 +124,7 @@ func buildOpenAPIDocument(buildInfo BuildInfo, viewer openAPIViewer) fiber.Map {
 		"info": fiber.Map{
 			"title":       "go-template API",
 			"version":     emptyFallback(buildInfo.Version, "dev"),
-			"description": "Dynamic OpenAPI document filtered by current user permissions. Successful responses include `X-Request-ID` and `X-Trace-ID` headers for request correlation.",
+			"description": "Dynamic OpenAPI document filtered by current user permissions. Successful responses include `X-Request-ID`, `X-Trace-ID`, and `Traceparent` headers for request correlation, where `X-Trace-ID` is the compatibility-friendly trace identifier header.",
 		},
 		"servers": []fiber.Map{{"url": "/"}},
 		"tags":    openAPITags(),
@@ -161,6 +162,16 @@ func openAPITraceHeaderParameters() []fiber.Map {
 				"example": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 			},
 		},
+		{
+			"name":        "Tracestate",
+			"in":          "header",
+			"required":    false,
+			"description": "Optional W3C tracestate header propagated when a valid Traceparent is supplied.",
+			"schema": fiber.Map{
+				"type":    "string",
+				"example": "vendor=value",
+			},
+		},
 	}
 }
 
@@ -173,7 +184,19 @@ func openAPITraceResponseHeaders() fiber.Map {
 			},
 		},
 		"X-Trace-ID": fiber.Map{
-			"description": "Trace identifier propagated across HTTP logs, audit logs, and database query logs.",
+			"description": "Compatibility trace identifier propagated across HTTP logs, audit logs, and database query logs.",
+			"schema": fiber.Map{
+				"type": "string",
+			},
+		},
+		"Traceparent": fiber.Map{
+			"description": "W3C trace context response header containing the current trace id and server span id.",
+			"schema": fiber.Map{
+				"type": "string",
+			},
+		},
+		"Tracestate": fiber.Map{
+			"description": "W3C tracestate response header echoed when the request continues a valid upstream trace.",
 			"schema": fiber.Map{
 				"type": "string",
 			},

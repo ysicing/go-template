@@ -11,14 +11,15 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/cors"
-	fiberrecover "github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
-	fibersession "github.com/gofiber/fiber/v3/middleware/session"
 	"github.com/rs/zerolog"
 
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+
+	fiberrecover "github.com/gofiber/fiber/v3/middleware/recover"
+	fibersession "github.com/gofiber/fiber/v3/middleware/session"
 )
 
 func setupMiddlewareChain(app *fiber.App, settingStore *store.SettingStore, sessionStorage fiber.Storage, log *zerolog.Logger) {
@@ -69,11 +70,7 @@ func shouldSkipSession(c fiber.Ctx) bool {
 
 func traceContextMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
-		trace := store.TraceContext{
-			RequestID: requestid.FromContext(c),
-			TraceID:   resolveTraceID(c.Get("X-Trace-ID"), c.Get("Traceparent"), requestid.FromContext(c)),
-			SpanID:    store.NewSpanID(),
-		}
+		trace := resolveTraceContext(c)
 		if sess := fibersession.FromContext(c); sess != nil && sess.Session != nil {
 			trace.SessionID = sess.Session.ID()
 		}
@@ -84,6 +81,10 @@ func traceContextMiddleware() fiber.Handler {
 			c.Locals("session_id", trace.SessionID)
 		}
 		c.Set("X-Trace-ID", trace.TraceID)
+		c.Set("Traceparent", store.FormatTraceparent(trace.TraceID, trace.SpanID, trace.TraceFlags))
+		if trace.TraceState != "" {
+			c.Set("Tracestate", trace.TraceState)
+		}
 		c.SetContext(store.WithTraceContext(c.Context(), trace))
 		return c.Next()
 	}
@@ -143,19 +144,47 @@ func matchesOrigin(raw, expectedScheme, expectedHost string) bool {
 	return strings.EqualFold(parsed.Host, expectedHost)
 }
 
-func resolveTraceID(headerTraceID, traceparent, requestID string) string {
-	if tid := strings.TrimSpace(headerTraceID); tid != "" {
-		return tid
+func resolveTraceContext(c fiber.Ctx) store.TraceContext {
+	requestID := requestid.FromContext(c)
+	trace := store.TraceContext{
+		RequestID:  requestID,
+		TraceFlags: store.DefaultTraceFlags(),
 	}
-	parts := strings.Split(strings.TrimSpace(traceparent), "-")
-	if len(parts) == 4 && len(parts[1]) == 32 {
-		return strings.ToLower(parts[1])
+
+	if spanID := store.NewSpanID(); spanID != "" {
+		trace.SpanID = spanID
+	} else if len(trace.TraceID) >= 16 {
+		trace.SpanID = trace.TraceID[:16]
+	} else {
+		trace.SpanID = requestID
 	}
-	traceID := store.NewTraceID()
-	if traceID != "" {
-		return traceID
+
+	if headerTraceID := strings.ToLower(strings.TrimSpace(c.Get("X-Trace-ID"))); store.IsValidTraceID(headerTraceID) {
+		trace.TraceID = headerTraceID
+	} else if parsed, ok := store.ParseTraceparent(c.Get("Traceparent")); ok {
+		trace.TraceID = parsed.TraceID
+		trace.ParentSpanID = parsed.ParentSpanID
+		trace.TraceFlags = parsed.TraceFlags
+		trace.TraceState = store.NormalizeTraceState(c.Get("Tracestate"))
 	}
-	return requestID
+
+	if trace.TraceID == "" {
+		trace.TraceID = store.NewTraceID()
+	}
+	if trace.TraceID == "" {
+		trace.TraceID = requestID
+	}
+	if trace.SpanID == "" {
+		if fallback := store.NewSpanID(); fallback != "" {
+			trace.SpanID = fallback
+		} else if len(trace.TraceID) >= 16 {
+			trace.SpanID = trace.TraceID[:16]
+		} else {
+			trace.SpanID = requestID
+		}
+	}
+
+	return trace
 }
 
 func securityHeadersMiddleware(settingStore *store.SettingStore) fiber.Handler {

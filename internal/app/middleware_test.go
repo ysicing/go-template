@@ -11,11 +11,12 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	fibermemory "github.com/gofiber/storage/memory/v2"
 	"github.com/rs/zerolog"
 
-	pkglogger "github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+
+	fibermemory "github.com/gofiber/storage/memory/v2"
+	pkglogger "github.com/ysicing/go-template/pkg/logger"
 )
 
 func newTestSettingStore(t *testing.T) *store.SettingStore {
@@ -174,6 +175,93 @@ func TestSetupMiddlewareChain_GeneratesIndependentTraceAndSpanIDs(t *testing.T) 
 	}
 	if len(trace.SpanID) != 16 {
 		t.Fatalf("expected 16-char span id, got %q", trace.SpanID)
+	}
+}
+
+func TestSetupMiddlewareChain_PropagatesW3CTraceHeaders(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
+	app.Get("/trace", func(c fiber.Ctx) error {
+		return c.JSON(store.TraceContextFromContext(c.Context()))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/trace", nil)
+	req.Header.Set("X-Request-ID", "req-123")
+	req.Header.Set("Traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
+	req.Header.Set("Tracestate", "vendor=value")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var trace store.TraceContext
+	if err := json.NewDecoder(resp.Body).Decode(&trace); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if trace.TraceID != "4bf92f3577b34da6a3ce929d0e0e4736" {
+		t.Fatalf("expected propagated trace id, got %q", trace.TraceID)
+	}
+	if trace.ParentSpanID != "00f067aa0ba902b7" {
+		t.Fatalf("expected parent span id, got %q", trace.ParentSpanID)
+	}
+	if trace.TraceFlags != "01" {
+		t.Fatalf("expected trace flags 01, got %q", trace.TraceFlags)
+	}
+	if trace.TraceState != "vendor=value" {
+		t.Fatalf("expected tracestate to be preserved, got %q", trace.TraceState)
+	}
+	if trace.SpanID == "" || trace.SpanID == trace.ParentSpanID {
+		t.Fatalf("expected a fresh span id, got %q", trace.SpanID)
+	}
+
+	if got := resp.Header.Get("Traceparent"); got != "00-4bf92f3577b34da6a3ce929d0e0e4736-"+trace.SpanID+"-01" {
+		t.Fatalf("expected response traceparent to use current span, got %q", got)
+	}
+	if got := resp.Header.Get("Tracestate"); got != "vendor=value" {
+		t.Fatalf("expected response tracestate, got %q", got)
+	}
+}
+
+func TestSetupMiddlewareChain_InvalidTraceparentStartsNewTrace(t *testing.T) {
+	settingStore := newTestSettingStore(t)
+
+	app := fiber.New()
+	log := zerolog.New(io.Discard)
+	setupMiddlewareChain(app, settingStore, fibermemory.New(), &log)
+	app.Get("/trace", func(c fiber.Ctx) error {
+		return c.JSON(store.TraceContextFromContext(c.Context()))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/trace", nil)
+	req.Header.Set("X-Request-ID", "req-123")
+	req.Header.Set("Traceparent", "00-00000000000000000000000000000000-00f067aa0ba902b7-01")
+	req.Header.Set("Tracestate", "vendor=value")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var trace store.TraceContext
+	if err := json.NewDecoder(resp.Body).Decode(&trace); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if trace.TraceID == "" || trace.TraceID == trace.RequestID {
+		t.Fatalf("expected a new independent trace id, got %q", trace.TraceID)
+	}
+	if len(trace.TraceID) != 32 {
+		t.Fatalf("expected 32-char trace id, got %q", trace.TraceID)
+	}
+	if trace.ParentSpanID != "" {
+		t.Fatalf("expected no parent span id for invalid traceparent, got %q", trace.ParentSpanID)
+	}
+	if got := resp.Header.Get("Traceparent"); got != "00-"+trace.TraceID+"-"+trace.SpanID+"-01" {
+		t.Fatalf("expected regenerated response traceparent, got %q", got)
+	}
+	if got := resp.Header.Get("Tracestate"); got != "" {
+		t.Fatalf("expected tracestate to be dropped for invalid traceparent, got %q", got)
 	}
 }
 

@@ -73,3 +73,51 @@ func TestTraceLogger_LogsTraceFieldsFromContext(t *testing.T) {
 		}
 	}
 }
+
+func TestParseTraceparent_Valid(t *testing.T) {
+	traceparent := "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+
+	parsed, ok := ParseTraceparent(traceparent)
+	if !ok {
+		t.Fatalf("expected traceparent %q to parse", traceparent)
+	}
+	if parsed.Version != "00" {
+		t.Fatalf("expected version 00, got %q", parsed.Version)
+	}
+	if parsed.TraceID != "4bf92f3577b34da6a3ce929d0e0e4736" {
+		t.Fatalf("unexpected trace id %q", parsed.TraceID)
+	}
+	if parsed.ParentSpanID != "00f067aa0ba902b7" {
+		t.Fatalf("unexpected parent span id %q", parsed.ParentSpanID)
+	}
+	if parsed.TraceFlags != "01" {
+		t.Fatalf("unexpected trace flags %q", parsed.TraceFlags)
+	}
+}
+
+func TestParseTraceparent_Invalid(t *testing.T) {
+	cases := []string{
+		"",
+		"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
+		"00-00000000000000000000000000000000-00f067aa0ba902b7-01",
+		"00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01",
+		"00-4bf92f3577b34da6a3ce929d0e0e473g-00f067aa0ba902b7-01",
+		"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-gg",
+	}
+
+	for _, traceparent := range cases {
+		t.Run(traceparent, func(t *testing.T) {
+			if parsed, ok := ParseTraceparent(traceparent); ok {
+				t.Fatalf("expected traceparent %q to be rejected, got %#v", traceparent, parsed)
+			}
+		})
+	}
+}
+
+func TestFormatTraceparent_NormalizesLowercase(t *testing.T) {
+	got := FormatTraceparent("4BF92F3577B34DA6A3CE929D0E0E4736", "00F067AA0BA902B7", "01")
+	want := "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+	if got != want {
+		t.Fatalf("expected formatted traceparent %q, got %q", want, got)
+	}
+}

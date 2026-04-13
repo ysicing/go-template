@@ -105,15 +105,21 @@ func TestRegisterDocsRoutes_OpenAPIIncludesTraceHeaders(t *testing.T) {
 	}
 
 	foundTraceparent := false
+	foundTracestate := false
 	for _, item := range parameters {
 		param, _ := item.(map[string]any)
 		if param["name"] == "Traceparent" && param["in"] == "header" {
 			foundTraceparent = true
-			break
+		}
+		if param["name"] == "Tracestate" && param["in"] == "header" {
+			foundTracestate = true
 		}
 	}
 	if !foundTraceparent {
 		t.Fatalf("expected Traceparent header parameter, got %#v", parameters)
+	}
+	if !foundTracestate {
+		t.Fatalf("expected Tracestate header parameter, got %#v", parameters)
 	}
 
 	responses, _ := healthGet["responses"].(map[string]any)
@@ -125,9 +131,12 @@ func TestRegisterDocsRoutes_OpenAPIIncludesTraceHeaders(t *testing.T) {
 	if _, ok := headers["X-Trace-ID"]; !ok {
 		t.Fatalf("expected X-Trace-ID response header, got %#v", headers)
 	}
+	if _, ok := headers["Traceparent"]; !ok {
+		t.Fatalf("expected Traceparent response header, got %#v", headers)
+	}
 
 	description, _ := doc.Info["description"].(string)
-	if !strings.Contains(description, "X-Trace-ID") {
+	if !strings.Contains(description, "X-Trace-ID") || !strings.Contains(description, "Traceparent") {
 		t.Fatalf("expected info description to mention trace headers, got %q", description)
 	}
 }
