@@ -5,15 +5,22 @@ server:
 
 database:
   driver: "sqlite"
-  dsn: "id.db"
+  dsn: "go-template.db"
 
 log:
   level: "info"
   format: "json"
+  file:
+    enabled: false
+    path: "/data/logs/go-template/app.log"
+    max_size_mb: 100
+    max_backups: 10
+    max_age_days: 30
+    compress: true
 
 jwt:
   secret: "change-me-in-production"
-  issuer: "auth-template"
+  issuer: "go-template"
   access_token_ttl: 15m
   refresh_token_ttl: 168h
   remember_me_ttl: 720h

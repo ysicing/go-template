@@ -17,7 +17,9 @@ import (
 )
 
 type openAPITestDocument struct {
-	Paths map[string]map[string]any `json:"paths"`
+	Components map[string]any            `json:"components"`
+	Info       map[string]any            `json:"info"`
+	Paths      map[string]map[string]any `json:"paths"`
 }
 
 func TestRegisterDocsRoutes_OpenAPIFiltersByPermissions(t *testing.T) {
@@ -83,6 +85,50 @@ func TestRegisterDocsRoutes_SwaggerUI(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(strings.ToLower(string(body)), "swagger") {
 		t.Fatalf("expected swagger html response, got %s", string(body))
+	}
+}
+
+func TestRegisterDocsRoutes_OpenAPIIncludesTraceHeaders(t *testing.T) {
+	app := fiber.New()
+	deps := testRouteDeps(t)
+	registerDocsRoutes(app, deps, BuildInfo{Version: "test"})
+
+	doc := fetchOpenAPIDoc(t, app, "")
+	healthGet, ok := doc.Paths["/health"]["get"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected /health get operation, got %#v", doc.Paths["/health"])
+	}
+
+	parameters, _ := healthGet["parameters"].([]any)
+	if len(parameters) == 0 {
+		t.Fatal("expected trace request headers to be documented")
+	}
+
+	foundTraceparent := false
+	for _, item := range parameters {
+		param, _ := item.(map[string]any)
+		if param["name"] == "Traceparent" && param["in"] == "header" {
+			foundTraceparent = true
+			break
+		}
+	}
+	if !foundTraceparent {
+		t.Fatalf("expected Traceparent header parameter, got %#v", parameters)
+	}
+
+	responses, _ := healthGet["responses"].(map[string]any)
+	okResp, _ := responses["200"].(map[string]any)
+	headers, _ := okResp["headers"].(map[string]any)
+	if _, ok := headers["X-Request-ID"]; !ok {
+		t.Fatalf("expected X-Request-ID response header, got %#v", headers)
+	}
+	if _, ok := headers["X-Trace-ID"]; !ok {
+		t.Fatalf("expected X-Trace-ID response header, got %#v", headers)
+	}
+
+	description, _ := doc.Info["description"].(string)
+	if !strings.Contains(description, "X-Trace-ID") {
+		t.Fatalf("expected info description to mention trace headers, got %q", description)
 	}
 }
 

@@ -100,8 +100,12 @@ func buildOpenAPIDocument(buildInfo BuildInfo, viewer openAPIViewer) fiber.Map {
 			"tags":        []string{route.Tag},
 			"summary":     route.Summary,
 			"operationId": openAPIOperationID(route),
+			"parameters":  openAPITraceHeaderParameters(),
 			"responses": fiber.Map{
-				"200": fiber.Map{"description": "OK"},
+				"200": fiber.Map{
+					"description": "OK",
+					"headers":     openAPITraceResponseHeaders(),
+				},
 			},
 		}
 		if route.RequiresAuth || len(route.Permissions) > 0 {
@@ -119,7 +123,7 @@ func buildOpenAPIDocument(buildInfo BuildInfo, viewer openAPIViewer) fiber.Map {
 		"info": fiber.Map{
 			"title":       "go-template API",
 			"version":     emptyFallback(buildInfo.Version, "dev"),
-			"description": "Dynamic OpenAPI document filtered by current user permissions.",
+			"description": "Dynamic OpenAPI document filtered by current user permissions. Successful responses include `X-Request-ID` and `X-Trace-ID` headers for request correlation.",
 		},
 		"servers": []fiber.Map{{"url": "/"}},
 		"tags":    openAPITags(),
@@ -133,6 +137,47 @@ func buildOpenAPIDocument(buildInfo BuildInfo, viewer openAPIViewer) fiber.Map {
 			},
 		},
 		"paths": paths,
+	}
+}
+
+func openAPITraceHeaderParameters() []fiber.Map {
+	return []fiber.Map{
+		{
+			"name":        "X-Request-ID",
+			"in":          "header",
+			"required":    false,
+			"description": "Optional caller-supplied request correlation ID. When omitted, the server generates one.",
+			"schema": fiber.Map{
+				"type": "string",
+			},
+		},
+		{
+			"name":        "Traceparent",
+			"in":          "header",
+			"required":    false,
+			"description": "Optional W3C trace context header used to continue an upstream distributed trace.",
+			"schema": fiber.Map{
+				"type":    "string",
+				"example": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+			},
+		},
+	}
+}
+
+func openAPITraceResponseHeaders() fiber.Map {
+	return fiber.Map{
+		"X-Request-ID": fiber.Map{
+			"description": "Request correlation ID for this response.",
+			"schema": fiber.Map{
+				"type": "string",
+			},
+		},
+		"X-Trace-ID": fiber.Map{
+			"description": "Trace identifier propagated across HTTP logs, audit logs, and database query logs.",
+			"schema": fiber.Map{
+				"type": "string",
+			},
+		},
 	}
 }
 

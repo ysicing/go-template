@@ -26,8 +26,18 @@ type MonitoringConfig struct {
 }
 
 type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
+	Level  string        `yaml:"level"`
+	Format string        `yaml:"format"`
+	File   LogFileConfig `yaml:"file"`
+}
+
+type LogFileConfig struct {
+	Enabled    bool   `yaml:"enabled"`
+	Path       string `yaml:"path"`
+	MaxSizeMB  int    `yaml:"max_size_mb"`
+	MaxBackups int    `yaml:"max_backups"`
+	MaxAgeDays int    `yaml:"max_age_days"`
+	Compress   bool   `yaml:"compress"`
 }
 
 type RedisConfig struct {
@@ -73,11 +83,11 @@ func DefaultConfig() *Config {
 		},
 		Database: DatabaseConfig{
 			Driver: "sqlite",
-			DSN:    "id.db",
+			DSN:    "go-template.db",
 		},
 		JWT: JWTConfig{
 			Secret:          "change-me-in-production",
-			Issuer:          "id",
+			Issuer:          "go-template",
 			AccessTokenTTL:  1 * time.Hour,       // Access token valid for 1 hour
 			RefreshTokenTTL: 7 * 24 * time.Hour,  // Refresh token valid for 7 days
 			RememberMeTTL:   30 * 24 * time.Hour, // Remember me: 30 days
@@ -88,6 +98,11 @@ func DefaultConfig() *Config {
 		Log: LogConfig{
 			Level:  "info", // WARNING: "info" level logs full SQL queries which may contain sensitive data. Use "warn" or "error" in production.
 			Format: "json",
+			File: LogFileConfig{
+				MaxSizeMB:  100,
+				MaxBackups: 10,
+				MaxAgeDays: 7,
+			},
 		},
 	}
 }
@@ -137,6 +152,34 @@ func LoadConfig() (*Config, error) {
 	}
 	if v := os.Getenv("LOG_FORMAT"); v != "" {
 		cfg.Log.Format = v
+	}
+	if v := os.Getenv("LOG_FILE_ENABLED"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Log.File.Enabled = b
+		}
+	}
+	if v := os.Getenv("LOG_FILE_PATH"); v != "" {
+		cfg.Log.File.Path = v
+	}
+	if v := os.Getenv("LOG_FILE_MAX_SIZE_MB"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.Log.File.MaxSizeMB = n
+		}
+	}
+	if v := os.Getenv("LOG_FILE_MAX_BACKUPS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.Log.File.MaxBackups = n
+		}
+	}
+	if v := os.Getenv("LOG_FILE_MAX_AGE_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.Log.File.MaxAgeDays = n
+		}
+	}
+	if v := os.Getenv("LOG_FILE_COMPRESS"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Log.File.Compress = b
+		}
 	}
 	if v := os.Getenv("ENCRYPTION_KEY"); v != "" {
 		cfg.Security.EncryptionKey = v
