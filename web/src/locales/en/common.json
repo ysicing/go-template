@@ -421,6 +421,8 @@
     "ipPlaceholder": "Enter exact IP",
     "userAgent": "User Agent",
     "detail": "Detail",
+    "viewDetail": "View detail",
+    "detailDescription": "View the full audit detail content for this record.",
     "time": "Time",
     "all": "All",
     "apply": "Apply Filters",

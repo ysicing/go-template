@@ -8,6 +8,7 @@ import { getApiErrorKind, getErrorMessage, type ApiErrorKind } from "@/api/clien
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useHasPermission, adminPermissions } from "@/lib/permissions"
@@ -79,6 +80,7 @@ export default function AdminAuditLogsPage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [errorKind, setErrorKind] = useState<ApiErrorKind | null>(null)
+  const [selectedLog, setSelectedLog] = useState<AuditLogRow | null>(null)
 
   const fetchLogs = useCallback(async (currentPage: number, currentFilters: AuditLogFilters) => {
     if (!canRead) {
@@ -280,8 +282,17 @@ export default function AdminAuditLogsPage() {
                       <TableCell className="max-w-[240px] text-xs text-muted-foreground" title={log.user_agent}>
                         {truncateMiddle(log.user_agent, 48)}
                       </TableCell>
-                      <TableCell className="max-w-[340px] text-xs text-muted-foreground" title={log.detail}>
-                        {truncateMiddle(log.detail, 96)}
+                      <TableCell className="max-w-[340px]">
+                        <div className="space-y-2">
+                          <div className="text-xs text-muted-foreground" title={log.detail}>
+                            {truncateMiddle(log.detail, 96)}
+                          </div>
+                          {log.detail && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedLog(log)}>
+                              {t("auditLogs.viewDetail")}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -305,6 +316,21 @@ export default function AdminAuditLogsPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={selectedLog !== null} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("auditLogs.detail")}</DialogTitle>
+            <DialogDescription>{t("auditLogs.detailDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-auto rounded-md border bg-muted/20 p-4">
+            <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground">
+              {selectedLog?.detail || "-"}
+            </pre>
+          </div>
+          <DialogFooter showCloseButton />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

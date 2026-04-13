@@ -421,6 +421,8 @@
     "ipPlaceholder": "输入精确 IP",
     "userAgent": "UA",
     "detail": "详情",
+    "viewDetail": "查看详情",
+    "detailDescription": "查看这条审计记录的完整详情内容。",
     "time": "时间",
     "all": "全部",
     "apply": "应用筛选",
