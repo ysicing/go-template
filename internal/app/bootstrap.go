@@ -79,7 +79,7 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 	}
 	deps.CheckInStore = store.NewCheckInStore(db, deps.PointStore)
 	deps.Services = Services{
-		Applications: service.NewApplicationService(deps.ClientStore, nil, nil, nil),
+		Applications: service.NewApplicationService(deps.ClientStore),
 		ClientCredentials: service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
 			DB:      db,
 			Clients: deps.ClientStore,

@@ -60,7 +60,7 @@ func (s *OAuthClientStore) Count(ctx context.Context) (int64, error) {
 	return total, nil
 }
 
-// ListByUserID returns a paginated list of OAuth clients owned by the given user.
+// ListByUserID returns a paginated list of personal OAuth clients owned by the given user.
 func (s *OAuthClientStore) ListByUserID(ctx context.Context, userID string, page, pageSize int) ([]model.OAuthClient, int64, error) {
 	var clients []model.OAuthClient
 	var total int64
@@ -72,7 +72,9 @@ func (s *OAuthClientStore) ListByUserID(ctx context.Context, userID string, page
 		pageSize = 20
 	}
 
-	q := s.db.WithContext(ctx).Model(&model.OAuthClient{}).Where("user_id = ?", userID)
+	q := s.db.WithContext(ctx).
+		Model(&model.OAuthClient{}).
+		Where("user_id = ? AND (organization_id = '' OR organization_id IS NULL)", userID)
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -85,18 +87,22 @@ func (s *OAuthClientStore) ListByUserID(ctx context.Context, userID string, page
 	return clients, total, nil
 }
 
-// GetByIDAndUserID retrieves an OAuth client only if it belongs to the given user.
+// GetByIDAndUserID retrieves a personal OAuth client only if it belongs to the given user.
 func (s *OAuthClientStore) GetByIDAndUserID(ctx context.Context, id, userID string) (*model.OAuthClient, error) {
 	var client model.OAuthClient
-	if err := s.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).First(&client).Error; err != nil {
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND user_id = ? AND (organization_id = '' OR organization_id IS NULL)", id, userID).
+		First(&client).Error; err != nil {
 		return nil, err
 	}
 	return &client, nil
 }
 
-// DeleteByIDAndUserID soft-deletes an OAuth client only if it belongs to the given user.
+// DeleteByIDAndUserID soft-deletes a personal OAuth client only if it belongs to the given user.
 func (s *OAuthClientStore) DeleteByIDAndUserID(ctx context.Context, id, userID string) error {
-	result := s.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&model.OAuthClient{})
+	result := s.db.WithContext(ctx).
+		Where("id = ? AND user_id = ? AND (organization_id = '' OR organization_id IS NULL)", id, userID).
+		Delete(&model.OAuthClient{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -129,96 +135,4 @@ func (s *OAuthClientStore) List(ctx context.Context, page, pageSize int) ([]mode
 	}
 
 	return clients, total, nil
-}
-
-func (s *OAuthClientStore) ListAccessibleByUser(ctx context.Context, userID string, organizationIDs []string, page, pageSize int) ([]model.OAuthClient, int64, error) {
-	var clients []model.OAuthClient
-	var total int64
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 20
-	}
-
-	query := s.accessibleQuery(ctx, userID, organizationIDs)
-	if err := query.Model(&model.OAuthClient{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if err := query.
-		Order("created_at DESC").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&clients).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return clients, total, nil
-}
-
-func (s *OAuthClientStore) GetAccessibleByUser(ctx context.Context, id, userID string, organizationIDs []string) (*model.OAuthClient, error) {
-	var client model.OAuthClient
-	if err := s.accessibleQuery(ctx, userID, organizationIDs).
-		Where("id = ?", id).
-		First(&client).Error; err != nil {
-		return nil, err
-	}
-	return &client, nil
-}
-
-func (s *OAuthClientStore) ListByWorkspace(ctx context.Context, workspaceType, ownerUserID, organizationID string, page, pageSize int) ([]model.OAuthClient, int64, error) {
-	var clients []model.OAuthClient
-	var total int64
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 20
-	}
-
-	query := s.workspaceQuery(ctx, workspaceType, ownerUserID, organizationID)
-	if err := query.Model(&model.OAuthClient{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	if err := query.
-		Order("created_at DESC").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&clients).Error; err != nil {
-		return nil, 0, err
-	}
-	return clients, total, nil
-}
-
-func (s *OAuthClientStore) GetByWorkspace(ctx context.Context, id, workspaceType, ownerUserID, organizationID string) (*model.OAuthClient, error) {
-	var client model.OAuthClient
-	if err := s.workspaceQuery(ctx, workspaceType, ownerUserID, organizationID).
-		Where("id = ?", id).
-		First(&client).Error; err != nil {
-		return nil, err
-	}
-	return &client, nil
-}
-
-func (s *OAuthClientStore) accessibleQuery(ctx context.Context, userID string, organizationIDs []string) *gorm.DB {
-	query := s.db.WithContext(ctx).Model(&model.OAuthClient{})
-	if len(organizationIDs) == 0 {
-		return query.Where("user_id = ? AND (organization_id = '' OR organization_id IS NULL)", userID)
-	}
-	return query.Where(
-		"(user_id = ? AND (organization_id = '' OR organization_id IS NULL)) OR organization_id IN ?",
-		userID,
-		organizationIDs,
-	)
-}
-
-func (s *OAuthClientStore) workspaceQuery(ctx context.Context, workspaceType, ownerUserID, organizationID string) *gorm.DB {
-	query := s.db.WithContext(ctx).Model(&model.OAuthClient{})
-	if workspaceType == model.WorkspaceTypeOrganization {
-		return query.Where("organization_id = ?", organizationID)
-	}
-	return query.Where("user_id = ? AND (organization_id = '' OR organization_id IS NULL)", ownerUserID)
 }

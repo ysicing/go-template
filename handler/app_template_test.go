@@ -32,7 +32,7 @@ func TestAppHandlerTemplateCreateReturnsApplicationEnvelope(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	h := NewAppHandler(service.NewApplicationService(clients, nil, nil, nil), audit)
+	h := NewAppHandler(service.NewApplicationService(clients), audit)
 	app := newTemplateAppHandlerTestApp(t, h, "user-1")
 
 	payload, err := json.Marshal(map[string]any{
@@ -59,7 +59,7 @@ func TestAppHandlerTemplateListReturnsApplicationCollection(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	h := NewAppHandler(service.NewApplicationService(clients, nil, nil, nil), audit)
+	h := NewAppHandler(service.NewApplicationService(clients), audit)
 	app := newTemplateAppHandlerTestApp(t, h, "user-1")
 
 	createReq := httptest.NewRequest(http.MethodPost, "/api/apps", bytes.NewBufferString(`{"name":"Portal","redirect_uris":"https://portal.example.com/callback"}`))
@@ -83,7 +83,7 @@ func TestAppHandlerTemplateCreatePersistsRequireConsent(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	h := NewAppHandler(service.NewApplicationService(clients, nil, nil, nil), audit)
+	h := NewAppHandler(service.NewApplicationService(clients), audit)
 	app := newTemplateAppHandlerTestApp(t, h, "user-1")
 
 	payload, err := json.Marshal(map[string]any{
@@ -113,7 +113,7 @@ func TestAppHandlerTemplateCreateIgnoresOrganizationScopeFields(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	h := NewAppHandler(service.NewApplicationService(clients, nil, nil, nil), audit)
+	h := NewAppHandler(service.NewApplicationService(clients), audit)
 	app := newTemplateAppHandlerTestApp(t, h, "user-1")
 
 	payload, err := json.Marshal(map[string]any{
@@ -142,7 +142,7 @@ func TestAppHandlerTemplateListOmitsOrganizationScopeFields(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	h := NewAppHandler(service.NewApplicationService(clients, nil, nil, nil), audit)
+	h := NewAppHandler(service.NewApplicationService(clients), audit)
 	app := newTemplateAppHandlerTestApp(t, h, "user-1")
 
 	createReq := httptest.NewRequest(

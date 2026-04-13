@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"testing"
 
 	"github.com/glebarez/sqlite"
@@ -18,22 +17,4 @@ func setupOrganizationServiceTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err)
 	require.NoError(t, model.AutoMigrate(db))
 	return db
-}
-
-type fakeWorkspaceQuotaChecker struct {
-	checkApplicationErr error
-	checkWebhookErr     error
-	checkMemberErr      error
-}
-
-func (f *fakeWorkspaceQuotaChecker) CheckApplicationCreate(context.Context, string, string) error {
-	return f.checkApplicationErr
-}
-
-func (f *fakeWorkspaceQuotaChecker) CheckWebhookCreate(context.Context, string, string, string) error {
-	return f.checkWebhookErr
-}
-
-func (f *fakeWorkspaceQuotaChecker) CheckOrganizationMemberAdd(context.Context, string, string) error {
-	return f.checkMemberErr
 }
