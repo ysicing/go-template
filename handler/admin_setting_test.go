@@ -178,6 +178,48 @@ func TestAdminSettingUpdate_ReturnsErrorWhenSecretSettingEncryptionFails(t *test
 	}
 }
 
+func TestAdminSettingUpdate_IsAtomicWhenSecretSettingEncryptionFails(t *testing.T) {
+	db := setupTestDB(t)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+	settings := store.NewSettingStore(db, cache, "encryption-key")
+	audit := store.NewAuditLogStore(db)
+	h := NewAdminSettingHandler(settings, audit, nil)
+
+	originalReader := crand.Reader
+	crand.Reader = failingEntropyReader{}
+	t.Cleanup(func() { crand.Reader = originalReader })
+
+	app := fiber.New()
+	app.Use(RequestIDMiddleware())
+	app.Use(AuditContextMiddleware())
+	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
+		c.Locals("user_id", "admin-user")
+		return h.Update(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/admin/settings", strings.NewReader(`{
+		"site_title":"Acme ID",
+		"smtp_password":"smtp-secret"
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", resp.StatusCode)
+	}
+
+	if got := settings.Get(store.SettingSiteTitle, ""); got != "" {
+		t.Fatalf("expected site_title to remain unset after rollback, got %q", got)
+	}
+	if got := settings.Get(store.SettingSMTPPassword, ""); got != "" {
+		t.Fatalf("expected smtp_password to remain unset after rollback, got %q", got)
+	}
+}
+
 func TestAdminSettingTestEmail_SendsToProvidedRecipient(t *testing.T) {
 	db := setupTestDB(t)
 	cache := store.NewMemoryCache()

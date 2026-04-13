@@ -70,19 +70,17 @@ func isMasked(s string) bool {
 }
 
 // setBoolSetting sets a boolean setting if the value is not nil.
-func setBoolSetting(ctx context.Context, s *store.SettingStore, key string, val *bool) error {
+func setBoolSetting(values map[string]string, key string, val *bool) {
 	if val != nil {
-		return s.Set(ctx, key, strconv.FormatBool(*val))
+		values[key] = strconv.FormatBool(*val)
 	}
-	return nil
 }
 
 // setStringSetting sets a string setting if the value is not nil and not masked.
-func setStringSetting(ctx context.Context, s *store.SettingStore, key string, val *string, skipMasked bool) error {
+func setStringSetting(values map[string]string, key string, val *string, skipMasked bool) {
 	if val != nil && (!skipMasked || !isMasked(*val)) {
-		return s.Set(ctx, key, *val)
+		values[key] = *val
 	}
-	return nil
 }
 
 func parseInviteRewardValue(v string) (int, error) {
@@ -194,80 +192,41 @@ func (h *AdminSettingHandler) Update(c fiber.Ctx) error {
 	}
 
 	ctx := c.Context()
+	pendingValues := make(map[string]string)
 
 	if err := validateInviteRewardSettings(req.InviteRewardMin, req.InviteRewardMax); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Boolean settings
-	if err := setBoolSetting(ctx, h.settings, store.SettingRegisterEnabled, req.RegisterEnabled); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setBoolSetting(ctx, h.settings, store.SettingPasswordPolicyEnabled, req.PasswordPolicyEnabled); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setBoolSetting(ctx, h.settings, store.SettingSMTPTLS, req.SMTPTLS); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setBoolSetting(ctx, h.settings, store.SettingEmailVerificationEnabled, req.EmailVerificationEnabled); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setBoolSetting(ctx, h.settings, store.SettingInviteRewardEnabled, req.InviteRewardEnabled); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
+	setBoolSetting(pendingValues, store.SettingRegisterEnabled, req.RegisterEnabled)
+	setBoolSetting(pendingValues, store.SettingPasswordPolicyEnabled, req.PasswordPolicyEnabled)
+	setBoolSetting(pendingValues, store.SettingSMTPTLS, req.SMTPTLS)
+	setBoolSetting(pendingValues, store.SettingEmailVerificationEnabled, req.EmailVerificationEnabled)
+	setBoolSetting(pendingValues, store.SettingInviteRewardEnabled, req.InviteRewardEnabled)
 
 	// String settings (no masking)
-	if err := setStringSetting(ctx, h.settings, store.SettingSiteTitle, req.SiteTitle, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingCORSOrigins, req.CORSOrigins, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingWebAuthnRPID, req.WebAuthnRPID, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingWebAuthnRPDisplay, req.WebAuthnRPDisplay, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingWebAuthnRPOrigins, req.WebAuthnRPOrigins, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingTurnstileSiteKey, req.TurnstileSiteKey, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingSMTPHost, req.SMTPHost, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingSMTPPort, req.SMTPPort, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingSMTPUsername, req.SMTPUsername, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingSMTPFromAddress, req.SMTPFromAddress, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingEmailDomainMode, req.EmailDomainMode, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingEmailDomainWhitelist, req.EmailDomainWhitelist, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingEmailDomainBlacklist, req.EmailDomainBlacklist, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingInviteRewardMin, req.InviteRewardMin, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingInviteRewardMax, req.InviteRewardMax, false); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
+	setStringSetting(pendingValues, store.SettingSiteTitle, req.SiteTitle, false)
+	setStringSetting(pendingValues, store.SettingCORSOrigins, req.CORSOrigins, false)
+	setStringSetting(pendingValues, store.SettingWebAuthnRPID, req.WebAuthnRPID, false)
+	setStringSetting(pendingValues, store.SettingWebAuthnRPDisplay, req.WebAuthnRPDisplay, false)
+	setStringSetting(pendingValues, store.SettingWebAuthnRPOrigins, req.WebAuthnRPOrigins, false)
+	setStringSetting(pendingValues, store.SettingTurnstileSiteKey, req.TurnstileSiteKey, false)
+	setStringSetting(pendingValues, store.SettingSMTPHost, req.SMTPHost, false)
+	setStringSetting(pendingValues, store.SettingSMTPPort, req.SMTPPort, false)
+	setStringSetting(pendingValues, store.SettingSMTPUsername, req.SMTPUsername, false)
+	setStringSetting(pendingValues, store.SettingSMTPFromAddress, req.SMTPFromAddress, false)
+	setStringSetting(pendingValues, store.SettingEmailDomainMode, req.EmailDomainMode, false)
+	setStringSetting(pendingValues, store.SettingEmailDomainWhitelist, req.EmailDomainWhitelist, false)
+	setStringSetting(pendingValues, store.SettingEmailDomainBlacklist, req.EmailDomainBlacklist, false)
+	setStringSetting(pendingValues, store.SettingInviteRewardMin, req.InviteRewardMin, false)
+	setStringSetting(pendingValues, store.SettingInviteRewardMax, req.InviteRewardMax, false)
 
 	// Secret settings (skip if masked)
-	if err := setStringSetting(ctx, h.settings, store.SettingTurnstileSecretKey, req.TurnstileSecret, true); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
-	}
-	if err := setStringSetting(ctx, h.settings, store.SettingSMTPPassword, req.SMTPPassword, true); err != nil {
+	setStringSetting(pendingValues, store.SettingTurnstileSecretKey, req.TurnstileSecret, true)
+	setStringSetting(pendingValues, store.SettingSMTPPassword, req.SMTPPassword, true)
+
+	if err := h.settings.SetMany(ctx, pendingValues); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update settings"})
 	}
 

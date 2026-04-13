@@ -140,6 +140,39 @@ func (s *SettingStore) Set(ctx context.Context, key, value string) error {
 	return err
 }
 
+// SetMany creates or updates multiple settings atomically.
+func (s *SettingStore) SetMany(ctx context.Context, values map[string]string) error {
+	if len(values) == 0 {
+		return nil
+	}
+
+	storedValues := make(map[string]string, len(values))
+	for key, value := range values {
+		storedValue, err := s.encryptSettingValue(key, value)
+		if err != nil {
+			return err
+		}
+		storedValues[key] = storedValue
+	}
+
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for key, storedValue := range storedValues {
+			setting := model.Setting{Key: key, Value: storedValue}
+			if err := tx.Where("key = ?", key).Assign(model.Setting{Value: storedValue}).FirstOrCreate(&setting).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	for key, storedValue := range storedValues {
+		_ = s.cache.Set(ctx, "setting:"+key, storedValue, settingCacheTTL)
+	}
+	return nil
+}
+
 // List returns all settings.
 func (s *SettingStore) List(ctx context.Context) ([]model.Setting, error) {
 	var settings []model.Setting

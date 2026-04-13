@@ -170,3 +170,28 @@ func TestSettingStore_GetReturnsEmptySecretForPlaintextLegacyValue(t *testing.T)
 		t.Fatalf("expected empty secret for legacy plaintext value, got %q", got)
 	}
 }
+
+func TestSettingStore_SetManyIsAtomicWhenSecretEncryptionFails(t *testing.T) {
+	settings, db, _ := newEncryptedSettingStoreTest(t, "encryption-key")
+	ctx := context.Background()
+
+	originalReader := crand.Reader
+	crand.Reader = failingReader{}
+	t.Cleanup(func() { crand.Reader = originalReader })
+
+	err := settings.SetMany(ctx, map[string]string{
+		SettingSiteTitle:    "Acme ID",
+		SettingSMTPPassword: "smtp-secret",
+	})
+	if err == nil {
+		t.Fatal("expected batch encryption failure to be returned")
+	}
+
+	var count int64
+	if err := db.WithContext(ctx).Model(&model.Setting{}).Where("key IN ?", []string{SettingSiteTitle, SettingSMTPPassword}).Count(&count).Error; err != nil {
+		t.Fatalf("count settings: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no settings to be persisted after rollback, got %d", count)
+	}
+}
