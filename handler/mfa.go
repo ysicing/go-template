@@ -13,6 +13,7 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 )
@@ -40,6 +41,7 @@ type MFADeps struct {
 	MFA           mfaStore
 	Audit         *store.AuditLogStore
 	RefreshTokens refreshTokenCreator
+	Sessions      *service.SessionService
 	Cache         store.Cache
 	OIDC          oidcAuthCompleter
 	Clients       *store.OAuthClientStore
@@ -52,7 +54,7 @@ type MFAHandler struct {
 	users         mfaUserStore
 	mfa           mfaStore
 	audit         *store.AuditLogStore
-	refreshTokens refreshTokenCreator
+	sessions      *service.SessionService
 	cache         store.Cache
 	oidc          oidcAuthCompleter
 	clients       *store.OAuthClientStore
@@ -67,11 +69,22 @@ const (
 
 // NewMFAHandler creates a MFAHandler.
 func NewMFAHandler(deps MFADeps) *MFAHandler {
+	sessions := deps.Sessions
+	if sessions == nil {
+		sessions = service.NewSessionService(deps.RefreshTokens, service.TokenConfig{
+			Secret:        deps.TokenConfig.Secret,
+			Issuer:        deps.TokenConfig.Issuer,
+			AccessTTL:     deps.TokenConfig.AccessTTL,
+			RefreshTTL:    deps.TokenConfig.RefreshTTL,
+			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
+		})
+	}
+
 	return &MFAHandler{
 		users:         deps.Users,
 		mfa:           deps.MFA,
 		audit:         deps.Audit,
-		refreshTokens: deps.RefreshTokens,
+		sessions:      sessions,
 		cache:         deps.Cache,
 		oidc:          deps.OIDC,
 		clients:       deps.Clients,
@@ -422,13 +435,13 @@ func (h *MFAHandler) Verify(c fiber.Ctx) error {
 		IP: ip, UserAgent: ua, Status: "success", Detail: "local",
 	})
 
-	accessToken, refreshToken, err := GenerateTokenPairWithSession(c, user, h.refreshTokens, h.tokenConfig.Secret, h.tokenConfig.Issuer, h.tokenConfig.AccessTTL, refreshTTL)
+	issuedSession, err := issueBrowserSession(c, h.sessions, user, refreshTTL)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 
 	// Set tokens in cookies for web clients
-	SetTokenCookies(c, accessToken, refreshToken, h.tokenConfig.AccessTTL, refreshTTL)
+	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 
 	return c.JSON(fiber.Map{
 		"user": user,

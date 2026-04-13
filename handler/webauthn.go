@@ -11,6 +11,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofiber/fiber/v3"
 
+	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
@@ -28,22 +29,23 @@ type WebAuthnDeps struct {
 	MFA           *store.MFAStore
 	Audit         *store.AuditLogStore
 	RefreshTokens *store.APIRefreshTokenStore
+	Sessions      *service.SessionService
 	Cache         store.Cache
 	TokenConfig   TokenConfig
 }
 
 // WebAuthnHandler handles WebAuthn/Passkey endpoints.
 type WebAuthnHandler struct {
-	settings      *store.SettingStore
-	users         *store.UserStore
-	creds         *store.WebAuthnStore
-	mfa           *store.MFAStore
-	audit         *store.AuditLogStore
-	refreshTokens *store.APIRefreshTokenStore
-	cache         store.Cache
-	tokenConfig   TokenConfig
+	settings    *store.SettingStore
+	users       *store.UserStore
+	creds       *store.WebAuthnStore
+	mfa         *store.MFAStore
+	audit       *store.AuditLogStore
+	sessions    *service.SessionService
+	cache       store.Cache
+	tokenConfig TokenConfig
 
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	cachedWA  *webauthn.WebAuthn
 	cachedAt  time.Time
 	cachedCfg string
@@ -51,15 +53,26 @@ type WebAuthnHandler struct {
 
 // NewWebAuthnHandler creates a WebAuthnHandler.
 func NewWebAuthnHandler(deps WebAuthnDeps) *WebAuthnHandler {
+	sessions := deps.Sessions
+	if sessions == nil {
+		sessions = service.NewSessionService(deps.RefreshTokens, service.TokenConfig{
+			Secret:        deps.TokenConfig.Secret,
+			Issuer:        deps.TokenConfig.Issuer,
+			AccessTTL:     deps.TokenConfig.AccessTTL,
+			RefreshTTL:    deps.TokenConfig.RefreshTTL,
+			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
+		})
+	}
+
 	return &WebAuthnHandler{
-		settings:      deps.Settings,
-		users:         deps.Users,
-		creds:         deps.Creds,
-		mfa:           deps.MFA,
-		audit:         deps.Audit,
-		refreshTokens: deps.RefreshTokens,
-		cache:         deps.Cache,
-		tokenConfig:   deps.TokenConfig,
+		settings:    deps.Settings,
+		users:       deps.Users,
+		creds:       deps.Creds,
+		mfa:         deps.MFA,
+		audit:       deps.Audit,
+		sessions:    sessions,
+		cache:       deps.Cache,
+		tokenConfig: deps.TokenConfig,
 	}
 }
 
@@ -69,6 +82,14 @@ func (h *WebAuthnHandler) getWebAuthn() (*webauthn.WebAuthn, error) {
 	rpDisplay := h.settings.Get(store.SettingWebAuthnRPDisplay, "ID Service")
 	rpOrigins := h.settings.Get(store.SettingWebAuthnRPOrigins, "")
 	cfgKey := rpID + "|" + rpDisplay + "|" + rpOrigins
+
+	h.mu.RLock()
+	if h.cachedWA != nil && h.cachedCfg == cfgKey && time.Since(h.cachedAt) < 30*time.Second {
+		cached := h.cachedWA
+		h.mu.RUnlock()
+		return cached, nil
+	}
+	h.mu.RUnlock()
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -360,13 +381,13 @@ func (h *WebAuthnHandler) LoginFinish(c fiber.Ctx) error {
 		IP: waLoginIP, UserAgent: waLoginUA, Status: "success", Detail: "webauthn",
 	})
 
-	accessToken, refreshToken, err := GenerateTokenPairWithSession(c, user, h.refreshTokens, h.tokenConfig.Secret, h.tokenConfig.Issuer, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	issuedSession, err := issueBrowserSession(c, h.sessions, user, h.tokenConfig.RefreshTTL)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 
 	// Set tokens in cookies for web clients
-	SetTokenCookies(c, accessToken, refreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
 	return c.JSON(fiber.Map{
 		"user": user,
@@ -494,13 +515,13 @@ func (h *WebAuthnHandler) AuthFinish(c fiber.Ctx) error {
 		IP: waVerifyIP, UserAgent: waVerifyUA, Status: "success", Detail: "webauthn",
 	})
 
-	accessToken, refreshToken, err := GenerateTokenPairWithSession(c, user, h.refreshTokens, h.tokenConfig.Secret, h.tokenConfig.Issuer, h.tokenConfig.AccessTTL, refreshTTL)
+	issuedSession, err := issueBrowserSession(c, h.sessions, user, refreshTTL)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 
 	// Set tokens in cookies for web clients
-	SetTokenCookies(c, accessToken, refreshToken, h.tokenConfig.AccessTTL, refreshTTL)
+	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 
 	return c.JSON(fiber.Map{
 		"user": user,

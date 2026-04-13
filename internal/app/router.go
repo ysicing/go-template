@@ -96,6 +96,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 		MFA:           d.MFAStore,
 		Audit:         d.AuditLogStore,
 		RefreshTokens: d.RefreshTokenStore,
+		Sessions:      d.Services.Sessions,
 		Cache:         d.Cache,
 		OIDC:          d.OIDCStorage,
 		Clients:       d.ClientStore,
@@ -110,6 +111,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 		MFA:           d.MFAStore,
 		Audit:         d.AuditLogStore,
 		RefreshTokens: d.RefreshTokenStore,
+		Sessions:      d.Services.Sessions,
 		Cache:         d.Cache,
 		TokenConfig:   tokenCfg,
 	})
@@ -121,6 +123,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 		SocialAccounts: d.SocialAccountStore,
 		Audit:          d.AuditLogStore,
 		RefreshTokens:  d.RefreshTokenStore,
+		Sessions:       d.Services.Sessions,
 		MFA:            d.MFAStore,
 		Cache:          d.Cache,
 		Settings:       d.SettingStore,

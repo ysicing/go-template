@@ -17,6 +17,7 @@ import (
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
 
+	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
@@ -60,6 +61,7 @@ type OAuthDeps struct {
 	SocialAccounts oauthSocialAccountStore
 	Audit          *store.AuditLogStore
 	RefreshTokens  refreshTokenCreator
+	Sessions       *service.SessionService
 	MFA            mfaReader
 	Cache          store.Cache
 	Settings       oauthSettingStore
@@ -73,7 +75,7 @@ type OAuthHandler struct {
 	providers      oauthProviderStore
 	socialAccounts oauthSocialAccountStore
 	audit          *store.AuditLogStore
-	refreshTokens  refreshTokenCreator
+	sessions       *service.SessionService
 	mfa            mfaReader
 	cache          store.Cache
 	settings       oauthSettingStore
@@ -82,13 +84,24 @@ type OAuthHandler struct {
 
 // NewOAuthHandler creates an OAuthHandler with database-backed social providers.
 func NewOAuthHandler(deps OAuthDeps) *OAuthHandler {
+	sessions := deps.Sessions
+	if sessions == nil {
+		sessions = service.NewSessionService(deps.RefreshTokens, service.TokenConfig{
+			Secret:        deps.TokenConfig.Secret,
+			Issuer:        deps.TokenConfig.Issuer,
+			AccessTTL:     deps.TokenConfig.AccessTTL,
+			RefreshTTL:    deps.TokenConfig.RefreshTTL,
+			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
+		})
+	}
+
 	return &OAuthHandler{
 		db:             deps.DB,
 		users:          deps.Users,
 		providers:      deps.Providers,
 		socialAccounts: deps.SocialAccounts,
 		audit:          deps.Audit,
-		refreshTokens:  deps.RefreshTokens,
+		sessions:       sessions,
 		mfa:            deps.MFA,
 		cache:          deps.Cache,
 		settings:       deps.Settings,
@@ -199,7 +212,7 @@ func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, pro
 	return user, nil
 }
 
-// saveOAuthState stores state in cache and cookie.
+// saveOAuthState stores state in cache.
 // linkUserID is optional; when set it is stored server-side so the state string itself
 // does not embed sensitive user information.
 func (h *OAuthHandler) saveOAuthState(c fiber.Ctx, state, linkUserID string) {
@@ -208,10 +221,6 @@ func (h *OAuthHandler) saveOAuthState(c fiber.Ctx, state, linkUserID string) {
 		val = "link:" + linkUserID
 	}
 	_ = h.cache.Set(c.Context(), oauthStateKey(state), val, 5*time.Minute)
-	c.Cookie(&fiber.Cookie{
-		Name: "oauth_state", Value: state, Path: "/",
-		HTTPOnly: true, SameSite: "Lax", Secure: c.Scheme() == "https", MaxAge: 300,
-	})
 }
 
 // verifyOAuthState validates state and returns (valid, linkUserID).
@@ -230,8 +239,6 @@ func (h *OAuthHandler) verifyOAuthState(c fiber.Ctx, state string) (bool, string
 		return false, ""
 	}
 	_ = h.cache.Del(c.Context(), oauthStateKey(state))
-	// Clear the cookie (no longer used for validation, just cleanup)
-	c.Cookie(&fiber.Cookie{Name: "oauth_state", Value: "", Path: "/", MaxAge: -1})
 
 	linkUserID := ""
 	if strings.HasPrefix(val, "link:") {
@@ -765,13 +772,13 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		},
 	})
 
-	accessToken, refreshToken, err := GenerateTokenPairWithSession(c, user, h.refreshTokens, h.tokenConfig.Secret, h.tokenConfig.Issuer, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	issuedSession, err := issueBrowserSession(c, h.sessions, user, h.tokenConfig.RefreshTTL)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 
 	// Set tokens in cookies for web clients
-	SetTokenCookies(c, accessToken, refreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
 	return c.JSON(fiber.Map{
 		"user": user,

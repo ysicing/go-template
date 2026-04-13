@@ -132,6 +132,11 @@ func TestGitHubLogin_Redirect(t *testing.T) {
 	if loc == "" {
 		t.Error("expected Location header to be set")
 	}
+	for _, cookie := range resp.Header.Values("Set-Cookie") {
+		if strings.Contains(cookie, "oauth_state=") {
+			t.Fatalf("expected no oauth_state cookie, got %q", cookie)
+		}
+	}
 }
 
 func TestGoogleLogin_NotConfigured(t *testing.T) {
@@ -172,6 +177,11 @@ func TestGoogleLogin_Redirect(t *testing.T) {
 	loc := resp.Header.Get("Location")
 	if loc == "" {
 		t.Error("expected Location header to be set")
+	}
+	for _, cookie := range resp.Header.Values("Set-Cookie") {
+		if strings.Contains(cookie, "oauth_state=") {
+			t.Fatalf("expected no oauth_state cookie, got %q", cookie)
+		}
 	}
 }
 

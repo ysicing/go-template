@@ -245,56 +245,6 @@ func GenerateAccessToken(userID string, isAdmin bool, permissions []string, toke
 	return t.SignedString([]byte(secret))
 }
 
-// GenerateTokenPairWithSession creates tokens and records session metadata (IP, UserAgent).
-func GenerateTokenPairWithSession(c fiber.Ctx, user *model.User, refreshTokens interface {
-	Create(ctx context.Context, rt *model.APIRefreshToken) error
-}, jwtSecret, issuer string, accessTTL, refreshTTL time.Duration) (accessToken, refreshToken string, err error) {
-	accessToken, err = GenerateAccessToken(user.ID, user.IsAdmin, user.PermissionList(), user.TokenVersion, jwtSecret, issuer, accessTTL)
-	if err != nil {
-		return "", "", err
-	}
-
-	refreshToken = uuid.New().String()
-	rt := &model.APIRefreshToken{
-		UserID:     user.ID,
-		TokenHash:  store.HashToken(refreshToken),
-		Family:     uuid.New().String(),
-		ExpiresAt:  time.Now().Add(refreshTTL),
-		IP:         GetRealIP(c),
-		UserAgent:  c.Get("User-Agent"),
-		LastUsedAt: time.Now(),
-	}
-	if err := refreshTokens.Create(c.Context(), rt); err != nil {
-		return "", "", err
-	}
-	return accessToken, refreshToken, nil
-}
-
-// RotateRefreshToken creates a new refresh token inheriting the family from the old one.
-func RotateRefreshToken(c fiber.Ctx, user *model.User, family string, refreshTokens interface {
-	Create(ctx context.Context, rt *model.APIRefreshToken) error
-}, jwtSecret, issuer string, accessTTL, refreshTTL time.Duration) (accessToken, refreshToken string, err error) {
-	accessToken, err = GenerateAccessToken(user.ID, user.IsAdmin, user.PermissionList(), user.TokenVersion, jwtSecret, issuer, accessTTL)
-	if err != nil {
-		return "", "", err
-	}
-
-	refreshToken = uuid.New().String()
-	rt := &model.APIRefreshToken{
-		UserID:     user.ID,
-		TokenHash:  store.HashToken(refreshToken),
-		Family:     family,
-		ExpiresAt:  time.Now().Add(refreshTTL),
-		IP:         GetRealIP(c),
-		UserAgent:  c.Get("User-Agent"),
-		LastUsedAt: time.Now(),
-	}
-	if err := refreshTokens.Create(c.Context(), rt); err != nil {
-		return "", "", err
-	}
-	return accessToken, refreshToken, nil
-}
-
 // RequestIDMiddleware ensures every request has a unique X-Request-ID header.
 // If the client provides one, it is reused; otherwise a new UUID is generated.
 // The ID is also stored in Locals("request_id") for structured logging.
