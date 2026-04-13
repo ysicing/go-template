@@ -15,10 +15,6 @@ import (
 	"github.com/ysicing/go-template/store"
 )
 
-type serviceAccountAuthenticator interface {
-	AuthenticateToken(ctx context.Context, plaintext string) (*model.ServiceAccount, *model.IntegrationToken, error)
-}
-
 // Claims defines the JWT token payload.
 type Claims struct {
 	UserID       string   `json:"user_id"`
@@ -34,10 +30,6 @@ type Claims struct {
 // 1. Authorization: Bearer <token>
 // 2. Cookie: access_token=<token>
 func JWTMiddleware(secret, issuer string) fiber.Handler {
-	return JWTMiddlewareWithServiceAccounts(secret, issuer, nil)
-}
-
-func JWTMiddlewareWithServiceAccounts(secret, issuer string, serviceAccounts serviceAccountAuthenticator) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		tokenStr := bearerToken(c)
 		if tokenStr == "" {
@@ -45,23 +37,6 @@ func JWTMiddlewareWithServiceAccounts(secret, issuer string, serviceAccounts ser
 		}
 		if tokenStr == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing or invalid token"})
-		}
-		if strings.HasPrefix(tokenStr, model.IntegrationTokenPrefix) && serviceAccounts != nil {
-			account, token, err := serviceAccounts.AuthenticateToken(c.Context(), tokenStr)
-			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
-			}
-			c.Locals("principal_type", "service_account")
-			c.Locals("service_account_id", account.ID)
-			c.Locals("workspace_type", account.WorkspaceType)
-			c.Locals("owner_user_id", account.OwnerUserID)
-			c.Locals("organization_id", account.OrganizationID)
-			c.Locals("service_account_allowed_application_ids", account.ApplicationIDs)
-			c.Locals("service_account_allowed_webhook_ids", account.WebhookEndpointIDs)
-			c.Locals("service_account_rate_limit_per_minute", account.RateLimitPerMinute)
-			c.Locals("integration_token_id", token.ID)
-			c.Locals("service_account_scopes", effectiveIntegrationTokenScopes(token))
-			return c.Next()
 		}
 
 		claims := &Claims{}
@@ -99,25 +74,6 @@ func bearerToken(c fiber.Ctx) string {
 		return ""
 	}
 	return strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
-}
-
-func effectiveIntegrationTokenScopes(token *model.IntegrationToken) []string {
-	if token == nil {
-		return nil
-	}
-	scopes := model.SplitIntegrationTokenScopes(token.Scopes)
-	if len(scopes) == 0 {
-		return model.LegacyIntegrationTokenScopes()
-	}
-	return scopes
-}
-
-func serviceAccountHasScope(c fiber.Ctx, scope string) bool {
-	if scope == "" {
-		return true
-	}
-	scopes, _ := c.Locals("service_account_scopes").([]string)
-	return slices.Contains(scopes, scope)
 }
 
 // TokenVersionMiddleware validates token_version claim against current user version.

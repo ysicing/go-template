@@ -40,7 +40,7 @@ func buildManagedRouteRuntime(d *Deps, h *builtHandlers) managedRouteRuntime {
 	return managedRouteRuntime{
 		deps:              d,
 		handlers:          h,
-		jwtMW:             handler.JWTMiddlewareWithServiceAccounts(cfg.JWT.Secret, cfg.JWT.Issuer, nil),
+		jwtMW:             handler.JWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),
 		tokenVersionMW:    handler.TokenVersionMiddleware(d.UserStore, d.Cache),
 		emailVerified:     handler.EmailVerifiedMiddleware(d.UserStore, d.SettingStore, d.Cache),
 		optionalJWT:       handler.OptionalJWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),

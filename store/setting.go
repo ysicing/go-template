@@ -38,9 +38,6 @@ const (
 	SettingInviteRewardEnabled = "invite_reward_enabled"
 	SettingInviteRewardMin     = "invite_reward_min"
 	SettingInviteRewardMax     = "invite_reward_max"
-
-	SettingQuoteExtraSubmissionCostPoints = "quotes_extra_submission_cost_points"
-	SettingQuoteLevelHourlyLimitPrefix    = "quotes_level_hourly_limit_"
 )
 
 const (
