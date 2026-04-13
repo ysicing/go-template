@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/gofiber/fiber/v3"
+
 	fibermemory "github.com/gofiber/storage/memory/v2"
 	fiberredis "github.com/gofiber/storage/redis/v3"
 )

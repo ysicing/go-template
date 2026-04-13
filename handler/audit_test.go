@@ -8,11 +8,12 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/prometheus/client_golang/prometheus"
-	io_prometheus_client "github.com/prometheus/client_model/go"
 	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	io_prometheus_client "github.com/prometheus/client_model/go"
 )
 
 func TestWriteAuditReturnsNilWhenStoreIsNil(t *testing.T) {

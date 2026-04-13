@@ -32,4 +32,3 @@ func IsValidOrganizationRole(role string) bool {
 		return false
 	}
 }
-

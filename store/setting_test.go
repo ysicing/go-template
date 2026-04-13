@@ -2,8 +2,9 @@ package store
 
 import (
 	"context"
-	"gorm.io/gorm"
 	"testing"
+
+	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
 )
