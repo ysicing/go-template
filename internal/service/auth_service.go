@@ -45,6 +45,18 @@ func NewAuthService(deps AuthServiceDeps) *AuthService {
 }
 
 func (s *AuthService) Login(ctx context.Context, input LoginInput) (*model.User, error) {
+	user, err := s.login(ctx, input)
+	if errors.Is(err, ErrInvalidCredentials) {
+		return nil, err
+	}
+	return user, err
+}
+
+func (s *AuthService) LoginForAudit(ctx context.Context, input LoginInput) (*model.User, error) {
+	return s.login(ctx, input)
+}
+
+func (s *AuthService) login(ctx context.Context, input LoginInput) (*model.User, error) {
 	user, err := s.users.GetByUsernameOrEmail(ctx, input.Identity)
 	if err != nil {
 		CompareWithDummyHash(input.Password)

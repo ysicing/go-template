@@ -60,7 +60,7 @@ func TestAuthServiceLoginReturnsUserOnValidPassword(t *testing.T) {
 	require.Equal(t, "user-1", user.ID)
 }
 
-func TestAuthServiceLoginReturnsUserOnInvalidPassword(t *testing.T) {
+func TestAuthServiceLoginReturnsNilOnInvalidPassword(t *testing.T) {
 	cache := store.NewMemoryCache()
 	passwordUser := &model.User{Base: model.Base{ID: "user-1"}, Username: "demo", Provider: "local"}
 	require.NoError(t, passwordUser.SetPassword("Password123!abcd"))
@@ -70,6 +70,24 @@ func TestAuthServiceLoginReturnsUserOnInvalidPassword(t *testing.T) {
 	})
 
 	user, err := svc.Login(context.Background(), LoginInput{
+		Identity: "demo",
+		Password: "wrong-password",
+	})
+
+	require.ErrorIs(t, err, ErrInvalidCredentials)
+	require.Nil(t, user)
+}
+
+func TestAuthServiceLoginForAuditReturnsUserOnInvalidPassword(t *testing.T) {
+	cache := store.NewMemoryCache()
+	passwordUser := &model.User{Base: model.Base{ID: "user-1"}, Username: "demo", Provider: "local"}
+	require.NoError(t, passwordUser.SetPassword("Password123!abcd"))
+	svc := NewAuthService(AuthServiceDeps{
+		Users: fakeLoginUserStore{user: passwordUser},
+		Cache: cache,
+	})
+
+	user, err := svc.LoginForAudit(context.Background(), LoginInput{
 		Identity: "demo",
 		Password: "wrong-password",
 	})

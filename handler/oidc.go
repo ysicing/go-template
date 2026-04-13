@@ -67,7 +67,7 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 			JSON(fiber.Map{"error": "missing auth request id"})
 	}
 
-	user, err := h.auth.Login(c.Context(), service.LoginInput{
+	user, err := h.auth.LoginForAudit(c.Context(), service.LoginInput{
 		Identity: req.Username,
 		Password: req.Password,
 	})
