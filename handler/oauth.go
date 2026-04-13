@@ -389,6 +389,10 @@ var errProviderHandled = errors.New("provider response handled")
 func (h *OAuthHandler) loadProvider(c fiber.Ctx, name string) (*model.SocialProvider, error) {
 	provider, err := h.providers.GetByName(c.Context(), name)
 	if err != nil {
+		if errors.Is(err, store.ErrSocialProviderSecretUnavailable) {
+			_ = c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": name + " oauth temporarily unavailable"})
+			return nil, errProviderHandled
+		}
 		_ = c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": name + " oauth not configured"})
 		return nil, errProviderHandled
 	}

@@ -2,11 +2,13 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 
+	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
@@ -17,10 +19,10 @@ type OIDCLoginHandler struct {
 	storage *store.OIDCStorage
 	clients *store.OAuthClientStore
 	grants  *store.OAuthConsentGrantStore
-	users   *store.UserStore
 	mfa     *store.MFAStore
 	audit   *store.AuditLogStore
 	cache   store.Cache
+	auth    *service.AuthService
 }
 
 // NewOIDCLoginHandler creates an OIDCLoginHandler.
@@ -29,10 +31,13 @@ func NewOIDCLoginHandler(storage *store.OIDCStorage, clients *store.OAuthClientS
 		storage: storage,
 		clients: clients,
 		grants:  grants,
-		users:   users,
 		mfa:     mfa,
 		audit:   audit,
 		cache:   cache,
+		auth: service.NewAuthService(service.AuthServiceDeps{
+			Users: users,
+			Cache: cache,
+		}),
 	}
 }
 
@@ -62,18 +67,11 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 			JSON(fiber.Map{"error": "missing auth request id"})
 	}
 
-	// Validate credentials: try username, then email.
-	user, err := h.users.GetByUsername(c.Context(), req.Username)
-	if err != nil {
-		user, err = h.users.GetByEmail(c.Context(), req.Username)
-	}
-	if err != nil {
-		// Perform a dummy bcrypt compare to prevent timing-based user enumeration.
-		compareWithDummyHash(req.Password)
-		return c.Status(fiber.StatusUnauthorized).
-			JSON(fiber.Map{"error": "invalid credentials"})
-	}
-	if isAccountLocked(c.Context(), h.cache, user.ID) {
+	user, err := h.auth.Login(c.Context(), service.LoginInput{
+		Identity: req.Username,
+		Password: req.Password,
+	})
+	if errors.Is(err, service.ErrAccountLocked) {
 		writeAudit(c.Context(), h.audit, &model.AuditLog{
 			UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,
 			IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: "oidc: account locked",
@@ -81,16 +79,20 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 		return c.Status(fiber.StatusTooManyRequests).
 			JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
-	if !user.CheckPassword(req.Password) {
-		recordFailedAuthAttempt(c.Context(), h.cache, user.ID)
-		writeAudit(c.Context(), h.audit, &model.AuditLog{
-			UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,
-			IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: "oidc: invalid password",
-		})
+	if errors.Is(err, service.ErrInvalidCredentials) {
+		if user != nil {
+			writeAudit(c.Context(), h.audit, &model.AuditLog{
+				UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,
+				IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: "oidc: invalid password",
+			})
+		}
 		return c.Status(fiber.StatusUnauthorized).
 			JSON(fiber.Map{"error": "invalid credentials"})
 	}
-	clearFailedAuthAttempts(c.Context(), h.cache, user.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{"error": "login failed"})
+	}
 
 	// Ensure auth request exists and is not expired.
 	if _, err := h.storage.AuthRequestByID(c.Context(), req.ID); err != nil {

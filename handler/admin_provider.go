@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -33,7 +36,13 @@ func (h *AdminProviderHandler) List(c fiber.Ctx) error {
 func (h *AdminProviderHandler) Get(c fiber.Ctx) error {
 	provider, err := h.providers.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
+		if errors.Is(err, store.ErrSocialProviderSecretUnavailable) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider secret unavailable"})
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load provider"})
 	}
 	// Mask sensitive fields before returning
 	if provider.ClientSecret != "" {
@@ -77,7 +86,13 @@ func (h *AdminProviderHandler) Create(c fiber.Ctx) error {
 func (h *AdminProviderHandler) Update(c fiber.Ctx) error {
 	provider, err := h.providers.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
+		if errors.Is(err, store.ErrSocialProviderSecretUnavailable) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider secret unavailable"})
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load provider"})
 	}
 	var req struct {
 		ClientID     *string `json:"client_id"`

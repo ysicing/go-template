@@ -2,12 +2,16 @@ package store
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
 )
+
+var ErrSocialProviderSecretUnavailable = errors.New("social provider secret unavailable")
 
 // SocialProviderStore handles persistence for social login provider configurations.
 type SocialProviderStore struct {
@@ -32,22 +36,33 @@ func (s *SocialProviderStore) encryptSecret(plaintext string) (string, error) {
 	return enc, nil
 }
 
-func (s *SocialProviderStore) decryptSecret(stored string) string {
-	if s.encPassphrase == "" || stored == "" {
-		return stored
+func (s *SocialProviderStore) decryptSecret(stored string) (string, error) {
+	if stored == "" {
+		return "", nil
+	}
+	if s.encPassphrase == "" {
+		if crypto.IsEncrypted(stored) {
+			return "", ErrSocialProviderSecretUnavailable
+		}
+		return stored, nil
 	}
 	if !crypto.IsEncrypted(stored) {
-		return ""
+		return "", ErrSocialProviderSecretUnavailable
 	}
-	dec, err := crypto.DecryptOrPlaintext(s.encPassphrase, stored)
+	dec, err := crypto.Decrypt(s.encPassphrase, stored)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("%w: %v", ErrSocialProviderSecretUnavailable, err)
 	}
-	return dec
+	return dec, nil
 }
 
-func (s *SocialProviderStore) decryptProvider(p *model.SocialProvider) {
-	p.ClientSecret = s.decryptSecret(p.ClientSecret)
+func (s *SocialProviderStore) decryptProvider(p *model.SocialProvider) error {
+	secret, err := s.decryptSecret(p.ClientSecret)
+	if err != nil {
+		return err
+	}
+	p.ClientSecret = secret
+	return nil
 }
 
 // GetByName retrieves a social provider by name (e.g. "github", "google").
@@ -56,7 +71,9 @@ func (s *SocialProviderStore) GetByName(ctx context.Context, name string) (*mode
 	if err := s.db.WithContext(ctx).Where("name = ?", name).First(&p).Error; err != nil {
 		return nil, err
 	}
-	s.decryptProvider(&p)
+	if err := s.decryptProvider(&p); err != nil {
+		return nil, err
+	}
 	return &p, nil
 }
 
@@ -66,7 +83,9 @@ func (s *SocialProviderStore) GetByID(ctx context.Context, id string) (*model.So
 	if err := s.db.WithContext(ctx).First(&p, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	s.decryptProvider(&p)
+	if err := s.decryptProvider(&p); err != nil {
+		return nil, err
+	}
 	return &p, nil
 }
 
@@ -89,7 +108,7 @@ func (s *SocialProviderStore) Upsert(ctx context.Context, provider *model.Social
 	provider.ClientSecret = encSecret
 	err = d.Create(provider).Error
 	// Restore plaintext on the in-memory struct so callers see the original value.
-	provider.ClientSecret = s.decryptSecret(encSecret)
+	provider.ClientSecret, _ = s.decryptSecret(encSecret)
 	return err
 }
 
@@ -100,7 +119,9 @@ func (s *SocialProviderStore) List(ctx context.Context) ([]model.SocialProvider,
 		return nil, err
 	}
 	for i := range providers {
-		s.decryptProvider(&providers[i])
+		if err := s.decryptProvider(&providers[i]); err != nil {
+			return nil, err
+		}
 	}
 	return providers, nil
 }

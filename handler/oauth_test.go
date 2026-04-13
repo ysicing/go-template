@@ -113,6 +113,35 @@ func TestGitHubLogin_Disabled(t *testing.T) {
 	}
 }
 
+func TestGitHubLogin_ProviderSecretUnavailable(t *testing.T) {
+	db := setupTestDB(t)
+	writer := store.NewSocialProviderStore(db, "writer-key")
+	if err := writer.Upsert(context.Background(), &model.SocialProvider{
+		Name:         "github",
+		ClientID:     "gh-id",
+		ClientSecret: "gh-secret",
+		RedirectURL:  "http://localhost/cb",
+		Enabled:      true,
+	}); err != nil {
+		t.Fatalf("seed provider: %v", err)
+	}
+
+	sp := store.NewSocialProviderStore(db, "wrong-reader-key")
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+
+	app := fiber.New()
+	app.Get("/auth/github", h.GitHubLogin)
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/github", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusServiceUnavailable {
+		t.Errorf("expected 503 for unavailable provider secret, got %d", resp.StatusCode)
+	}
+}
+
 func TestGitHubLogin_Redirect(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "github", "test-id", "test-secret", "http://localhost/cb", true)

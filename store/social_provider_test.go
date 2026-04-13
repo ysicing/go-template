@@ -187,7 +187,7 @@ func TestSocialProviderStore_EncryptionRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSocialProviderStore_GetByNameReturnsEmptySecretForPlaintextLegacyValue(t *testing.T) {
+func TestSocialProviderStore_GetByNameReturnsErrorForPlaintextLegacyValue(t *testing.T) {
 	db := setupSocialTestDB(t)
 	ctx := context.Background()
 
@@ -200,16 +200,13 @@ func TestSocialProviderStore_GetByNameReturnsEmptySecretForPlaintextLegacyValue(
 
 	// Read with encryption enabled — plaintext legacy secrets are no longer accepted.
 	s := NewSocialProviderStore(db, "some-key")
-	got, err := s.GetByName(ctx, "legacy-google")
-	if err != nil {
-		t.Fatalf("get: %v", err)
-	}
-	if got.ClientSecret != "" {
-		t.Fatalf("expected empty secret for legacy plaintext value, got %q", got.ClientSecret)
+	_, err := s.GetByName(ctx, "legacy-google")
+	if !errors.Is(err, ErrSocialProviderSecretUnavailable) {
+		t.Fatalf("expected ErrSocialProviderSecretUnavailable, got %v", err)
 	}
 }
 
-func TestSocialProviderStore_GetByNameReturnsEmptySecretWhenDecryptFails(t *testing.T) {
+func TestSocialProviderStore_GetByNameReturnsErrorWhenDecryptFails(t *testing.T) {
 	db := setupSocialTestDB(t)
 	ctx := context.Background()
 
@@ -225,12 +222,9 @@ func TestSocialProviderStore_GetByNameReturnsEmptySecretWhenDecryptFails(t *test
 	}
 
 	reader := NewSocialProviderStore(db, "wrong-reader-key")
-	got, err := reader.GetByName(ctx, "github")
-	if err != nil {
-		t.Fatalf("get provider with wrong key: %v", err)
-	}
-	if got.ClientSecret != "" {
-		t.Fatalf("expected empty secret on decrypt failure, got %q", got.ClientSecret)
+	_, err := reader.GetByName(ctx, "github")
+	if !errors.Is(err, ErrSocialProviderSecretUnavailable) {
+		t.Fatalf("expected ErrSocialProviderSecretUnavailable, got %v", err)
 	}
 }
 

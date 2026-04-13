@@ -55,7 +55,7 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*model.User,
 	}
 	if !user.CheckPassword(input.Password) {
 		RecordFailedAuthAttempt(ctx, s.cache, user.ID)
-		return nil, ErrInvalidCredentials
+		return user, ErrInvalidCredentials
 	}
 	ClearFailedAuthAttempts(ctx, s.cache, user.ID)
 	return user, nil

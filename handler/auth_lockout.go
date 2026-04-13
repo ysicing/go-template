@@ -18,7 +18,3 @@ func recordFailedAuthAttempt(ctx context.Context, cache store.Cache, userID stri
 func clearFailedAuthAttempts(ctx context.Context, cache store.Cache, userID string) {
 	service.ClearFailedAuthAttempts(ctx, cache, userID)
 }
-
-func compareWithDummyHash(password string) {
-	service.CompareWithDummyHash(password)
-}
