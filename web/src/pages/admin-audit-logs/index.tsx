@@ -8,8 +8,9 @@ import { getApiErrorKind, getErrorMessage, type ApiErrorKind } from "@/api/clien
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useHasPermission, adminPermissions } from "@/lib/permissions"
 import PageErrorState from "@/components/page-error-state"
@@ -68,6 +69,10 @@ const sourceVariant: Record<string, "default" | "secondary" | "outline"> = {
 function truncateMiddle(value: string, max = 52) {
   if (!value || value.length <= max) return value || "-"
   return `${value.slice(0, max - 16)}...${value.slice(-12)}`
+}
+
+function safeText(value: string) {
+  return value?.trim() || "-"
 }
 
 export default function AdminAuditLogsPage() {
@@ -234,20 +239,19 @@ export default function AdminAuditLogsPage() {
                   <TableHead>{t("auditLogs.source")}</TableHead>
                   <TableHead>{t("auditLogs.status")}</TableHead>
                   <TableHead>{t("auditLogs.ip")}</TableHead>
-                  <TableHead>{t("auditLogs.userAgent")}</TableHead>
                   <TableHead>{t("auditLogs.detail")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-10 text-center">
+                    <TableCell colSpan={8} className="py-10 text-center">
                       <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : logs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                       {t("common.noData")}
                     </TableCell>
                   </TableRow>
@@ -279,20 +283,10 @@ export default function AdminAuditLogsPage() {
                         <Badge variant={statusVariant[log.status] ?? "outline"}>{log.status || "-"}</Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{log.ip || "-"}</TableCell>
-                      <TableCell className="max-w-[240px] text-xs text-muted-foreground" title={log.user_agent}>
-                        {truncateMiddle(log.user_agent, 48)}
-                      </TableCell>
-                      <TableCell className="max-w-[340px]">
-                        <div className="space-y-2">
-                          <div className="text-xs text-muted-foreground" title={log.detail}>
-                            {truncateMiddle(log.detail, 96)}
-                          </div>
-                          {log.detail && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedLog(log)}>
-                              {t("auditLogs.viewDetail")}
-                            </Button>
-                          )}
-                        </div>
+                      <TableCell className="w-[120px]">
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setSelectedLog(log)}>
+                          {t("auditLogs.viewDetail")}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -304,33 +298,99 @@ export default function AdminAuditLogsPage() {
       </Card>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              {t("common.prev")}
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
-              {t("common.next")}
-            </Button>
-          </div>
+          <Pagination className="mx-0 w-auto justify-start sm:justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  aria-disabled={page <= 1}
+                  className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (page > 1) setPage((current) => current - 1)
+                  }}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href="#" isActive onClick={(e) => e.preventDefault()}>
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  aria-disabled={page >= totalPages}
+                  className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (page < totalPages) setPage((current) => current + 1)
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
-      <Dialog open={selectedLog !== null} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{t("auditLogs.detail")}</DialogTitle>
-            <DialogDescription>{t("auditLogs.detailDescription")}</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-auto rounded-md border bg-muted/20 p-4">
-            <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground">
-              {selectedLog?.detail || "-"}
-            </pre>
+      <Sheet open={selectedLog !== null} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>{t("auditLogs.detail")}</SheetTitle>
+            <SheetDescription>{t("auditLogs.detailDescription")}</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 space-y-4 overflow-auto px-4 pb-4">
+            <div className="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.time")}</p>
+                <p className="text-sm font-medium">{selectedLog ? dayjs(selectedLog.created_at).format("YYYY-MM-DD HH:mm:ss") : "-"}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.status")}</p>
+                <div>
+                  <Badge variant={selectedLog ? (statusVariant[selectedLog.status] ?? "outline") : "outline"}>{selectedLog?.status || "-"}</Badge>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.user")}</p>
+                <p className="text-sm font-medium">{safeText(selectedLog?.username || "")}</p>
+                <p className="font-mono text-xs text-muted-foreground">{safeText(selectedLog?.user_id || "")}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.source")}</p>
+                <div>
+                  <Badge variant={selectedLog ? (sourceVariant[selectedLog.source] ?? "outline") : "outline"}>{selectedLog?.source || "-"}</Badge>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.action")}</p>
+                <p className="font-mono text-xs text-foreground">{safeText(selectedLog?.action || "")}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.ip")}</p>
+                <p className="font-mono text-xs text-foreground">{safeText(selectedLog?.ip || "")}</p>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.resource")}</p>
+                <p className="text-sm font-medium">{safeText(selectedLog?.resource || "")}</p>
+                <p className="font-mono text-xs text-muted-foreground">{safeText(selectedLog?.resource_id || "")}</p>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">{t("auditLogs.userAgent")}</p>
+                <p className="break-all font-mono text-xs text-foreground">{safeText(selectedLog?.user_agent || "")}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">{t("auditLogs.detail")}</p>
+              <pre className="max-h-[40vh] overflow-auto rounded-lg border bg-muted/20 p-4 whitespace-pre-wrap break-all font-mono text-xs text-foreground">
+                {selectedLog?.detail || "-"}
+              </pre>
+            </div>
           </div>
-          <DialogFooter showCloseButton />
-        </DialogContent>
-      </Dialog>
+          <SheetFooter />
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

@@ -31,7 +31,7 @@ describe("AdminAuditLogsPage", () => {
     })
   })
 
-  it("opens a dialog to show full audit detail content", async () => {
+  it("keeps detail hidden in the table and opens a sheet with full content", async () => {
     auditLogListMock.mockResolvedValue({
       data: {
         logs: [
@@ -61,12 +61,15 @@ describe("AdminAuditLogsPage", () => {
       </MemoryRouter>,
     )
 
-    const user = userEvent.setup()
-    await user.click(await screen.findByRole("button", { name: "View detail" }))
+    expect(await screen.findByRole("button", { name: "View detail" })).toBeInTheDocument()
+    expect(screen.queryByText("line 1")).not.toBeInTheDocument()
 
-    const dialog = screen.getByRole("dialog")
-    expect(dialog).toBeInTheDocument()
-    expect(dialog).toHaveTextContent("line 1")
-    expect(dialog).toHaveTextContent("line 2 with a much longer explanation for audit trace")
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "View detail" }))
+
+    const sheet = screen.getByRole("dialog")
+    expect(sheet).toBeInTheDocument()
+    expect(sheet).toHaveTextContent("line 1")
+    expect(sheet).toHaveTextContent("line 2 with a much longer explanation for audit trace")
   })
 })
