@@ -45,6 +45,20 @@ func TestSeedAdmin_AllowsWeakPasswordByDefault(t *testing.T) {
 	}
 }
 
+func TestSeedAdmin_SkipsEmptyPassword(t *testing.T) {
+	users := setupUserStoreTest(t)
+	log := zerolog.New(io.Discard)
+
+	seedAdmin(&log, users, AdminSeedConfig{
+		Username: "admin",
+		Email:    "admin@example.com",
+	})
+
+	if _, err := users.GetByUsername(context.Background(), "admin"); err == nil {
+		t.Fatal("expected admin user not to be created without password")
+	}
+}
+
 func TestSeedAdmin_CreatesUserWithStrongPassword(t *testing.T) {
 	users := setupUserStoreTest(t)
 	log := zerolog.New(io.Discard)

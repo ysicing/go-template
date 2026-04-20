@@ -399,7 +399,7 @@ func (h *WebAuthnHandler) LoginFinish(c fiber.Ctx) error {
 	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
 	return c.JSON(fiber.Map{
-		"user": user,
+		"user": NewUserResponse(user),
 	})
 }
 
@@ -542,6 +542,6 @@ func (h *WebAuthnHandler) AuthFinish(c fiber.Ctx) error {
 	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 
 	return c.JSON(fiber.Map{
-		"user": user,
+		"user": NewUserResponse(user),
 	})
 }

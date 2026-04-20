@@ -38,5 +38,7 @@ security:
 
 admin:
   username: "admin"
-  password: "admin123"
+  # Set a strong password to seed the initial admin user.
+  # Leave empty to skip automatic admin creation.
+  password: ""
   email: "admin@example.com"

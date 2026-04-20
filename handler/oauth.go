@@ -132,6 +132,6 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
 	return c.JSON(fiber.Map{
-		"user": user,
+		"user": NewUserResponse(user),
 	})
 }

@@ -26,6 +26,10 @@ func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedCon
 	if cfg.Username == "" {
 		return
 	}
+	if cfg.Password == "" {
+		log.Warn().Str("username", cfg.Username).Msg("skip admin seed because admin.password is empty")
+		return
+	}
 	_, err := userStore.GetByUsername(context.Background(), cfg.Username)
 	if err == nil {
 		return

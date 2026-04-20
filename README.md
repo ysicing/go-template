@@ -103,7 +103,7 @@ Swagger 文档会按当前登录用户权限动态裁剪：
 - `security.encryption_key`
 - `security.oidc_secret`
 - `admin.username`
-- `admin.password`
+- `admin.password`（留空会跳过初始管理员自动创建）
 - `admin.email`
 
 系统设置中的站点标题、注册开关、邮件验证、Turnstile 等能力可在控制台里继续配置。

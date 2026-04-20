@@ -5,6 +5,7 @@ export interface User {
   username: string
   email: string
   is_admin: boolean
+  permissions?: string[]
   email_verified: boolean
   avatar_url?: string
   provider?: string

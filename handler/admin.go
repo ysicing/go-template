@@ -142,7 +142,7 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"user":                      user,
+		"user":                      NewUserResponse(user),
 		"password_setup_token":      setupToken,
 		"password_setup_expires_at": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339),
 	})
@@ -209,7 +209,7 @@ func (h *AdminHandler) GetUser(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
-	return c.JSON(fiber.Map{"user": user})
+	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
 }
 
 // UpdateUser handles PUT /api/admin/users/:id.
@@ -221,8 +221,8 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 	}
 
 	var req struct {
-		IsAdmin     *bool    `json:"is_admin"`
-		Permissions []string `json:"permissions"`
+		IsAdmin     *bool     `json:"is_admin"`
+		Permissions *[]string `json:"permissions"`
 	}
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
@@ -244,10 +244,10 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 		}
 	}
 
-	if len(req.Permissions) > 0 {
+	if req.Permissions != nil {
 		permissionChanged = true
-		perms := make([]string, 0, len(req.Permissions))
-		for _, perm := range req.Permissions {
+		perms := make([]string, 0, len(*req.Permissions))
+		for _, perm := range *req.Permissions {
 			perm = strings.TrimSpace(perm)
 			if perm == "" {
 				continue
@@ -287,7 +287,7 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 		IP: ip, UserAgent: ua, Status: "success",
 	})
 
-	return c.JSON(fiber.Map{"user": user})
+	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
 }
 
 // DeleteUser handles DELETE /api/admin/users/:id.

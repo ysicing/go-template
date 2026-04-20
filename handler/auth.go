@@ -210,7 +210,7 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 	RecordAuthAttempt("register", "success")
 
 	resp := fiber.Map{
-		"user": user,
+		"user": NewUserResponse(user),
 	}
 
 	emailVerificationRequired := h.settings != nil && h.settings.GetBool(store.SettingEmailVerificationEnabled, false)
@@ -326,7 +326,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 
 	// Note: tokens are NOT returned in JSON for security (XSS protection)
 	return c.JSON(fiber.Map{
-		"user": user,
+		"user": NewUserResponse(user),
 	})
 }
 
