@@ -52,11 +52,11 @@ type User struct {
 	ProviderID      string     `gorm:"type:varchar(255);uniqueIndex:idx_provider_providerid" json:"-"`
 	AvatarURL       string     `gorm:"type:varchar(512)" json:"avatar_url,omitempty"`
 	EmailVerified   bool       `gorm:"default:false" json:"email_verified"`
-	EmailUpdatedAt  *time.Time `json:"email_updated_at,omitempty"`
+	EmailUpdatedAt  *time.Time `json:"-"`
 	InviteCode      string     `gorm:"uniqueIndex;type:varchar(32)" json:"-"`
 	InvitedByUserID string     `gorm:"index;type:varchar(36)" json:"-"`
 	InviteIP        string     `gorm:"type:varchar(45)" json:"-"`
-	Permissions     string     `gorm:"type:varchar(1024)" json:"permissions,omitempty"`
+	Permissions     string     `gorm:"type:varchar(1024)" json:"-"`
 	TokenVersion    int64      `gorm:"type:bigint;not null;default:1" json:"-"`
 }
 

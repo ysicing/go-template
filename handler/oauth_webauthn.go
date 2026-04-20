@@ -138,7 +138,10 @@ func (h *OAuthHandler) SocialLinkWebAuthnBegin(c fiber.Ctx) error {
 
 // SocialLinkWebAuthnFinish handles POST /api/auth/social/confirm-link/webauthn/finish.
 func (h *OAuthHandler) SocialLinkWebAuthnFinish(c fiber.Ctx) error {
-	linkToken := c.Query("link_token")
+	linkToken := c.Get("X-Link-Token")
+	if linkToken == "" {
+		linkToken = c.Query("link_token")
+	}
 	if linkToken == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "link_token query param is required"})
 	}

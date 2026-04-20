@@ -166,7 +166,16 @@ func (h *UserHandler) UpdateMe(c fiber.Ctx) error {
 		}
 	}
 	if req.AvatarURL != nil {
-		user.AvatarURL = *req.AvatarURL
+		av := strings.TrimSpace(*req.AvatarURL)
+		if av != "" {
+			if len(av) > 512 {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "avatar_url must be at most 512 characters"})
+			}
+			if !strings.HasPrefix(av, "https://") {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "avatar_url must be an HTTPS URL"})
+			}
+		}
+		user.AvatarURL = av
 	}
 
 	if err := h.users.Update(c.Context(), user); err != nil {

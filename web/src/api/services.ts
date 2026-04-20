@@ -20,11 +20,11 @@ export const authApi = {
   webauthnLoginBegin: (username: string) =>
     api.post("/auth/webauthn/begin", { username }),
   webauthnLoginFinish: (webauthn_token: string, body: unknown) =>
-    api.post(`/auth/webauthn/finish?webauthn_token=${webauthn_token}`, body),
+    api.post("/auth/webauthn/finish", body, { headers: { "X-WebAuthn-Token": webauthn_token } }),
   webauthnAuthBegin: (mfa_token: string) =>
     api.post("/auth/mfa/webauthn/begin", { mfa_token }),
   webauthnAuthFinish: (mfa_token: string, body: unknown) =>
-    api.post(`/auth/mfa/webauthn/finish?mfa_token=${mfa_token}`, body),
+    api.post("/auth/mfa/webauthn/finish", body, { headers: { "X-MFA-Token": mfa_token } }),
   socialExchange: (code: string) =>
     api.post("/auth/social/exchange", { code }),
   confirmSocialLink: (link_token: string, payload: { password?: string; totp_code?: string }) =>
@@ -32,7 +32,7 @@ export const authApi = {
   socialLinkWebAuthnBegin: (link_token: string) =>
     api.post("/auth/social/confirm-link/webauthn/begin", { link_token }),
   socialLinkWebAuthnFinish: (link_token: string, body: unknown) =>
-    api.post(`/auth/social/confirm-link/webauthn/finish?link_token=${encodeURIComponent(link_token)}`, body),
+    api.post("/auth/social/confirm-link/webauthn/finish", body, { headers: { "X-Link-Token": link_token } }),
   verifyEmail: (token: string) => api.post("/auth/verify-email", { token }),
   resendVerification: () => api.post("/auth/resend-verification"),
 }
@@ -81,6 +81,8 @@ export const adminUserApi = {
   get: (id: string) => api.get(`/admin/users/${id}`),
   create: (data: { username: string; email: string; is_admin: boolean }) =>
     api.post("/admin/users", data),
+  update: (id: string, data: { is_admin?: boolean; permissions?: string[] }) =>
+    api.put(`/admin/users/${id}`, data),
   delete: (id: string) => api.delete(`/admin/users/${id}`),
 }
 

@@ -313,7 +313,10 @@ func (h *WebAuthnHandler) LoginBegin(c fiber.Ctx) error {
 
 // LoginFinish handles POST /api/auth/webauthn/finish (passwordless login).
 func (h *WebAuthnHandler) LoginFinish(c fiber.Ctx) error {
-	token := c.Query("webauthn_token")
+	token := c.Get("X-WebAuthn-Token")
+	if token == "" {
+		token = c.Query("webauthn_token")
+	}
 	if token == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "webauthn_token is required"})
 	}
@@ -437,7 +440,10 @@ func (h *WebAuthnHandler) AuthBegin(c fiber.Ctx) error {
 
 // AuthFinish handles POST /api/auth/mfa/webauthn/finish.
 func (h *WebAuthnHandler) AuthFinish(c fiber.Ctx) error {
-	mfaToken := c.Query("mfa_token")
+	mfaToken := c.Get("X-MFA-Token")
+	if mfaToken == "" {
+		mfaToken = c.Query("mfa_token")
+	}
 	if mfaToken == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "mfa_token query param is required"})
 	}

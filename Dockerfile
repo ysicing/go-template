@@ -40,7 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     chown -R app:app /app /data
 WORKDIR /data
 ENV CONFIG_PATH=/data/config.yaml
-ENV TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12"
 COPY --from=builder --chown=app:app /app/id /app/id
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
