@@ -7,10 +7,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/oauth2"
-
-	"github.com/ysicing/go-template/model"
 )
 
 // googleEndpoint defines Google OAuth2 endpoints.

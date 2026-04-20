@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
+
+	"gorm.io/gorm"
 )
 
 // AuditLogStore handles persistence for audit logs.

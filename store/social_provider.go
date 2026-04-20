@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
+
+	"gorm.io/gorm"
 )
 
 var ErrSocialProviderSecretUnavailable = errors.New("social provider secret unavailable")

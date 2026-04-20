@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/google/uuid"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 const defaultClientCredentialsAccessTokenTTL = 5 * time.Minute

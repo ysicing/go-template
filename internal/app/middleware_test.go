@@ -10,13 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/rs/zerolog"
-
+	pkglogger "github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
 
+	"github.com/gofiber/fiber/v3"
 	fibermemory "github.com/gofiber/storage/memory/v2"
-	pkglogger "github.com/ysicing/go-template/pkg/logger"
+	"github.com/rs/zerolog"
 )
 
 func newTestSettingStore(t *testing.T) *store.SettingStore {

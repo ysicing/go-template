@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/ysicing/go-template/model"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestAuditLogStoreAppLoginStatsIncludesMachineActivity(t *testing.T) {

@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
 
 type oauthUserStore interface {

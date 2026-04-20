@@ -47,7 +47,14 @@ func (r *redisCache) Del(ctx context.Context, key string) error {
 }
 
 func (r *redisCache) SetNX(ctx context.Context, key, value string, ttl time.Duration) (bool, error) {
-	return r.client.SetNX(ctx, key, value, ttl).Result()
+	res, err := r.client.SetArgs(ctx, key, value, redis.SetArgs{
+		TTL:  ttl,
+		Mode: "NX",
+	}).Result()
+	if err == redis.Nil {
+		return false, nil
+	}
+	return res == "OK", err
 }
 
 const refreshIfValueScriptSource = `

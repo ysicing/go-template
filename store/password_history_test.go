@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
 )
 
 func setupPasswordHistoryTestDB(t *testing.T) *gorm.DB {

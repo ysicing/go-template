@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 // OIDCLoginHandler handles the OIDC login submission.
@@ -72,7 +72,7 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 		Password: req.Password,
 	})
 	if errors.Is(err, service.ErrAccountLocked) {
-		writeAudit(c.Context(), h.audit, &model.AuditLog{
+		_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
 			UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,
 			IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: "oidc: account locked",
 		})
@@ -81,7 +81,7 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 	}
 	if errors.Is(err, service.ErrInvalidCredentials) {
 		if user != nil {
-			writeAudit(c.Context(), h.audit, &model.AuditLog{
+			_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
 				UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,
 				IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: "oidc: invalid password",
 			})

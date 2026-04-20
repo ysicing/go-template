@@ -1,10 +1,10 @@
 package app
 
 import (
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 func adminRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	crand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,13 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
-	crand "crypto/rand"
+	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
 
 type failingEntropyReader struct{}

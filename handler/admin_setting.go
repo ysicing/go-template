@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 type emailTester interface {

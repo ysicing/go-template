@@ -3,10 +3,10 @@ package store
 import (
 	"context"
 
+	"github.com/ysicing/go-template/model"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-
-	"github.com/ysicing/go-template/model"
 )
 
 type UserStore struct {

@@ -3,9 +3,9 @@ package store
 import (
 	"context"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
+
+	"gorm.io/gorm"
 )
 
 // OAuthClientStore handles persistence for OAuth2 client applications.

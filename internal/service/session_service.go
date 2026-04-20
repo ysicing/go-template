@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type TokenConfig struct {

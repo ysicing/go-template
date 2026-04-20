@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/pkg/logger"
 
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
 

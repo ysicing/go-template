@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
+
+	"gorm.io/gorm"
 )
 
 // Well-known setting keys.

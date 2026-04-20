@@ -4,9 +4,9 @@ import (
 	"context"
 	"sort"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
+
+	"gorm.io/gorm"
 )
 
 type OAuthConsentGrantStore struct {

@@ -3,11 +3,11 @@ package service
 import (
 	"testing"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
 )
 
 func setupOrganizationServiceTestDB(t *testing.T) *gorm.DB {

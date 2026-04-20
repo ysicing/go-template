@@ -5,14 +5,14 @@ import (
 	"crypto/sha256"
 	"errors"
 
+	"github.com/ysicing/go-template/internal/service"
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/internal/service"
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 func validateSecurityConfig(cfg *Config, log *zerolog.Logger) {

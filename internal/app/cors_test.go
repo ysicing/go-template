@@ -7,13 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/glebarez/sqlite"
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 func setupSettingStoreTest(t *testing.T) *store.SettingStore {

@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 // GitHubCompatHandler provides GitHub-compatible OAuth API endpoints so that

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
+
+	"gorm.io/gorm"
 )
 
 const checkInTimezone = "Asia/Shanghai"

@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/pquerna/otp/totp"
-
-	"github.com/ysicing/go-template/model"
 )
 
 type socialLinkPendingData struct {

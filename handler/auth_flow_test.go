@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pquerna/otp/totp"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 func createLocalUser(t *testing.T, db *gorm.DB, username, email, password string) *model.User {

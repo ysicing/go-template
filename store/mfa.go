@@ -3,10 +3,10 @@ package store
 import (
 	"context"
 
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
+
+	"gorm.io/gorm"
 )
 
 // MFAStore handles persistence for MFA configurations.

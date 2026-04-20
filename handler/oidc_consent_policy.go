@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/zitadel/oidc/v3/pkg/op"
-
 	"github.com/ysicing/go-template/store"
+
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 type oidcConsentStorage interface {

@@ -7,10 +7,10 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-
-	"github.com/ysicing/go-template/model"
 )
 
 // APIRefreshTokenStore handles persistence for API refresh tokens.

@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (

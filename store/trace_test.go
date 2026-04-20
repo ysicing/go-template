@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	pkglogger "github.com/ysicing/go-template/pkg/logger"
+
+	"github.com/rs/zerolog"
 )
 
 func captureTraceLogger(t *testing.T) (*bytes.Buffer, func()) {

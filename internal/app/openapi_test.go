@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 type openAPITestDocument struct {

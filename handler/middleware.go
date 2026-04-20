@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 // Claims defines the JWT token payload.

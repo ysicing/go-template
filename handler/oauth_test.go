@@ -11,15 +11,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/glebarez/sqlite"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 // setupTestDB creates an in-memory SQLite database with migrations.
@@ -88,7 +88,9 @@ func TestGitHubLogin_NotConfigured(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]string
-	json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
 	if result["error"] != "github oauth not configured" {
 		t.Errorf("unexpected error: %s", result["error"])
 	}
@@ -691,12 +693,14 @@ func TestGoogleCallback_MissingCode(t *testing.T) {
 
 func TestFetchGitHubUser_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"id":         12345,
 			"login":      "testuser",
 			"email":      "test@example.com",
 			"avatar_url": "https://example.com/avatar.png",
-		})
+		}); err != nil {
+			t.Errorf("encode github response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -724,12 +728,14 @@ func TestFetchGitHubUser_Success(t *testing.T) {
 
 func TestFetchGoogleUser_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"id":      "google-123",
 			"email":   "test@gmail.com",
 			"name":    "Test User",
 			"picture": "https://example.com/photo.png",
-		})
+		}); err != nil {
+			t.Errorf("encode google response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -764,7 +770,9 @@ func TestGoogleEndpoint(t *testing.T) {
 func TestGitHubCallback_InvalidExchange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":"bad_verification_code"}`))
+		if _, err := w.Write([]byte(`{"error":"bad_verification_code"}`)); err != nil {
+			t.Errorf("write github error response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -820,7 +828,9 @@ func TestGitHubCallback_InvalidExchange(t *testing.T) {
 func TestGoogleCallback_InvalidExchange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":"bad_verification_code"}`))
+		if _, err := w.Write([]byte(`{"error":"bad_verification_code"}`)); err != nil {
+			t.Errorf("write google error response: %v", err)
+		}
 	}))
 	defer srv.Close()
 

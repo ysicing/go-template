@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 // RateLimiterConfig defines configuration for the rate limiter middleware.

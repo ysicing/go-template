@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/glebarez/sqlite"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
 )
 
 func newTestOIDCStorage(t *testing.T) *OIDCStorage {
@@ -1004,6 +1004,7 @@ func TestCreateAuthRequest_WithCodeChallenge(t *testing.T) {
 	cc := ar.GetCodeChallenge()
 	if cc == nil {
 		t.Fatal("expected code challenge to be set")
+		return
 	}
 	if cc.Challenge != "challenge-value" {
 		t.Errorf("expected challenge 'challenge-value', got %q", cc.Challenge)

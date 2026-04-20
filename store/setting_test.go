@@ -2,15 +2,14 @@ package store
 
 import (
 	"context"
+	crand "crypto/rand"
 	"path/filepath"
 	"testing"
-
-	"gorm.io/gorm"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
 
-	crand "crypto/rand"
+	"gorm.io/gorm"
 )
 
 func newSettingStoreTest(t *testing.T) (*SettingStore, *gorm.DB, Cache) {

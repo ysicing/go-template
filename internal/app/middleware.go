@@ -8,18 +8,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/compress"
-	"github.com/gofiber/fiber/v3/middleware/cors"
-	"github.com/gofiber/fiber/v3/middleware/requestid"
-	"github.com/rs/zerolog"
-
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
 
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	fiberrecover "github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 	fibersession "github.com/gofiber/fiber/v3/middleware/session"
+	"github.com/rs/zerolog"
 )
 
 func setupMiddlewareChain(app *fiber.App, settingStore *store.SettingStore, sessionStorage fiber.Storage, log *zerolog.Logger) {

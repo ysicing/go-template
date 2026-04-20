@@ -2,6 +2,7 @@ version: '3'
 
 vars:
   BINARY: id
+  GO_MODULE: github.com/ysicing/go-template
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo dev
   GIT_COMMIT:
@@ -49,14 +50,37 @@ tasks:
 
   fmt:
     desc: Format code
+    deps: [gofmt, gci]
     cmds:
-      - gofmt -s -w .
-      - goimports -w .
-      - gci write --skip-generated --custom-order -s standard -s default -s "prefix(github.com/ysicing/go-template)" -s blank -s dot -s alias .
       - cd web && pnpm run lint --fix
 
+  gofmt:
+    desc: Format Go code
+    cmds:
+      - command -v goimports || go install golang.org/x/tools/cmd/goimports@latest
+      - gofmt -s -w .
+      - goimports -w .
+
+  gci:
+    desc: Format Go import groups
+    cmds:
+      - command -v gci || go install github.com/daixiang0/gci@v0.13.7
+      - gci write --skip-generated --custom-order -s standard -s "prefix({{.GO_MODULE}})" -s default -s blank -s dot .
+
+  golint:
+    desc: Lint Go code with golangci-lint
+    cmds:
+      - command -v golangci-lint || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+      - golangci-lint run -v ./...
+
+  govulncheck:
+    desc: Check Go vulnerabilities
+    cmds:
+      - command -v govulncheck || go install golang.org/x/vuln/cmd/govulncheck@latest
+      - govulncheck ./...
+
   go:lint:
-    desc: Check Go formatting and vet
+    desc: Check Go formatting, imports, vet, and lint
     cmds:
       - |
         files=$(find . -name '*.go' -not -path './web/*')
@@ -65,7 +89,18 @@ tasks:
           echo "$unformatted"
           exit 1
         fi
+      - command -v goimports || go install golang.org/x/tools/cmd/goimports@latest
+      - |
+        files=$(find . -name '*.go' -not -path './web/*')
+        unformatted=$(goimports -l $files)
+        if [ -n "$unformatted" ]; then
+          echo "$unformatted"
+          exit 1
+        fi
+      - command -v gci || go install github.com/daixiang0/gci@v0.13.7
+      - gci diff --skip-generated --custom-order -s standard -s "prefix({{.GO_MODULE}})" -s default -s blank -s dot .
       - go vet ./...
+      - task: golint
 
   go:test:
     desc: Run Go tests
@@ -89,6 +124,7 @@ tasks:
     cmds:
       - task: web:ci
       - task: go:lint
+      - task: govulncheck
       - task: go:test
       - task: openapi:check
 

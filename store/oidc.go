@@ -13,15 +13,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"github.com/zitadel/oidc/v3/pkg/op"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
 
 	jose "github.com/go-jose/go-jose/v4"
+	"github.com/google/uuid"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
+	"gorm.io/gorm"
 )
 
 // ---------------------------------------------------------------------------
@@ -384,9 +383,7 @@ func (s *OIDCStorage) cleanupLoop(ctx context.Context) {
 		case <-ticker.C:
 		}
 		now := time.Now()
-		if err := s.ensureSigningKeyFresh(ctx, now); err != nil {
-			// Keep serving with the current key if rotation fails.
-		}
+		_ = s.ensureSigningKeyFresh(ctx, now)
 		s.db.WithContext(ctx).Where("expires_at < ?", now).Delete(&model.Token{})
 	}
 }

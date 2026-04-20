@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 const auditWriteTimeout = 2 * time.Second

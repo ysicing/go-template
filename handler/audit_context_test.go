@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/model"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 func TestResolveAuditSource(t *testing.T) {

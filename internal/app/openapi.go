@@ -3,13 +3,12 @@ package app
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
 	fiberSwagger "github.com/gofiber/contrib/v3/swaggo"
+	"github.com/gofiber/fiber/v3"
 )
 
 type openAPIRoute struct {

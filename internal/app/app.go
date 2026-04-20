@@ -5,12 +5,12 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/rs/zerolog"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/pkg/metrics"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 // Run wires dependencies and starts the service lifecycle.

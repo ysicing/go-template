@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ysicing/go-template/internal/service"
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/pquerna/otp/totp"
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/crypto/bcrypt"
-
-	"github.com/ysicing/go-template/internal/service"
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 type mfaUserStore interface {

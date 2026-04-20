@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
-
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type authUserStore interface {

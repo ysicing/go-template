@@ -5,9 +5,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/rs/zerolog"
-
 	"github.com/ysicing/go-template/store"
+
+	"github.com/rs/zerolog"
 )
 
 func TestInitDeps_SetsCache(t *testing.T) {

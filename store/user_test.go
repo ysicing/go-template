@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
 )
 
 func setupUserStoreTestDB(t *testing.T) *gorm.DB {

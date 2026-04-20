@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/ysicing/go-template/store"
+
+	"github.com/rs/zerolog"
 )
 
 type stubCache struct {

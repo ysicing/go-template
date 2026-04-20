@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ysicing/go-template/store"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/ysicing/go-template/store"
 )
 
 func TestRateLimiter_MemoryCache(t *testing.T) {

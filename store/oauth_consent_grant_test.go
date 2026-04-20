@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
 )
 
 func newTestConsentGrantStore(t *testing.T) *OAuthConsentGrantStore {

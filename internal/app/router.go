@@ -3,12 +3,12 @@ package app
 import (
 	"net/http"
 
-	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
 
 // Services groups application-level services shared across handlers.

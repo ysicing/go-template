@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/ysicing/go-template/model"
+
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
 )
 
 // WebAuthnStore handles persistence for WebAuthn credentials.

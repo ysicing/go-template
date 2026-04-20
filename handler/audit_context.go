@@ -3,9 +3,9 @@ package handler
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/model"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 const auditSourceLocalKey = "audit_source"

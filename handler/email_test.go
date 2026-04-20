@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 func setupEmailHandler(t *testing.T) (*EmailHandler, *store.UserStore, *store.SettingStore, store.Cache) {

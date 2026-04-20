@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/stretchr/testify/require"
 )
 
 func createClientCredentialsTestClient(t *testing.T, clients *store.OAuthClientStore, grantTypes, scopes string) (*model.OAuthClient, string) {

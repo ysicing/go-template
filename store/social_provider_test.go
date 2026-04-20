@@ -2,17 +2,16 @@ package store
 
 import (
 	"context"
+	crand "crypto/rand"
 	"errors"
 	"strings"
 	"testing"
 
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
 
-	crand "crypto/rand"
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
 type failingReader struct{}
@@ -100,8 +99,12 @@ func TestSocialProviderStore_List(t *testing.T) {
 	db := setupSocialTestDB(t)
 	s := NewSocialProviderStore(db, "")
 
-	s.Upsert(context.Background(), &model.SocialProvider{Name: "github", ClientID: "a", ClientSecret: "b", Enabled: true})
-	s.Upsert(context.Background(), &model.SocialProvider{Name: "google", ClientID: "c", ClientSecret: "d", Enabled: true})
+	if err := s.Upsert(context.Background(), &model.SocialProvider{Name: "github", ClientID: "a", ClientSecret: "b", Enabled: true}); err != nil {
+		t.Fatalf("upsert github provider: %v", err)
+	}
+	if err := s.Upsert(context.Background(), &model.SocialProvider{Name: "google", ClientID: "c", ClientSecret: "d", Enabled: true}); err != nil {
+		t.Fatalf("upsert google provider: %v", err)
+	}
 
 	providers, err := s.List(context.Background())
 	if err != nil {
@@ -116,7 +119,9 @@ func TestSocialProviderStore_Delete(t *testing.T) {
 	db := setupSocialTestDB(t)
 	s := NewSocialProviderStore(db, "")
 
-	s.Upsert(context.Background(), &model.SocialProvider{Name: "github", ClientID: "a", ClientSecret: "b", Enabled: true})
+	if err := s.Upsert(context.Background(), &model.SocialProvider{Name: "github", ClientID: "a", ClientSecret: "b", Enabled: true}); err != nil {
+		t.Fatalf("upsert github provider: %v", err)
+	}
 
 	got, _ := s.GetByName(context.Background(), "github")
 	if err := s.Delete(context.Background(), got.ID); err != nil {
@@ -133,7 +138,9 @@ func TestSocialProviderStore_GetByID(t *testing.T) {
 	db := setupSocialTestDB(t)
 	s := NewSocialProviderStore(db, "")
 
-	s.Upsert(context.Background(), &model.SocialProvider{Name: "github", ClientID: "a", ClientSecret: "b", Enabled: true})
+	if err := s.Upsert(context.Background(), &model.SocialProvider{Name: "github", ClientID: "a", ClientSecret: "b", Enabled: true}); err != nil {
+		t.Fatalf("upsert github provider: %v", err)
+	}
 
 	byName, _ := s.GetByName(context.Background(), "github")
 	byID, err := s.GetByID(context.Background(), byName.ID)

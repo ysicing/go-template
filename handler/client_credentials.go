@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/internal/service"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 type ClientCredentialsHandler struct {

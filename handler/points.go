@@ -4,16 +4,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 const (
 	maxSpendAmount  int64 = 10000
-	maxReasonLength       = 200
+	maxReasonLength int   = 200
 )
 
 type PointsHandler struct {

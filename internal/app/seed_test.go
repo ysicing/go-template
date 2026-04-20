@@ -5,12 +5,12 @@ import (
 	"io"
 	"testing"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/glebarez/sqlite"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
 )
 
 func setupUserStoreTest(t *testing.T) *store.UserStore {

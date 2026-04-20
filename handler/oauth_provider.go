@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-	"golang.org/x/oauth2"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
+	"golang.org/x/oauth2"
 )
 
 type oauthProviderProfile struct {

@@ -11,15 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/pkg/logger"
+	"github.com/ysicing/go-template/store"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
-
-	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/pkg/logger"
-	"github.com/ysicing/go-template/store"
 )
 
 func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedConfig) {

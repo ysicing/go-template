@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
-
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+
+	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
 
 // errAccountLinkRequired is returned when a social login email matches an existing account.
