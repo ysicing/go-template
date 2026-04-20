@@ -16,14 +16,16 @@ import (
 )
 
 func validateSecurityConfig(cfg *Config, log *zerolog.Logger) {
-	if cfg.IsDefaultSecret() && !cfg.Security.AllowInsecure {
-		log.Fatal().Msg("default JWT secret is not allowed in secure mode, set jwt.secret or security.allow_insecure: true")
+	if cfg.IsDemoMode() {
+		log.Warn().Msg("running in DEMO mode — default secrets and relaxed policies are allowed; do NOT use in production")
+		cfg.Security.AllowInsecure = true
+		return
 	}
-	if cfg.IsDefaultSecret() && cfg.Security.AllowInsecure {
-		log.Warn().Msg("using default JWT secret")
+	if cfg.IsDefaultSecret() {
+		log.Fatal().Msg("default JWT secret is not allowed outside demo mode, set jwt.secret or security.mode: demo")
 	}
 	if cfg.Security.EncryptionKey == "" {
-		log.Warn().Msg("security.encryption_key is not set — TOTP secrets and social provider credentials will be stored in plaintext")
+		log.Fatal().Msg("security.encryption_key is required outside demo mode — TOTP secrets and social provider credentials need encryption")
 	}
 }
 

@@ -152,7 +152,14 @@ func TestUserHandler_SetPassword_WritesAuditLog(t *testing.T) {
 }
 
 func TestUserHandler_SetPassword_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
-	h, users, _, _, _, _, user, _ := setupUserHandler(t)
+	h, users, _, _, _, _, user, db := setupUserHandler(t)
+
+	// Explicitly disable password policy for this test.
+	settings := store.NewSettingStore(db, store.NewMemoryCache())
+	_ = settings.Set(context.Background(), store.SettingPasswordPolicyEnabled, "false")
+	// Replace handler's settings with the one that has the policy disabled.
+	h.settings = settings
+
 	app := newUserTestApp(t, h, user.ID)
 
 	user.PasswordHash = ""

@@ -443,8 +443,8 @@ func refreshTokenFromDB(t *model.Token) *oidcRefreshToken {
 // ---------------------------------------------------------------------------
 
 // GetAuthRequestClientID returns the OAuth client ID for the given auth request.
-func (s *OIDCStorage) GetAuthRequestClientID(id string) string {
-	ar, err := s.loadAuthRequest(context.Background(), id)
+func (s *OIDCStorage) GetAuthRequestClientID(ctx context.Context, id string) string {
+	ar, err := s.loadAuthRequest(ctx, id)
 	if err != nil {
 		return ""
 	}
@@ -452,30 +452,30 @@ func (s *OIDCStorage) GetAuthRequestClientID(id string) string {
 }
 
 // CompleteAuthRequest marks an auth request as done with the given userID.
-func (s *OIDCStorage) CompleteAuthRequest(id, userID string) error {
-	ar, err := s.loadAuthRequest(context.Background(), id)
+func (s *OIDCStorage) CompleteAuthRequest(ctx context.Context, id, userID string) error {
+	ar, err := s.loadAuthRequest(ctx, id)
 	if err != nil {
 		return err
 	}
 	ar.UserID = userID
 	ar.Done = true
 	ar.AuthTime = time.Now()
-	return s.storeAuthRequest(context.Background(), ar)
+	return s.storeAuthRequest(ctx, ar)
 }
 
-func (s *OIDCStorage) AssignAuthRequestUser(id, userID string) error {
-	ar, err := s.loadAuthRequest(context.Background(), id)
+func (s *OIDCStorage) AssignAuthRequestUser(ctx context.Context, id, userID string) error {
+	ar, err := s.loadAuthRequest(ctx, id)
 	if err != nil {
 		return err
 	}
 	ar.UserID = userID
 	ar.Done = false
 	ar.AuthTime = time.Now()
-	return s.storeAuthRequest(context.Background(), ar)
+	return s.storeAuthRequest(ctx, ar)
 }
 
-func (s *OIDCStorage) AuthRequestRequiresConsent(id string) bool {
-	ar, err := s.loadAuthRequest(context.Background(), id)
+func (s *OIDCStorage) AuthRequestRequiresConsent(ctx context.Context, id string) bool {
+	ar, err := s.loadAuthRequest(ctx, id)
 	if err != nil {
 		return false
 	}

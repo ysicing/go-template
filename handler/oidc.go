@@ -118,17 +118,17 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 			JSON(fiber.Map{"error": "auth request not found or expired"})
 	}
 	if shouldPrompt {
-		if err := h.storage.AssignAuthRequestUser(req.ID, user.ID); err != nil {
+		if err := h.storage.AssignAuthRequestUser(c.Context(), req.ID, user.ID); err != nil {
 			return c.Status(fiber.StatusBadRequest).
 				JSON(fiber.Map{"error": "auth request not found or expired"})
 		}
 		redirect = "/consent?id=" + req.ID
-	} else if err := h.storage.CompleteAuthRequest(req.ID, user.ID); err != nil {
+	} else if err := h.storage.CompleteAuthRequest(c.Context(), req.ID, user.ID); err != nil {
 		return c.Status(fiber.StatusBadRequest).
 			JSON(fiber.Map{"error": "auth request not found or expired"})
 	}
 
-	clientID := h.storage.GetAuthRequestClientID(req.ID)
+	clientID := h.storage.GetAuthRequestClientID(c.Context(), req.ID)
 	oidcIP, oidcUA := GetRealIPAndUA(c)
 	if err := writeAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: user.ID, Action: model.AuditLogin, Resource: "user", ResourceID: user.ID,
@@ -206,7 +206,7 @@ func (h *OIDCLoginHandler) ConsentApprove(c fiber.Ctx) error {
 			logger.L.Error().Err(err).Msg("record oidc consent grant upsert")
 		}
 	}
-	if err := h.storage.CompleteAuthRequest(req.ID, authReq.GetSubject()); err != nil {
+	if err := h.storage.CompleteAuthRequest(c.Context(), req.ID, authReq.GetSubject()); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth request not found or expired"})
 	}
 

@@ -630,6 +630,9 @@ func TestRegister_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
 	audit := store.NewAuditLogStore(db)
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
+	// Explicitly disable password policy for this test.
+	_ = settings.Set(context.Background(), store.SettingPasswordPolicyEnabled, "false")
+
 	authH := NewAuthHandler(AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,

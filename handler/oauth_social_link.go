@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/pquerna/otp/totp"
@@ -107,11 +106,14 @@ func (h *OAuthHandler) ExchangeCode(c fiber.Ctx) error {
 	}
 	_ = h.cache.Del(c.Context(), "oauth_code:"+req.Code)
 
-	parts := strings.SplitN(val, "|", 2)
-	if len(parts) != 2 {
+	var codeData struct {
+		UserID   string `json:"user_id"`
+		Provider string `json:"provider"`
+	}
+	if err := json.Unmarshal([]byte(val), &codeData); err != nil || codeData.UserID == "" {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid code data"})
 	}
-	userID, provider := parts[0], parts[1]
+	userID, provider := codeData.UserID, codeData.Provider
 
 	user, err := h.users.GetByID(c.Context(), userID)
 	if err != nil {

@@ -68,6 +68,7 @@ type SecurityConfig struct {
 	AllowInsecure bool   `yaml:"allow_insecure"`
 	EncryptionKey string `yaml:"encryption_key"`
 	OIDCSecret    string `yaml:"oidc_secret"`
+	Mode          string `yaml:"mode"` // "demo" allows default secrets and relaxed policies; any other value enforces production security
 }
 
 type AdminSeedConfig struct {
@@ -192,6 +193,9 @@ func LoadConfig() (*Config, error) {
 			cfg.Security.AllowInsecure = b
 		}
 	}
+	if v := os.Getenv("SECURITY_MODE"); v != "" {
+		cfg.Security.Mode = v
+	}
 	if v := os.Getenv("ADMIN_USERNAME"); v != "" {
 		cfg.Admin.Username = v
 	}
@@ -223,4 +227,9 @@ func LoadConfig() (*Config, error) {
 
 func (c *Config) IsDefaultSecret() bool {
 	return c.JWT.Secret == "change-me-in-production"
+}
+
+// IsDemoMode returns true when the application runs in demo/development mode.
+func (c *Config) IsDemoMode() bool {
+	return c.Security.Mode == "demo"
 }

@@ -66,13 +66,7 @@ type AuthHandler struct {
 func NewAuthHandler(deps AuthDeps) *AuthHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = service.NewSessionService(deps.RefreshTokens, service.TokenConfig{
-			Secret:        deps.TokenConfig.Secret,
-			Issuer:        deps.TokenConfig.Issuer,
-			AccessTTL:     deps.TokenConfig.AccessTTL,
-			RefreshTTL:    deps.TokenConfig.RefreshTTL,
-			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
-		})
+		sessions = service.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
 	}
 	authService := deps.AuthService
 	if authService == nil {
@@ -273,7 +267,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		Password: req.Password,
 	})
 	if errors.Is(err, service.ErrAccountLocked) {
-		h.recordAudit(c, user.ID, model.AuditLoginFailed, "user", user.ID, "failure", "account locked")
+		if user != nil {
+			h.recordAudit(c, user.ID, model.AuditLoginFailed, "user", user.ID, "failure", "account locked")
+		}
 		RecordAuthAttempt("login", "failure")
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
@@ -295,7 +291,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	mfaCfg, _ := h.mfa.GetByUserID(c.Context(), user.ID)
 	if mfaCfg != nil && mfaCfg.TOTPEnabled {
 		mfaToken := store.GenerateRandomToken()
-		_ = h.cache.Set(c.Context(), "mfa_pending:"+mfaToken, user.ID, 5*time.Minute)
+		if err := h.cache.Set(c.Context(), "mfa_pending:"+mfaToken, user.ID, 5*time.Minute); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to initiate MFA"})
+		}
 		if req.RememberMe {
 			_ = h.cache.Set(c.Context(), "mfa_pending_rm:"+mfaToken, "1", 5*time.Minute)
 		}

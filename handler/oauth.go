@@ -71,13 +71,7 @@ type OAuthHandler struct {
 func NewOAuthHandler(deps OAuthDeps) *OAuthHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = service.NewSessionService(deps.RefreshTokens, service.TokenConfig{
-			Secret:        deps.TokenConfig.Secret,
-			Issuer:        deps.TokenConfig.Issuer,
-			AccessTTL:     deps.TokenConfig.AccessTTL,
-			RefreshTTL:    deps.TokenConfig.RefreshTTL,
-			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
-		})
+		sessions = service.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
 	}
 
 	return &OAuthHandler{

@@ -59,6 +59,9 @@ func (h *EmailHandler) SendVerificationEmail(c fiber.Ctx, user *model.User, base
 <p>This link expires in 24 hours.</p>
 </body></html>`, htmlEscape(user.Username), link, link)
 
+	// Capture values before launching goroutine to avoid data races on the user pointer.
+	userID, userEmail := user.ID, user.Email
+
 	// Send email asynchronously with retry mechanism
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), emailSendTimeout)
@@ -66,12 +69,12 @@ func (h *EmailHandler) SendVerificationEmail(c fiber.Ctx, user *model.User, base
 
 		var lastErr error
 		for attempt := 1; attempt <= emailMaxRetries; attempt++ {
-			if err := h.sendEmailWithContext(ctx, user.Email, "Verify your email address", body); err != nil {
+			if err := h.sendEmailWithContext(ctx, userEmail, "Verify your email address", body); err != nil {
 				lastErr = err
 				logger.L.Warn().
 					Err(err).
-					Str("user_id", user.ID).
-					Str("email", user.Email).
+					Str("user_id", userID).
+					Str("email", userEmail).
 					Int("attempt", attempt).
 					Int("max_retries", emailMaxRetries).
 					Msg("failed to send verification email, will retry")
@@ -98,8 +101,8 @@ func (h *EmailHandler) SendVerificationEmail(c fiber.Ctx, user *model.User, base
 			} else {
 				// Success
 				logger.L.Info().
-					Str("user_id", user.ID).
-					Str("email", user.Email).
+					Str("user_id", userID).
+					Str("email", userEmail).
 					Int("attempt", attempt).
 					Msg("verification email sent successfully")
 				RecordEmailSent("verification", "success")
@@ -110,8 +113,8 @@ func (h *EmailHandler) SendVerificationEmail(c fiber.Ctx, user *model.User, base
 		// All retries failed
 		logger.L.Error().
 			Err(lastErr).
-			Str("user_id", user.ID).
-			Str("email", user.Email).
+			Str("user_id", userID).
+			Str("email", userEmail).
 			Int("attempts", emailMaxRetries).
 			Msg("failed to send verification email after all retries")
 		RecordEmailSent("verification", "failure")

@@ -29,9 +29,9 @@ type mfaStore interface {
 }
 
 type oidcAuthCompleter interface {
-	CompleteAuthRequest(id, userID string) error
-	AssignAuthRequestUser(id, userID string) error
-	AuthRequestRequiresConsent(id string) bool
+	CompleteAuthRequest(ctx context.Context, id, userID string) error
+	AssignAuthRequestUser(ctx context.Context, id, userID string) error
+	AuthRequestRequiresConsent(ctx context.Context, id string) bool
 	AuthRequestByID(ctx context.Context, id string) (op.AuthRequest, error)
 }
 
@@ -71,13 +71,7 @@ const (
 func NewMFAHandler(deps MFADeps) *MFAHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = service.NewSessionService(deps.RefreshTokens, service.TokenConfig{
-			Secret:        deps.TokenConfig.Secret,
-			Issuer:        deps.TokenConfig.Issuer,
-			AccessTTL:     deps.TokenConfig.AccessTTL,
-			RefreshTTL:    deps.TokenConfig.RefreshTTL,
-			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
-		})
+		sessions = service.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
 	}
 
 	return &MFAHandler{
@@ -174,7 +168,10 @@ func (h *MFAHandler) TOTPEnable(c fiber.Ctx) error {
 	// Generate backup codes.
 	backupCodes := generateBackupCodes(10)
 	hashedCodes := hashBackupCodes(backupCodes)
-	codesJSON, _ := json.Marshal(hashedCodes)
+	codesJSON, err := json.Marshal(hashedCodes)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encode backup codes"})
+	}
 
 	cfg := &model.MFAConfig{
 		UserID:      userID,
@@ -306,7 +303,10 @@ func (h *MFAHandler) RegenerateBackupCodes(c fiber.Ctx) error {
 
 	backupCodes := generateBackupCodes(10)
 	hashedCodes := hashBackupCodes(backupCodes)
-	codesJSON, _ := json.Marshal(hashedCodes)
+	codesJSON, err := json.Marshal(hashedCodes)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encode backup codes"})
+	}
 	cfg.BackupCodes = string(codesJSON)
 
 	if err := h.mfa.Upsert(c.Context(), cfg); err != nil {
@@ -336,13 +336,15 @@ func (h *MFAHandler) Verify(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "mfa_token is required"})
 	}
 
+	// Verify the pending token exists before consuming it, to avoid permanently
+	// burning the token when the pending key has already expired.
+	userID, err := h.cache.Get(c.Context(), "mfa_pending:"+req.MFAToken)
+	if err != nil || userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired mfa_token"})
+	}
 	// Atomically consume the MFA token to prevent TOCTOU double-use
 	consumed, err := h.cache.SetNX(c.Context(), mfaConsumedKey(req.MFAToken), "1", 5*time.Minute)
 	if err != nil || !consumed {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired mfa_token"})
-	}
-	userID, err := h.cache.Get(c.Context(), "mfa_pending:"+req.MFAToken)
-	if err != nil || userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired mfa_token"})
 	}
 	if h.isMFAVerifyLocked(c.Context(), req.MFAToken) {
@@ -404,7 +406,7 @@ func (h *MFAHandler) Verify(c fiber.Ctx) error {
 		if authReqID == "" || h.oidc == nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid oidc login context"})
 		}
-		shouldPrompt := h.oidc.AuthRequestRequiresConsent(authReqID)
+		shouldPrompt := h.oidc.AuthRequestRequiresConsent(c.Context(), authReqID)
 		if !shouldPrompt && h.clients != nil {
 			var err error
 			shouldPrompt, err = shouldPromptOIDCConsent(c.Context(), h.oidc, h.clients, h.consentGrants, authReqID, userID)
@@ -413,12 +415,12 @@ func (h *MFAHandler) Verify(c fiber.Ctx) error {
 			}
 		}
 		if shouldPrompt {
-			if err := h.oidc.AssignAuthRequestUser(authReqID, userID); err != nil {
+			if err := h.oidc.AssignAuthRequestUser(c.Context(), authReqID, userID); err != nil {
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth request not found or expired"})
 			}
 			return c.JSON(fiber.Map{"redirect": "/consent?id=" + authReqID})
 		}
-		if err := h.oidc.CompleteAuthRequest(authReqID, userID); err != nil {
+		if err := h.oidc.CompleteAuthRequest(c.Context(), authReqID, userID); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth request not found or expired"})
 		}
 		return c.JSON(fiber.Map{"redirect": "/authorize/callback?id=" + authReqID})
@@ -463,9 +465,14 @@ func (h *MFAHandler) verifyAndConsumeBackupCode(ctx context.Context, cfg *model.
 		if bcrypt.CompareHashAndPassword([]byte(hash), []byte(code)) == nil {
 			// Remove used code.
 			hashes = append(hashes[:i], hashes[i+1:]...)
-			codesJSON, _ := json.Marshal(hashes)
+			codesJSON, err := json.Marshal(hashes)
+			if err != nil {
+				return false
+			}
 			cfg.BackupCodes = string(codesJSON)
-			_ = h.mfa.Upsert(ctx, cfg)
+			if err := h.mfa.Upsert(ctx, cfg); err != nil {
+				return false
+			}
 			return true
 		}
 	}

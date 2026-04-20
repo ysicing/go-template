@@ -169,9 +169,9 @@ func (h *OAuthHandler) handleOAuthProviderCallback(c fiber.Ctx, name string, con
 			if errMsg == "registration_disabled" {
 				return c.Redirect().To("/login?error=registration_disabled")
 			}
-			if strings.HasPrefix(errMsg, "account_link_required:") {
-				linkToken := strings.TrimPrefix(errMsg, "account_link_required:")
-				return c.Redirect().To("/login?link_required=true&link_token=" + linkToken + "&provider=" + name)
+			var linkErr *errAccountLinkRequired
+			if errors.As(err, &linkErr) {
+				return c.Redirect().To("/login?link_required=true&link_token=" + linkErr.LinkToken + "&provider=" + name)
 			}
 			logger.L.Error().Err(err).Str("provider", name).Msg("social login failed")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "social login failed"})

@@ -20,7 +20,7 @@ func TestResolveAuditSource(t *testing.T) {
 		{name: "admin path", path: "/api/admin/users", expected: model.AuditSourceAdmin},
 		{name: "api path", path: "/api/users/me", expected: model.AuditSourceAPI},
 		{name: "web path", path: "/profile", expected: model.AuditSourceWeb},
-		{name: "header override", path: "/profile", header: model.AuditSourceCLI, expected: model.AuditSourceCLI},
+		{name: "header ignored", path: "/profile", header: model.AuditSourceCLI, expected: model.AuditSourceWeb},
 	}
 
 	for _, tt := range tests {

@@ -15,6 +15,14 @@ import (
 	"github.com/ysicing/go-template/store"
 )
 
+// errAccountLinkRequired is returned when a social login email matches an existing account.
+// The LinkToken holds a short-lived cache key with the pending link data.
+type errAccountLinkRequired struct {
+	LinkToken string
+}
+
+func (e *errAccountLinkRequired) Error() string { return "account link required" }
+
 // linkOrCreateSocialUser handles user lookup, linking, or creation for social login.
 func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, providerID, email, username, avatarURL string) (*model.User, error) {
 	socialAccount, err := h.socialAccounts.GetByProviderAndID(ctx, provider, providerID)
@@ -55,7 +63,7 @@ func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, pro
 			return nil, fmt.Errorf("failed to store pending link")
 		}
 
-		return nil, fmt.Errorf("account_link_required:%s", linkToken)
+		return nil, &errAccountLinkRequired{LinkToken: linkToken}
 	}
 
 	if !registerEnabled {
@@ -103,7 +111,8 @@ func (h *OAuthHandler) handleSocialCallback(c fiber.Ctx, user *model.User, provi
 	}
 
 	code := store.GenerateRandomToken()
-	_ = h.cache.Set(c.Context(), "oauth_code:"+code, user.ID+"|"+provider, 2*time.Minute)
+	codeData, _ := json.Marshal(map[string]string{"user_id": user.ID, "provider": provider})
+	_ = h.cache.Set(c.Context(), "oauth_code:"+code, string(codeData), 2*time.Minute)
 	return c.Redirect().To("/login/callback?code=" + code)
 }
 

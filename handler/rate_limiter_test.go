@@ -126,7 +126,7 @@ func TestRateLimiter_RemainingHeaderNeverNegative(t *testing.T) {
 	resp2.Body.Close()
 }
 
-func TestRateLimiter_CacheError_FailOpen(t *testing.T) {
+func TestRateLimiter_CacheError_FailClosed(t *testing.T) {
 	// Create a mock cache that always returns errors
 	mockCache := &mockErrorCache{}
 
@@ -139,11 +139,11 @@ func TestRateLimiter_CacheError_FailOpen(t *testing.T) {
 		return c.SendString("OK")
 	})
 
-	// Should succeed even though cache returns error (fail open)
+	// Should return 503 when cache errors (fail closed)
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 	resp.Body.Close()
 }
 

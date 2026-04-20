@@ -490,7 +490,7 @@ func TestOIDCConsentApproveWritesAuditAndCompletesRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create auth request: %v", err)
 	}
-	if err := deps.OIDCStorage.AssignAuthRequestUser(authReq.GetID(), user.ID); err != nil {
+	if err := deps.OIDCStorage.AssignAuthRequestUser(context.Background(), authReq.GetID(), user.ID); err != nil {
 		t.Fatalf("assign auth request user: %v", err)
 	}
 
@@ -561,7 +561,7 @@ func TestOIDCConsentDenyWritesAuditAndDeletesRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create auth request: %v", err)
 	}
-	if err := deps.OIDCStorage.AssignAuthRequestUser(authReq.GetID(), user.ID); err != nil {
+	if err := deps.OIDCStorage.AssignAuthRequestUser(context.Background(), authReq.GetID(), user.ID); err != nil {
 		t.Fatalf("assign auth request user: %v", err)
 	}
 

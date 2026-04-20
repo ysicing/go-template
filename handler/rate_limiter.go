@@ -65,10 +65,11 @@ func RateLimiter(config RateLimiterConfig) fiber.Handler {
 		// Increment counter atomically
 		count, err := config.Cache.Incr(c.Context(), key, config.Expiration)
 		if err != nil {
-			// On cache error, allow the request to proceed (fail open).
-			// Log the error so cache failures are observable in monitoring.
-			logger.L.Error().Err(err).Str("key", key).Msg("rate limiter: cache error, failing open")
-			return c.Next()
+			// On cache error, fail closed to prevent brute-force during outages.
+			logger.L.Error().Err(err).Str("key", key).Msg("rate limiter: cache error, failing closed")
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "service temporarily unavailable, please retry",
+			})
 		}
 
 		// Check if limit exceeded

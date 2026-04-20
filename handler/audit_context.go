@@ -18,14 +18,10 @@ func AuditContextMiddleware() fiber.Handler {
 	}
 }
 
-// ResolveAuditSource determines the canonical source for a request.
+// ResolveAuditSource determines the canonical source for a request based on path.
 func ResolveAuditSource(c fiber.Ctx) string {
 	if c == nil {
 		return model.AuditSourceSystem
-	}
-
-	if headerSource := normalizeAuditSource(c.Get("X-Audit-Source")); headerSource != "" {
-		return headerSource
 	}
 
 	path := strings.ToLower(c.Path())
@@ -36,22 +32,5 @@ func ResolveAuditSource(c fiber.Ctx) string {
 		return model.AuditSourceAPI
 	default:
 		return model.AuditSourceWeb
-	}
-}
-
-func normalizeAuditSource(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case model.AuditSourceWeb:
-		return model.AuditSourceWeb
-	case model.AuditSourceAPI:
-		return model.AuditSourceAPI
-	case model.AuditSourceAdmin:
-		return model.AuditSourceAdmin
-	case model.AuditSourceCLI:
-		return model.AuditSourceCLI
-	case model.AuditSourceSystem:
-		return model.AuditSourceSystem
-	default:
-		return ""
 	}
 }

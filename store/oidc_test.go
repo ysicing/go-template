@@ -286,7 +286,7 @@ func TestCompleteAuthRequest(t *testing.T) {
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
 
-	if err := s.CompleteAuthRequest(ar.GetID(), "user-123"); err != nil {
+	if err := s.CompleteAuthRequest(ctx, ar.GetID(), "user-123"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -301,7 +301,7 @@ func TestCompleteAuthRequest(t *testing.T) {
 
 func TestCompleteAuthRequest_NotFound(t *testing.T) {
 	s := newTestOIDCStorage(t)
-	err := s.CompleteAuthRequest("nonexistent", "user-123")
+	err := s.CompleteAuthRequest(context.Background(), "nonexistent", "user-123")
 	if err == nil {
 		t.Fatal("expected error for nonexistent auth request")
 	}
@@ -318,7 +318,7 @@ func TestCreateAccessToken(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 
 	tr, ok := ar.(op.TokenRequest)
@@ -348,7 +348,7 @@ func TestOIDCStorageCreateAccessTokenSetsUserSubjectType(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 
 	tokenID, _, err := s.CreateAccessToken(ctx, ar.(op.TokenRequest))
@@ -396,7 +396,7 @@ func TestCreateAccessAndRefreshTokens(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID()) // re-fetch to get updated userID
 
 	tokenID, refreshToken, expiry, err := s.CreateAccessAndRefreshTokens(ctx, ar.(op.TokenRequest), "")
@@ -434,7 +434,7 @@ func TestOIDCStorageCreateAccessAndRefreshTokensSetUserSubjectType(t *testing.T)
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 
 	tokenID, refreshToken, _, err := s.CreateAccessAndRefreshTokens(ctx, ar.(op.TokenRequest), "")
@@ -498,7 +498,7 @@ func TestRevokeToken(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 
 	tokenID, refreshToken, _, _ := s.CreateAccessAndRefreshTokens(ctx, ar.(op.TokenRequest), "")
@@ -680,7 +680,7 @@ func TestTerminateSession(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 	_, refreshToken, _, _ := s.CreateAccessAndRefreshTokens(ctx, ar.(op.TokenRequest), "")
 
@@ -706,7 +706,7 @@ func TestGetRefreshTokenInfo(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 	_, refreshToken, _, _ := s.CreateAccessAndRefreshTokens(ctx, ar.(op.TokenRequest), "")
 
@@ -1024,7 +1024,7 @@ func TestRefreshTokenRotation(t *testing.T) {
 		ResponseType: oidc.ResponseTypeCode,
 	}
 	ar, _ := s.CreateAuthRequest(ctx, req, "")
-	_ = s.CompleteAuthRequest(ar.GetID(), "user-123")
+	_ = s.CompleteAuthRequest(ctx, ar.GetID(), "user-123")
 	ar, _ = s.AuthRequestByID(ctx, ar.GetID())
 
 	// Create initial tokens.
