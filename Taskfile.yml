@@ -55,14 +55,85 @@ tasks:
       - gci write --skip-generated --custom-order -s standard -s default -s "prefix(github.com/ysicing/go-template)" -s blank -s dot -s alias .
       - cd web && pnpm run lint --fix
 
+  go:lint:
+    desc: Check Go formatting and vet
+    cmds:
+      - |
+        files=$(find . -name '*.go' -not -path './web/*')
+        unformatted=$(gofmt -l $files)
+        if [ -n "$unformatted" ]; then
+          echo "$unformatted"
+          exit 1
+        fi
+      - go vet ./...
+
+  go:test:
+    desc: Run Go tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run all lint checks
+    cmds:
+      - task: go:lint
+      - task: web:lint
+
+  test:
+    desc: Run all tests
+    cmds:
+      - task: go:test
+      - task: web:test
+
+  verify:
+    desc: Run CI-equivalent checks
+    cmds:
+      - task: web:ci
+      - task: go:lint
+      - task: go:test
+      - task: openapi:check
+
+  web:install:
+    desc: Install frontend dependencies with lockfile verification
+    dir: web
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  web:lint:
+    desc: Lint frontend
+    dir: web
+    cmds:
+      - pnpm run lint
+
+  web:test:
+    desc: Test frontend
+    dir: web
+    cmds:
+      - pnpm test
+
+  web:build:
+    desc: Build frontend
+    deps: [web:install]
+    dir: web
+    cmds:
+      - pnpm run build
+
+  web:ci:
+    desc: Run frontend CI checks
+    deps: [web:install]
+    dir: web
+    cmds:
+      - pnpm run lint
+      - pnpm test
+      - pnpm run build
+
   web:
     desc: Build frontend
     cmds:
-      - cd web && pnpm install && pnpm run build
+      - task: web:build
 
   build:
     desc: Build backend
-    deps: [web]
+    deps: [web:build]
     cmds:
       - CGO_ENABLED=0 go build -ldflags="{{.LDFLAGS}}" -o {{.BINARY}} .
 
