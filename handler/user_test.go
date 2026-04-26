@@ -408,7 +408,7 @@ func TestUserHandlerRevokeAuthorizedAppDeletesGrantAndWritesAudit(t *testing.T) 
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 
-	if _, err := consentGrants.GetByUserAndClient(ctx, user.ID, "client-1"); !errors.Is(err, gorm.ErrRecordNotFound) {
+	if _, err := consentGrants.GetByUserAndClient(ctx, user.ID, "client-1"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("expected deleted grant to be missing, got %v", err)
 	}
 

@@ -19,7 +19,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedConfig) {
@@ -34,7 +33,7 @@ func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedCon
 	if err == nil {
 		return
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, store.ErrNotFound) {
 		log.Error().Err(err).Msg("check admin user")
 		return
 	}

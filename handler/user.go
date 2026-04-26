@@ -12,7 +12,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
 )
 
 type userStore interface {
@@ -326,7 +325,7 @@ func (h *UserHandler) RevokeSession(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
 	sessionID := c.Params("id")
 	if err := h.refreshTokens.DeleteByIDAndUserID(c.Context(), sessionID, userID); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, store.ErrNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "session not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke session"})
@@ -472,7 +471,7 @@ func (h *UserHandler) RevokeAuthorizedApp(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
 	grantID := c.Params("id")
 	if err := h.consentGrants.DeleteByIDAndUserID(c.Context(), grantID, userID); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, store.ErrNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "authorized app not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke authorized app"})

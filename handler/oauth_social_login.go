@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -37,6 +38,9 @@ func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, pro
 		}
 		return user, nil
 	}
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return nil, fmt.Errorf("failed to get social account: %w", err)
+	}
 
 	registerEnabled := h.settings.GetBool(store.SettingRegisterEnabled, true)
 	if email == "" {
@@ -64,6 +68,9 @@ func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, pro
 		}
 
 		return nil, &errAccountLinkRequired{LinkToken: linkToken}
+	}
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
 	if !registerEnabled {

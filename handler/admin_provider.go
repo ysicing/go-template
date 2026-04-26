@@ -7,7 +7,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
 )
 
 type AdminProviderHandler struct {
@@ -39,7 +38,7 @@ func (h *AdminProviderHandler) Get(c fiber.Ctx) error {
 		if errors.Is(err, store.ErrSocialProviderSecretUnavailable) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider secret unavailable"})
 		}
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, store.ErrNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load provider"})
@@ -89,7 +88,7 @@ func (h *AdminProviderHandler) Update(c fiber.Ctx) error {
 		if errors.Is(err, store.ErrSocialProviderSecretUnavailable) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider secret unavailable"})
 		}
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, store.ErrNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load provider"})
