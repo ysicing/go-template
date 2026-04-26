@@ -72,7 +72,7 @@ func (s *APIRefreshTokenStore) Create(ctx context.Context, rt *model.APIRefreshT
 func (s *APIRefreshTokenStore) GetByTokenHash(ctx context.Context, hash string) (*model.APIRefreshToken, error) {
 	var rt model.APIRefreshToken
 	if err := s.db.WithContext(ctx).Where("token_hash = ?", hash).First(&rt).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &rt, nil
 }
@@ -148,7 +148,7 @@ func (s *APIRefreshTokenStore) DeleteByIDAndUserID(ctx context.Context, id, user
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return ErrNotFound
 	}
 	return nil
 }

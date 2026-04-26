@@ -27,7 +27,7 @@ func (s *OAuthClientStore) Create(ctx context.Context, client *model.OAuthClient
 func (s *OAuthClientStore) GetByID(ctx context.Context, id string) (*model.OAuthClient, error) {
 	var client model.OAuthClient
 	if err := s.db.WithContext(ctx).First(&client, "id = ?", id).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &client, nil
 }
@@ -36,7 +36,7 @@ func (s *OAuthClientStore) GetByID(ctx context.Context, id string) (*model.OAuth
 func (s *OAuthClientStore) GetByClientID(ctx context.Context, clientID string) (*model.OAuthClient, error) {
 	var client model.OAuthClient
 	if err := s.db.WithContext(ctx).Where("client_id = ?", clientID).First(&client).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &client, nil
 }

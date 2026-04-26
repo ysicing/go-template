@@ -69,7 +69,7 @@ func (s *SocialProviderStore) decryptProvider(p *model.SocialProvider) error {
 func (s *SocialProviderStore) GetByName(ctx context.Context, name string) (*model.SocialProvider, error) {
 	var p model.SocialProvider
 	if err := s.db.WithContext(ctx).Where("name = ?", name).First(&p).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	if err := s.decryptProvider(&p); err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (s *SocialProviderStore) GetByName(ctx context.Context, name string) (*mode
 func (s *SocialProviderStore) GetByID(ctx context.Context, id string) (*model.SocialProvider, error) {
 	var p model.SocialProvider
 	if err := s.db.WithContext(ctx).First(&p, "id = ?", id).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	if err := s.decryptProvider(&p); err != nil {
 		return nil, err

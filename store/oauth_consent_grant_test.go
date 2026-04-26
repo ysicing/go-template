@@ -124,7 +124,7 @@ func TestOAuthConsentGrantStoreDeleteByIDAndUserID(t *testing.T) {
 		t.Fatalf("delete grant: %v", err)
 	}
 
-	if _, err := s.GetByUserAndClient(ctx, "user-1", "client-a"); !errors.Is(err, gorm.ErrRecordNotFound) {
+	if _, err := s.GetByUserAndClient(ctx, "user-1", "client-a"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected deleted grant to be missing, got %v", err)
 	}
 }

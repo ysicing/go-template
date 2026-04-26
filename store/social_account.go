@@ -21,7 +21,7 @@ func NewSocialAccountStore(db *gorm.DB) *SocialAccountStore {
 func (s *SocialAccountStore) GetByProviderAndID(ctx context.Context, provider, providerID string) (*model.SocialAccount, error) {
 	var account model.SocialAccount
 	err := s.db.WithContext(ctx).Where("provider = ? AND provider_id = ?", provider, providerID).First(&account).Error
-	return &account, err
+	return &account, normalizeNotFound(err)
 }
 
 // ListByUserID returns all social accounts for a user.
@@ -79,5 +79,5 @@ func (s *SocialAccountStore) DeleteByUserIDAndProvider(ctx context.Context, user
 func (s *SocialAccountStore) GetByProviderForUser(ctx context.Context, userID, provider string) (*model.SocialAccount, error) {
 	var account model.SocialAccount
 	err := s.db.WithContext(ctx).Where("user_id = ? AND provider = ?", userID, provider).First(&account).Error
-	return &account, err
+	return &account, normalizeNotFound(err)
 }

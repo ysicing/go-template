@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"sort"
 
 	"github.com/ysicing/go-template/model"
@@ -20,17 +21,17 @@ func NewOAuthConsentGrantStore(db *gorm.DB) *OAuthConsentGrantStore {
 func (s *OAuthConsentGrantStore) GetByUserAndClient(ctx context.Context, userID, clientID string) (*model.OAuthConsentGrant, error) {
 	var grant model.OAuthConsentGrant
 	if err := s.db.WithContext(ctx).Where("user_id = ? AND client_id = ?", userID, clientID).First(&grant).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &grant, nil
 }
 
 func (s *OAuthConsentGrantStore) Upsert(ctx context.Context, grant *model.OAuthConsentGrant) error {
 	existing, err := s.GetByUserAndClient(ctx, grant.UserID, grant.ClientID)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
-	if existing == nil || err == gorm.ErrRecordNotFound {
+	if existing == nil || errors.Is(err, ErrNotFound) {
 		grant.Scopes = normalizeScopes(grant.Scopes)
 		return s.db.WithContext(ctx).Create(grant).Error
 	}
@@ -42,7 +43,7 @@ func (s *OAuthConsentGrantStore) Upsert(ctx context.Context, grant *model.OAuthC
 func (s *OAuthConsentGrantStore) HasGrantedScopes(ctx context.Context, userID, clientID string, requested []string) (bool, error) {
 	grant, err := s.GetByUserAndClient(ctx, userID, clientID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, ErrNotFound) {
 			return false, nil
 		}
 		return false, err
@@ -97,7 +98,7 @@ func (s *OAuthConsentGrantStore) DeleteByIDAndUserID(ctx context.Context, id, us
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return ErrNotFound
 	}
 	return nil
 }

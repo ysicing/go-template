@@ -37,7 +37,7 @@ func (s *WebAuthnStore) ListByUserID(ctx context.Context, userID string) ([]mode
 func (s *WebAuthnStore) GetByID(ctx context.Context, id string) (*model.WebAuthnCredential, error) {
 	var cred model.WebAuthnCredential
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&cred).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &cred, nil
 }

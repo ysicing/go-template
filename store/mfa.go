@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/crypto"
@@ -24,7 +25,7 @@ func NewMFAStore(db *gorm.DB, encryptionKey string) *MFAStore {
 func (s *MFAStore) GetByUserID(ctx context.Context, userID string) (*model.MFAConfig, error) {
 	var cfg model.MFAConfig
 	if err := s.db.WithContext(ctx).Where("user_id = ?", userID).First(&cfg).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	// Decrypt TOTP secret if encrypted.
 	if s.encPassphrase != "" && cfg.TOTPSecret != "" {
@@ -49,7 +50,7 @@ func (s *MFAStore) Upsert(ctx context.Context, cfg *model.MFAConfig) error {
 	}
 	var existing model.MFAConfig
 	err := s.db.WithContext(ctx).Where("user_id = ?", cfg.UserID).First(&existing).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return s.db.WithContext(ctx).Create(cfg).Error
 	}
 	if err != nil {

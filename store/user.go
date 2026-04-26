@@ -24,7 +24,7 @@ func (s *UserStore) Create(ctx context.Context, user *model.User) error {
 func (s *UserStore) GetByID(ctx context.Context, id string) (*model.User, error) {
 	var user model.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &user, nil
 }
@@ -32,7 +32,7 @@ func (s *UserStore) GetByID(ctx context.Context, id string) (*model.User, error)
 func (s *UserStore) GetByUsername(ctx context.Context, username string) (*model.User, error) {
 	var user model.User
 	if err := s.db.WithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &user, nil
 }
@@ -40,7 +40,7 @@ func (s *UserStore) GetByUsername(ctx context.Context, username string) (*model.
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	if err := s.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &user, nil
 }
@@ -59,7 +59,7 @@ func (s *UserStore) GetByUsernameOrEmail(ctx context.Context, identity string) (
 		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, ErrNotFound
 	}
 	return &user, nil
 }
@@ -67,7 +67,7 @@ func (s *UserStore) GetByUsernameOrEmail(ctx context.Context, identity string) (
 func (s *UserStore) GetByInviteCode(ctx context.Context, inviteCode string) (*model.User, error) {
 	var user model.User
 	if err := s.db.WithContext(ctx).Where("invite_code = ?", inviteCode).First(&user).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &user, nil
 }
@@ -75,7 +75,7 @@ func (s *UserStore) GetByInviteCode(ctx context.Context, inviteCode string) (*mo
 func (s *UserStore) GetByProviderID(ctx context.Context, provider, providerID string) (*model.User, error) {
 	var user model.User
 	if err := s.db.WithContext(ctx).Where("provider = ? AND provider_id = ?", provider, providerID).First(&user).Error; err != nil {
-		return nil, err
+		return nil, normalizeNotFound(err)
 	}
 	return &user, nil
 }
