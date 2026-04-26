@@ -1481,7 +1481,6 @@ func TestAdminUpdateUser_UsesJSONPermissions(t *testing.T) {
 		Clients: clientStore,
 		Audit:   auditStore,
 		Cache:   cache,
-		DB:      db,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {
@@ -1547,7 +1546,6 @@ func TestAdminUpdateUser_InvalidatesPermissionCache(t *testing.T) {
 		Clients: clientStore,
 		Audit:   auditStore,
 		Cache:   cache,
-		DB:      db,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {
@@ -1607,7 +1605,6 @@ func TestAdminUpdateUser_BumpsTokenVersionAndInvalidatesTokenVersionCache(t *tes
 		Clients: clientStore,
 		Audit:   auditStore,
 		Cache:   cache,
-		DB:      db,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {
@@ -1673,7 +1670,6 @@ func TestAdminDeleteUser_RevokesRefreshTokens(t *testing.T) {
 		Audit:         auditStore,
 		RefreshTokens: refreshStore,
 		Cache:         cache,
-		DB:            db,
 	})
 	app := fiber.New()
 	app.Delete("/api/admin/users/:id", func(c fiber.Ctx) error {

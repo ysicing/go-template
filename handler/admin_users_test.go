@@ -45,7 +45,6 @@ func TestAdminHandler_ListUsers_IncludesSocialProviders(t *testing.T) {
 		Clients:        clientStore,
 		Audit:          auditStore,
 		SocialAccounts: socialAccounts,
-		DB:             db,
 	})
 
 	app := fiber.New()
@@ -98,7 +97,6 @@ func TestAdminHandler_CreateUser_ReturnsSetupTokenInsteadOfPassword(t *testing.T
 		Clients: clientStore,
 		Audit:   auditStore,
 		Cache:   cache,
-		DB:      db,
 	})
 
 	app := fiber.New()

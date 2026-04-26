@@ -286,7 +286,6 @@ func TestConfirmSocialLink_WritesAuditLog(t *testing.T) {
 	}
 
 	h := NewOAuthHandler(OAuthDeps{
-		DB:             db,
 		Users:          users,
 		SocialAccounts: socialAccounts,
 		Audit:          audit,
@@ -451,7 +450,6 @@ func TestSocialLinkWebAuthnBegin_ReturnsOptionsAndStoresSession(t *testing.T) {
 	}
 
 	h := NewOAuthHandler(OAuthDeps{
-		DB:             db,
 		Users:          users,
 		SocialAccounts: store.NewSocialAccountStore(db),
 		Audit:          store.NewAuditLogStore(db),
@@ -551,7 +549,6 @@ func TestSocialLinkWebAuthnFinish_LinksAccountAndWritesAuditLog(t *testing.T) {
 	}
 
 	h := NewOAuthHandler(OAuthDeps{
-		DB:             db,
 		Users:          users,
 		SocialAccounts: socialAccounts,
 		Audit:          audit,

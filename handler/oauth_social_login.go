@@ -13,7 +13,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
 )
 
 // errAccountLinkRequired is returned when a social login email matches an existing account.
@@ -86,23 +85,11 @@ func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, pro
 		EmailVerified: true,
 	}
 
-	err = h.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(user).Error; err != nil {
-			return fmt.Errorf("failed to create user: %w", err)
-		}
-
-		newSocialAccount := &model.SocialAccount{
-			UserID:     user.ID,
-			Provider:   provider,
-			ProviderID: providerID,
-			Email:      email,
-			AvatarURL:  avatarURL,
-		}
-		if err := tx.Create(newSocialAccount).Error; err != nil {
-			return fmt.Errorf("failed to create social account binding: %w", err)
-		}
-
-		return nil
+	err = h.socialAccounts.CreateUserWithSocialAccount(ctx, user, &model.SocialAccount{
+		Provider:   provider,
+		ProviderID: providerID,
+		Email:      email,
+		AvatarURL:  avatarURL,
 	})
 	if err != nil {
 		return nil, err

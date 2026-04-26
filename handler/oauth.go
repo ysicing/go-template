@@ -9,7 +9,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
 )
 
 type oauthUserStore interface {
@@ -26,6 +25,7 @@ type oauthProviderStore interface {
 
 type oauthSocialAccountStore interface {
 	GetByProviderAndID(ctx context.Context, provider, providerID string) (*model.SocialAccount, error)
+	CreateUserWithSocialAccount(ctx context.Context, user *model.User, account *model.SocialAccount) error
 	Create(ctx context.Context, account *model.SocialAccount) error
 	Update(ctx context.Context, account *model.SocialAccount) error
 }
@@ -37,7 +37,6 @@ type oauthSettingStore interface {
 
 // OAuthDeps aggregates dependencies required by OAuthHandler.
 type OAuthDeps struct {
-	DB             *gorm.DB
 	Users          oauthUserStore
 	Providers      oauthProviderStore
 	SocialAccounts oauthSocialAccountStore
@@ -53,7 +52,6 @@ type OAuthDeps struct {
 
 // OAuthHandler handles social login flows using database-managed provider configs.
 type OAuthHandler struct {
-	db             *gorm.DB
 	users          oauthUserStore
 	providers      oauthProviderStore
 	socialAccounts oauthSocialAccountStore
@@ -75,7 +73,6 @@ func NewOAuthHandler(deps OAuthDeps) *OAuthHandler {
 	}
 
 	return &OAuthHandler{
-		db:             deps.DB,
 		users:          deps.Users,
 		providers:      deps.Providers,
 		socialAccounts: deps.SocialAccounts,

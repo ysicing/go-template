@@ -88,6 +88,34 @@ func (s *UserStore) Delete(ctx context.Context, id string) error {
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(&model.User{}).Error
 }
 
+// DeleteCascade 在同一事务中删除用户及其直接关联数据。
+func (s *UserStore) DeleteCascade(ctx context.Context, id string) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id = ?", id).Delete(&model.User{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&model.APIRefreshToken{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&model.MFAConfig{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&model.WebAuthnCredential{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&model.SocialAccount{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&model.PasswordHistory{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", id).Delete(&model.UserPoints{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("user_id = ?", id).Delete(&model.CheckInRecord{}).Error
+	})
+}
+
 // Count returns total number of users.
 func (s *UserStore) Count(ctx context.Context) (int64, error) {
 	var total int64

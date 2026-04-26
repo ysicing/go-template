@@ -81,7 +81,6 @@ func TestAdminUpdateUser_ClearsPermissionsWithEmptyArray(t *testing.T) {
 		Clients: clientStore,
 		Audit:   auditStore,
 		Cache:   cache,
-		DB:      db,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {

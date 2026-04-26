@@ -52,7 +52,6 @@ func TestAdminHandler_GetAuditLogs_FiltersAndReturnsSource(t *testing.T) {
 		Users:   userStore,
 		Clients: clientStore,
 		Audit:   auditStore,
-		DB:      db,
 	})
 
 	app := fiber.New()
@@ -146,7 +145,6 @@ func TestAdminHandler_GetAuditLogs_FiltersByStatusAndUserID(t *testing.T) {
 		Users:   userStore,
 		Clients: clientStore,
 		Audit:   auditStore,
-		DB:      db,
 	})
 
 	app := fiber.New()

@@ -117,7 +117,6 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 	})
 
 	h.oauth = handler.NewOAuthHandler(handler.OAuthDeps{
-		DB:             d.DB,
 		Users:          d.UserStore,
 		Providers:      d.SocialStore,
 		SocialAccounts: d.SocialAccountStore,
@@ -146,7 +145,6 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 		SocialAccounts: d.SocialAccountStore,
 		PasswordHist:   d.PasswordHistory,
 		Cache:          d.Cache,
-		DB:             d.DB,
 	})
 	h.adminProv = handler.NewAdminProviderHandler(d.SocialStore, d.AuditLogStore)
 	h.adminSett = handler.NewAdminSettingHandler(d.SettingStore, d.AuditLogStore, h.email)

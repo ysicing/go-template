@@ -17,6 +17,17 @@ func NewSocialAccountStore(db *gorm.DB) *SocialAccountStore {
 	return &SocialAccountStore{db: db}
 }
 
+// CreateUserWithSocialAccount 在同一事务中创建用户和社交账号绑定。
+func (s *SocialAccountStore) CreateUserWithSocialAccount(ctx context.Context, user *model.User, account *model.SocialAccount) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
+		account.UserID = user.ID
+		return tx.Create(account).Error
+	})
+}
+
 // GetByProviderAndID finds a social account by provider and provider ID.
 func (s *SocialAccountStore) GetByProviderAndID(ctx context.Context, provider, providerID string) (*model.SocialAccount, error) {
 	var account model.SocialAccount

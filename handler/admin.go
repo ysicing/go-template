@@ -13,7 +13,6 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/sync/errgroup"
-	"gorm.io/gorm"
 )
 
 type adminUserStore interface {
@@ -21,6 +20,7 @@ type adminUserStore interface {
 	List(ctx context.Context, page, pageSize int) ([]model.User, int64, error)
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
+	DeleteCascade(ctx context.Context, id string) error
 	Count(ctx context.Context) (int64, error)
 }
 
@@ -54,7 +54,6 @@ type AdminDeps struct {
 	SocialAccounts *store.SocialAccountStore
 	PasswordHist   *store.PasswordHistoryStore
 	Cache          adminCache
-	DB             *gorm.DB
 }
 
 // AdminHandler handles admin user management endpoints.
@@ -68,7 +67,6 @@ type AdminHandler struct {
 	socialAccounts *store.SocialAccountStore
 	passwordHist   *store.PasswordHistoryStore
 	cache          adminCache
-	db             *gorm.DB
 }
 
 // NewAdminHandler creates an AdminHandler.
@@ -83,7 +81,6 @@ func NewAdminHandler(deps AdminDeps) *AdminHandler {
 		socialAccounts: deps.SocialAccounts,
 		passwordHist:   deps.PasswordHist,
 		cache:          deps.Cache,
-		db:             deps.DB,
 	}
 }
 
@@ -301,57 +298,7 @@ func (h *AdminHandler) DeleteUser(c fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
 
-	// Use transaction to ensure atomicity
-	err := h.db.WithContext(c.Context()).Transaction(func(tx *gorm.DB) error {
-		// Delete user (soft delete with GORM)
-		if err := tx.Where("id = ?", id).Delete(&model.User{}).Error; err != nil {
-			return err
-		}
-
-		// Cascade cleanup: delete all related data
-		// 1. Refresh tokens (sessions)
-		if err := tx.Where("user_id = ?", id).Delete(&model.APIRefreshToken{}).Error; err != nil {
-			return err
-		}
-
-		// 2. MFA configuration
-		if err := tx.Where("user_id = ?", id).Delete(&model.MFAConfig{}).Error; err != nil {
-			return err
-		}
-
-		// 3. WebAuthn credentials
-		if err := tx.Where("user_id = ?", id).Delete(&model.WebAuthnCredential{}).Error; err != nil {
-			return err
-		}
-
-		// 4. Social account bindings
-		if err := tx.Where("user_id = ?", id).Delete(&model.SocialAccount{}).Error; err != nil {
-			return err
-		}
-
-		// 5. Password history
-		if err := tx.Where("user_id = ?", id).Delete(&model.PasswordHistory{}).Error; err != nil {
-			return err
-		}
-
-		// 6. User points
-		if err := tx.Where("user_id = ?", id).Delete(&model.UserPoints{}).Error; err != nil {
-			return err
-		}
-
-		// 7. Check-in records
-		if err := tx.Where("user_id = ?", id).Delete(&model.CheckInRecord{}).Error; err != nil {
-			return err
-		}
-
-		// Note: AuditLog is intentionally NOT deleted for compliance/audit trail
-		// Note: OIDC tokens (authorization_codes, access_tokens, refresh_tokens)
-		// are managed by zitadel/oidc library and will be cleaned up by their TTL
-
-		return nil
-	})
-
-	if err != nil {
+	if err := h.users.DeleteCascade(c.Context(), id); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete user"})
 	}
 
