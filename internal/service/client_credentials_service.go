@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"gorm.io/gorm"
 )
 
 const defaultClientCredentialsAccessTokenTTL = 5 * time.Minute
@@ -24,7 +23,6 @@ var (
 )
 
 type ClientCredentialsServiceDeps struct {
-	DB             *gorm.DB
 	Clients        *store.OAuthClientStore
 	Audit          *store.AuditLogStore
 	AccessTokenTTL time.Duration
@@ -57,7 +55,6 @@ type ClientCredentialsRevokeInput struct {
 }
 
 type ClientCredentialsService struct {
-	db             *gorm.DB
 	clients        *store.OAuthClientStore
 	audit          *store.AuditLogStore
 	accessTokenTTL time.Duration
@@ -69,7 +66,6 @@ func NewClientCredentialsService(deps ClientCredentialsServiceDeps) *ClientCrede
 		ttl = defaultClientCredentialsAccessTokenTTL
 	}
 	return &ClientCredentialsService{
-		db:             deps.DB,
 		clients:        deps.Clients,
 		audit:          deps.Audit,
 		accessTokenTTL: ttl,
@@ -115,12 +111,7 @@ func (s *ClientCredentialsService) Exchange(ctx context.Context, input ClientCre
 		Status:     "success",
 	}
 
-	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(token).Error; err != nil {
-			return err
-		}
-		return tx.Create(auditLog).Error
-	}); err != nil {
+	if err := s.clients.IssueClientAccessToken(ctx, token, auditLog); err != nil {
 		return nil, err
 	}
 
@@ -184,18 +175,13 @@ func (s *ClientCredentialsService) RevokeForClient(ctx context.Context, client *
 		return true, nil
 	}
 
-	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Unscoped().Delete(&model.Token{}, "id = ?", token.ID).Error; err != nil {
-			return err
-		}
-		return tx.Create(&model.AuditLog{
-			Action:     model.AuditOAuthTokenRevoke,
-			Resource:   "oauth_token",
-			ResourceID: token.TokenID,
-			ClientID:   client.ClientID,
-			Detail:     "oauth token revoked",
-			Status:     "success",
-		}).Error
+	if err := s.clients.RevokeClientAccessToken(ctx, token.ID, &model.AuditLog{
+		Action:     model.AuditOAuthTokenRevoke,
+		Resource:   "oauth_token",
+		ResourceID: token.TokenID,
+		ClientID:   client.ClientID,
+		Detail:     "oauth token revoked",
+		Status:     "success",
 	}); err != nil {
 		return true, err
 	}
@@ -262,15 +248,12 @@ func (s *ClientCredentialsService) authenticateClient(ctx context.Context, clien
 }
 
 func (s *ClientCredentialsService) findClientPrincipalToken(ctx context.Context, tokenValue string) (*model.Token, bool, error) {
-	var token model.Token
-	if err := s.db.WithContext(ctx).Where("token_id = ?", tokenValue).First(&token).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	token, err := s.clients.FindClientPrincipalToken(ctx, tokenValue)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
 			return nil, false, nil
 		}
 		return nil, false, err
 	}
-	if token.SubjectType != "oauth_client" {
-		return nil, false, nil
-	}
-	return &token, true, nil
+	return token, true, nil
 }

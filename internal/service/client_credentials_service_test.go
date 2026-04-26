@@ -34,7 +34,6 @@ func TestClientCredentialsServiceExchangeIssuesAccessToken(t *testing.T) {
 	client, secret := createClientCredentialsTestClient(t, clients, "client_credentials", "openid profile")
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   audit,
 	})
@@ -72,7 +71,6 @@ func TestClientCredentialsServiceExchangeRejectsInvalidScopeSubset(t *testing.T)
 	client, secret := createClientCredentialsTestClient(t, clients, "client_credentials", "openid profile")
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})
@@ -92,7 +90,6 @@ func TestClientCredentialsServiceExchangeRejectsUnauthorizedGrantType(t *testing
 	client, secret := createClientCredentialsTestClient(t, clients, "authorization_code", "openid profile")
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})
@@ -111,7 +108,6 @@ func TestClientCredentialsServiceExchangeRejectsWrongSecret(t *testing.T) {
 	client, _ := createClientCredentialsTestClient(t, clients, "client_credentials", "openid profile")
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})
@@ -141,7 +137,6 @@ func TestClientCredentialsServiceIntrospectReturnsActiveForOwnedToken(t *testing
 	require.NoError(t, db.WithContext(context.Background()).Create(token).Error)
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})
@@ -177,7 +172,6 @@ func TestClientCredentialsServiceRevokeDeletesOwnedTokenAndWritesAudit(t *testin
 	require.NoError(t, db.WithContext(context.Background()).Create(token).Error)
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})
@@ -217,7 +211,6 @@ func TestClientCredentialsServiceOperatorIntrospectReturnsActiveForOwnedToken(t 
 	require.NoError(t, db.WithContext(context.Background()).Create(token).Error)
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})
@@ -247,7 +240,6 @@ func TestClientCredentialsServiceOperatorRevokeDeletesOwnedTokenAndWritesAudit(t
 	require.NoError(t, db.WithContext(context.Background()).Create(token).Error)
 
 	svc := NewClientCredentialsService(ClientCredentialsServiceDeps{
-		DB:      db,
 		Clients: clients,
 		Audit:   store.NewAuditLogStore(db),
 	})

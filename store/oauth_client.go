@@ -41,6 +41,38 @@ func (s *OAuthClientStore) GetByClientID(ctx context.Context, clientID string) (
 	return &client, nil
 }
 
+// IssueClientAccessToken 在同一事务中写入客户端访问令牌和审计日志。
+func (s *OAuthClientStore) IssueClientAccessToken(ctx context.Context, token *model.Token, auditLog *model.AuditLog) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(token).Error; err != nil {
+			return err
+		}
+		return tx.Create(auditLog).Error
+	})
+}
+
+// RevokeClientAccessToken 在同一事务中删除客户端访问令牌并写入审计日志。
+func (s *OAuthClientStore) RevokeClientAccessToken(ctx context.Context, tokenID string, auditLog *model.AuditLog) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Delete(&model.Token{}, "id = ?", tokenID).Error; err != nil {
+			return err
+		}
+		return tx.Create(auditLog).Error
+	})
+}
+
+// FindClientPrincipalToken 返回客户端主体访问令牌，不匹配客户端主体时按未找到处理。
+func (s *OAuthClientStore) FindClientPrincipalToken(ctx context.Context, tokenValue string) (*model.Token, error) {
+	var token model.Token
+	if err := s.db.WithContext(ctx).Where("token_id = ?", tokenValue).First(&token).Error; err != nil {
+		return nil, normalizeNotFound(err)
+	}
+	if token.SubjectType != "oauth_client" {
+		return nil, ErrNotFound
+	}
+	return &token, nil
+}
+
 // Update saves changes to an existing OAuth client.
 func (s *OAuthClientStore) Update(ctx context.Context, client *model.OAuthClient) error {
 	return s.db.WithContext(ctx).Save(client).Error

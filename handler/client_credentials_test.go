@@ -45,7 +45,6 @@ func TestClientCredentialsHandlerTokenHandlesClientCredentialsGrant(t *testing.T
 	fallbackCalled := false
 	h := NewClientCredentialsHandler(
 		service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
-			DB:      db,
 			Clients: clients,
 			Audit:   audit,
 		}),
@@ -103,7 +102,6 @@ func TestClientCredentialsHandlerTokenDelegatesOtherGrantTypes(t *testing.T) {
 	fallbackCalled := false
 	h := NewClientCredentialsHandler(
 		service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
-			DB:      db,
 			Clients: store.NewOAuthClientStore(db),
 			Audit:   store.NewAuditLogStore(db),
 		}),
