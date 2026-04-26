@@ -14,6 +14,7 @@ import (
 const checkInTimezone = "Asia/Shanghai"
 
 var nowForCheckIn = time.Now
+var randomCheckInPoints = model.RandomCheckInPoints
 
 func currentCheckInTime() time.Time {
 	return nowForCheckIn().In(checkInLocation)
@@ -49,59 +50,37 @@ func (s *CheckInStore) CheckIn(ctx context.Context, userID string) (*model.Check
 	today := todayDateStr()
 
 	// Quick non-transactional check to avoid starting a transaction for repeat check-ins.
-	var existing model.CheckInRecord
-	err := s.db.WithContext(ctx).
-		Where("user_id = ? AND check_in_date = ?", userID, today).
-		First(&existing).Error
-	if err == nil {
-		return &existing, false, nil
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	existing, found, err := s.findRecord(s.db.WithContext(ctx), userID, today)
+	if err != nil {
 		return nil, false, err
+	}
+	if found {
+		return &existing, false, nil
 	}
 
 	var record model.CheckInRecord
 	isNew := false
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Re-check inside transaction to prevent race conditions.
-		var dup model.CheckInRecord
-		if err := tx.Where("user_id = ? AND check_in_date = ?", userID, today).First(&dup).Error; err == nil {
+		dup, found, err := s.findRecord(tx, userID, today)
+		if err != nil {
+			return err
+		}
+		if found {
 			record = dup
 			return nil
 		}
 
-		// Calculate streak.
-		streak := 1
-		yesterday := yesterdayDateStr()
-		var yesterdayRecord model.CheckInRecord
-		if err := tx.Where("user_id = ? AND check_in_date = ?", userID, yesterday).First(&yesterdayRecord).Error; err == nil {
-			streak = yesterdayRecord.StreakDays + 1
+		prevStreak, err := s.loadStreak(tx, userID, yesterdayDateStr())
+		if err != nil {
+			return err
 		}
-
-		// Calculate points using normal distribution.
-		dailyPts := model.RandomCheckInPoints()
-		points := dailyPts
-		if streak%model.StreakBonusDays == 0 {
-			points += int64(model.StreakBonusPoints)
-		}
-
-		record = model.CheckInRecord{
-			UserID:        userID,
-			CheckInDate:   today,
-			StreakDays:    streak,
-			PointsAwarded: points,
-		}
+		outcome := buildCheckInOutcome(prevStreak, randomCheckInPoints())
+		record = buildCheckInRecord(userID, today, outcome)
 		if err := tx.Create(&record).Error; err != nil {
 			return err
 		}
-
-		// Award points within the same transaction.
-		if err := s.points.AddPointsWithTx(tx, userID, model.PointTypeFree, dailyPts, model.PointKindCheckIn, "daily check-in", ""); err != nil {
-			return err
-		}
-
-		if streak%model.StreakBonusDays == 0 {
-			if err := s.points.AddPointsWithTx(tx, userID, model.PointTypeFree, int64(model.StreakBonusPoints), model.PointKindStreakBonus, "streak bonus", ""); err != nil {
+		for _, award := range outcome.PointAwards {
+			if err := s.points.AddPointsWithTx(tx, userID, award.PointType, award.Amount, award.Kind, award.Reason, ""); err != nil {
 				return err
 			}
 		}
@@ -136,18 +115,15 @@ func (s *CheckInStore) GetStreak(ctx context.Context, userID string) (int, error
 	return 0, nil
 }
 
-// GetTodayRecord returns today's check-in record if it exists.
+// GetTodayRecord returns today's check-in record.
+// 未签到属于状态查询的正常结果，因此未找到时返回 (nil, nil)。
 func (s *CheckInStore) GetTodayRecord(ctx context.Context, userID string) (*model.CheckInRecord, error) {
-	today := todayDateStr()
-	var record model.CheckInRecord
-	err := s.db.WithContext(ctx).
-		Where("user_id = ? AND check_in_date = ?", userID, today).
-		First(&record).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
+	record, found, err := s.findRecord(s.db.WithContext(ctx), userID, todayDateStr())
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		return nil, nil
 	}
 	return &record, nil
 }
@@ -177,4 +153,27 @@ func todayDateStr() string {
 
 func yesterdayDateStr() string {
 	return currentCheckInTime().AddDate(0, 0, -1).Format("2006-01-02")
+}
+
+func (s *CheckInStore) findRecord(db *gorm.DB, userID, date string) (model.CheckInRecord, bool, error) {
+	var record model.CheckInRecord
+	err := db.Where("user_id = ? AND check_in_date = ?", userID, date).First(&record).Error
+	if err == nil {
+		return record, true, nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return model.CheckInRecord{}, false, nil
+	}
+	return model.CheckInRecord{}, false, err
+}
+
+func (s *CheckInStore) loadStreak(tx *gorm.DB, userID, date string) (int, error) {
+	record, found, err := s.findRecord(tx, userID, date)
+	if err != nil {
+		return 0, err
+	}
+	if !found {
+		return 0, nil
+	}
+	return record.StreakDays, nil
 }

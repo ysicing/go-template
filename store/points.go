@@ -65,36 +65,19 @@ func (s *PointStore) AddPoints(ctx context.Context, userID, pointType string, am
 
 // AddPointsWithTx adds points using an existing transaction handle.
 func (s *PointStore) AddPointsWithTx(tx *gorm.DB, userID, pointType string, amount int64, kind, reason, operatorID string) error {
-	var up model.UserPoints
-	if err := forUpdate(tx).Where("user_id = ?", userID).First(&up).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			up = model.UserPoints{UserID: userID, Level: 1}
-			if err := tx.Create(&up).Error; err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
+	up, err := s.loadOrCreateUserPointsTx(tx, userID)
+	if err != nil {
+		return err
 	}
-
-	switch pointType {
-	case model.PointTypePaid:
-		up.PaidBalance += amount
-	case model.PointTypeFree:
-		up.FreeBalance += amount
-	default:
-		return fmt.Errorf("invalid point type: %s", pointType)
+	up, err = applyPointCredit(up, pointType, amount, kind)
+	if err != nil {
+		return err
 	}
-	if model.CountsTowardEXP(kind) {
-		up.TotalEarned += amount
-	}
-	up.Level = model.CalcLevel(up.TotalEarned)
-
 	if err := tx.Save(&up).Error; err != nil {
 		return err
 	}
 
-	txn := model.PointTransaction{
+	return tx.Create(&model.PointTransaction{
 		UserID:     userID,
 		PointType:  pointType,
 		Kind:       kind,
@@ -102,8 +85,7 @@ func (s *PointStore) AddPointsWithTx(tx *gorm.DB, userID, pointType string, amou
 		Balance:    up.TotalBalance(),
 		Reason:     reason,
 		OperatorID: operatorID,
-	}
-	return tx.Create(&txn).Error
+	}).Error
 }
 
 // SpendPoints deducts points (free first, then paid). Does not reduce TotalEarned.
@@ -112,93 +94,43 @@ func (s *PointStore) SpendPoints(ctx context.Context, userID string, amount int6
 		return fmt.Errorf("amount must be positive")
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var up model.UserPoints
-		if err := forUpdate(tx).Where("user_id = ?", userID).First(&up).Error; err != nil {
+		up, err := s.loadUserPointsForUpdate(tx, userID)
+		if err != nil {
 			return fmt.Errorf("user points not found")
 		}
-
-		if up.TotalBalance() < amount {
-			return fmt.Errorf("insufficient balance")
-		}
-
-		remaining := amount
-		usedFree := int64(0)
-		usedPaid := int64(0)
-		// Deduct from free balance first.
-		if up.FreeBalance >= remaining {
-			up.FreeBalance -= remaining
-			usedFree = remaining
-			remaining = 0
-		} else {
-			usedFree = up.FreeBalance
-			remaining -= up.FreeBalance
-			up.FreeBalance = 0
-		}
-		// Deduct remainder from paid balance.
-		if remaining > 0 {
-			up.PaidBalance -= remaining
-			usedPaid = remaining
-		}
-
-		if err := tx.Save(&up).Error; err != nil {
+		result, err := applyPointSpend(up, amount)
+		if err != nil {
 			return err
 		}
-
-		// Determine point type based on actual deduction source.
-		pointType := model.PointTypeFree
-		if usedPaid > 0 && usedFree > 0 {
-			pointType = model.PointTypeMixed
-		} else if usedPaid > 0 {
-			pointType = model.PointTypePaid
+		if err := tx.Save(&result.UserPoints).Error; err != nil {
+			return err
 		}
-
-		txn := model.PointTransaction{
+		return tx.Create(&model.PointTransaction{
 			UserID:    userID,
-			PointType: pointType,
+			PointType: result.PointType,
 			Kind:      kind,
 			Amount:    -amount,
-			Balance:   up.TotalBalance(),
+			Balance:   result.UserPoints.TotalBalance(),
 			Reason:    reason,
-		}
-		return tx.Create(&txn).Error
+		}).Error
 	})
 }
 
 // AdminAdjust adjusts points for a user (can be positive or negative).
 func (s *PointStore) AdminAdjust(ctx context.Context, userID, pointType string, amount int64, reason, operatorID string) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var up model.UserPoints
-		if err := forUpdate(tx).Where("user_id = ?", userID).First(&up).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				up = model.UserPoints{UserID: userID, Level: 1}
-				if err := tx.Create(&up).Error; err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
+		up, err := s.loadOrCreateUserPointsTx(tx, userID)
+		if err != nil {
+			return err
 		}
-
-		switch pointType {
-		case model.PointTypePaid:
-			up.PaidBalance += amount
-		case model.PointTypeFree:
-			up.FreeBalance += amount
-		default:
-			return fmt.Errorf("invalid point type: %s", pointType)
+		up, err = applyPointAdjustment(up, pointType, amount)
+		if err != nil {
+			return err
 		}
-
-		if up.PaidBalance < 0 || up.FreeBalance < 0 {
-			return fmt.Errorf("adjustment would result in negative balance")
-		}
-
-		up.Level = model.CalcLevel(up.TotalEarned)
-
 		if err := tx.Save(&up).Error; err != nil {
 			return err
 		}
-
-		txn := model.PointTransaction{
+		return tx.Create(&model.PointTransaction{
 			UserID:     userID,
 			PointType:  pointType,
 			Kind:       model.PointKindAdminAdjust,
@@ -206,8 +138,7 @@ func (s *PointStore) AdminAdjust(ctx context.Context, userID, pointType string, 
 			Balance:    up.TotalBalance(),
 			Reason:     reason,
 			OperatorID: operatorID,
-		}
-		return tx.Create(&txn).Error
+		}).Error
 	})
 }
 
@@ -299,4 +230,28 @@ func (s *PointStore) GetLeaderboard(ctx context.Context, limit int) ([]Leaderboa
 	s.lbMu.Unlock()
 
 	return entries, nil
+}
+
+func (s *PointStore) loadOrCreateUserPointsTx(tx *gorm.DB, userID string) (model.UserPoints, error) {
+	up, err := s.loadUserPointsForUpdate(tx, userID)
+	if err == nil {
+		return up, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return model.UserPoints{}, err
+	}
+
+	up = model.UserPoints{UserID: userID, Level: 1}
+	if err := tx.Create(&up).Error; err != nil {
+		return model.UserPoints{}, err
+	}
+	return up, nil
+}
+
+func (s *PointStore) loadUserPointsForUpdate(tx *gorm.DB, userID string) (model.UserPoints, error) {
+	var up model.UserPoints
+	if err := forUpdate(tx).Where("user_id = ?", userID).First(&up).Error; err != nil {
+		return model.UserPoints{}, err
+	}
+	return up, nil
 }
