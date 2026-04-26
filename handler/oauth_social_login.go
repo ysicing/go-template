@@ -25,57 +25,92 @@ func (e *errAccountLinkRequired) Error() string { return "account link required"
 
 // linkOrCreateSocialUser handles user lookup, linking, or creation for social login.
 func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, providerID, email, username, avatarURL string) (*model.User, error) {
-	socialAccount, err := h.socialAccounts.GetByProviderAndID(ctx, provider, providerID)
-	if err == nil {
-		user, err := h.users.GetByID(ctx, socialAccount.UserID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user")
-		}
-		if avatarURL != "" && socialAccount.AvatarURL != avatarURL {
-			socialAccount.AvatarURL = avatarURL
-			_ = h.socialAccounts.Update(ctx, socialAccount)
-		}
-		return user, nil
+	user, found, err := h.findSocialLoginUser(ctx, provider, providerID, avatarURL)
+	if found || err != nil {
+		return user, err
 	}
-	if err != nil && !errors.Is(err, store.ErrNotFound) {
-		return nil, fmt.Errorf("failed to get social account: %w", err)
-	}
-
-	registerEnabled := h.settings.GetBool(store.SettingRegisterEnabled, true)
 	if email == "" {
 		return nil, fmt.Errorf("email_required")
 	}
+	if err := h.requireSocialRegistrationEnabled(); err != nil {
+		return nil, err
+	}
+	if err := h.maybeRequireAccountLink(ctx, provider, providerID, email, avatarURL); err != nil {
+		return nil, err
+	}
+	return h.createSocialLoginUser(ctx, provider, providerID, email, username, avatarURL)
+}
 
+func (h *OAuthHandler) findSocialLoginUser(ctx context.Context, provider, providerID, avatarURL string) (*model.User, bool, error) {
+	socialAccount, err := h.socialAccounts.GetByProviderAndID(ctx, provider, providerID)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get social account: %w", err)
+	}
+
+	user, err := h.users.GetByID(ctx, socialAccount.UserID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get user")
+	}
+	if avatarURL != "" && socialAccount.AvatarURL != avatarURL {
+		socialAccount.AvatarURL = avatarURL
+		_ = h.socialAccounts.Update(ctx, socialAccount)
+	}
+	return user, true, nil
+}
+
+func (h *OAuthHandler) requireSocialRegistrationEnabled() error {
+	if h.settings.GetBool(store.SettingRegisterEnabled, true) {
+		return nil
+	}
+	return fmt.Errorf("registration_disabled")
+}
+
+func (h *OAuthHandler) maybeRequireAccountLink(ctx context.Context, provider, providerID, email, avatarURL string) error {
 	existingUser, err := h.users.GetByEmail(ctx, email)
-	if err == nil {
-		tokenBytes := make([]byte, 32)
-		if _, err := rand.Read(tokenBytes); err != nil {
-			return nil, fmt.Errorf("failed to generate link token")
-		}
-		linkToken := hex.EncodeToString(tokenBytes)
-
-		pendingData := map[string]string{
-			"user_id":     existingUser.ID,
-			"provider":    provider,
-			"provider_id": providerID,
-			"email":       email,
-			"avatar_url":  avatarURL,
-		}
-		dataJSON, _ := json.Marshal(pendingData)
-		if err := h.cache.Set(ctx, socialLinkPendingKey(linkToken), string(dataJSON), 5*time.Minute); err != nil {
-			return nil, fmt.Errorf("failed to store pending link")
-		}
-
-		return nil, &errAccountLinkRequired{LinkToken: linkToken}
+	if errors.Is(err, store.ErrNotFound) {
+		return nil
 	}
-	if err != nil && !errors.Is(err, store.ErrNotFound) {
-		return nil, fmt.Errorf("failed to get user by email: %w", err)
+	if err != nil {
+		return fmt.Errorf("failed to get user by email: %w", err)
 	}
 
-	if !registerEnabled {
-		return nil, fmt.Errorf("registration_disabled")
+	linkToken, err := generateSocialLinkToken()
+	if err != nil {
+		return err
 	}
+	if err := h.storePendingSocialLink(ctx, linkToken, existingUser.ID, provider, providerID, email, avatarURL); err != nil {
+		return err
+	}
+	return &errAccountLinkRequired{LinkToken: linkToken}
+}
 
+func generateSocialLinkToken() (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("failed to generate link token")
+	}
+	return hex.EncodeToString(tokenBytes), nil
+}
+
+func (h *OAuthHandler) storePendingSocialLink(ctx context.Context, linkToken, userID, provider, providerID, email, avatarURL string) error {
+	pendingData := map[string]string{
+		"user_id":     userID,
+		"provider":    provider,
+		"provider_id": providerID,
+		"email":       email,
+		"avatar_url":  avatarURL,
+	}
+	dataJSON, _ := json.Marshal(pendingData)
+	if err := h.cache.Set(ctx, socialLinkPendingKey(linkToken), string(dataJSON), 5*time.Minute); err != nil {
+		return fmt.Errorf("failed to store pending link")
+	}
+	return nil
+}
+
+func (h *OAuthHandler) createSocialLoginUser(ctx context.Context, provider, providerID, email, username, avatarURL string) (*model.User, error) {
 	user := &model.User{
 		Username:      username,
 		Email:         email,
@@ -85,16 +120,14 @@ func (h *OAuthHandler) linkOrCreateSocialUser(ctx context.Context, provider, pro
 		EmailVerified: true,
 	}
 
-	err = h.socialAccounts.CreateUserWithSocialAccount(ctx, user, &model.SocialAccount{
+	if err := h.socialAccounts.CreateUserWithSocialAccount(ctx, user, &model.SocialAccount{
 		Provider:   provider,
 		ProviderID: providerID,
 		Email:      email,
 		AvatarURL:  avatarURL,
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
-
 	return user, nil
 }
 

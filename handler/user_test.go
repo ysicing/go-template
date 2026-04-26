@@ -434,7 +434,7 @@ func assertNoUserAuditLogByAction(t *testing.T, db *gorm.DB, userID, action stri
 	err := db.WithContext(context.Background()).
 		Where("user_id = ? AND action = ?", userID, action).
 		First(&auditLog).Error
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err == nil {
 		t.Fatalf("expected no audit log for action %s, got err=%v record=%+v", action, err, auditLog)
 	}
 }

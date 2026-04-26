@@ -3,12 +3,9 @@ package handler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
@@ -97,198 +94,6 @@ func (h *UserHandler) GetMe(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
 }
 
-// UpdateMe handles PUT /api/users/me.
-func (h *UserHandler) UpdateMe(c fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	user, err := h.users.GetByID(c.Context(), userID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
-	}
-
-	var req struct {
-		Username  *string `json:"username"`
-		Email     *string `json:"email"`
-		AvatarURL *string `json:"avatar_url"`
-	}
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	emailChanged := false
-
-	if req.Username != nil {
-		u := strings.TrimSpace(*req.Username)
-		if len(u) < 3 || len(u) > 32 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username must be 3-32 characters"})
-		}
-		user.Username = u
-	}
-	if req.Email != nil {
-		e := strings.TrimSpace(*req.Email)
-		if !isValidEmail(e) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
-		}
-		if e != user.Email {
-			// 频率限制：30 天一次
-			if user.EmailUpdatedAt != nil {
-				daysSince := time.Since(*user.EmailUpdatedAt).Hours() / 24
-				if daysSince < 30 {
-					remaining := int(30 - daysSince)
-					return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-						"error": fmt.Sprintf("email can only be changed once every 30 days, %d days remaining", remaining),
-					})
-				}
-			}
-
-			// 检查邮箱是否已被使用
-			if existing, _ := h.users.GetByEmail(c.Context(), e); existing != nil && existing.ID != user.ID {
-				return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email already in use"})
-			}
-
-			// 邮箱域名验证
-			if h.settings != nil {
-				mode := h.settings.Get(store.SettingEmailDomainMode, "disabled")
-				if mode != "disabled" {
-					whitelist := h.settings.GetStringSlice(store.SettingEmailDomainWhitelist, nil)
-					blacklist := h.settings.GetStringSlice(store.SettingEmailDomainBlacklist, nil)
-					if err := validator.ValidateEmailDomain(e, mode, whitelist, blacklist); err != nil {
-						return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email domain not allowed"})
-					}
-				}
-			}
-
-			now := time.Now()
-			user.Email = e
-			user.EmailVerified = false
-			user.EmailUpdatedAt = &now
-			emailChanged = true
-		}
-	}
-	if req.AvatarURL != nil {
-		av := strings.TrimSpace(*req.AvatarURL)
-		if av != "" {
-			if len(av) > 512 {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "avatar_url must be at most 512 characters"})
-			}
-			if !strings.HasPrefix(av, "https://") {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "avatar_url must be an HTTPS URL"})
-			}
-		}
-		user.AvatarURL = av
-	}
-
-	if err := h.users.Update(c.Context(), user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update user"})
-	}
-
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-		UserID:     userID,
-		Action:     model.AuditUserUpdate,
-		Resource:   "user",
-		ResourceID: userID,
-		Status:     "success",
-		Detail:     "user profile updated",
-	})
-
-	// 如果邮箱已更改，发送验证邮件
-	if emailChanged && h.emailHandler != nil &&
-		h.settings != nil && h.settings.GetBool(store.SettingEmailVerificationEnabled, false) {
-		baseURL := c.Protocol() + "://" + c.Hostname()
-		_ = h.emailHandler.SendVerificationEmail(c, user, baseURL)
-
-		_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-			UserID:     userID,
-			Action:     model.AuditEmailChange,
-			Resource:   "user",
-			ResourceID: userID,
-			Status:     "success",
-			Detail:     "user email changed",
-			Metadata: map[string]string{
-				"email": user.Email,
-			},
-		})
-	}
-
-	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
-}
-
-// ChangePassword handles PUT /api/users/me/password.
-func (h *UserHandler) ChangePassword(c fiber.Ctx) error {
-	const historyKeep = 5
-
-	userID, _ := c.Locals("user_id").(string)
-	user, err := h.users.GetByID(c.Context(), userID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
-	}
-
-	if user.PasswordHash == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no password set, use set-password first"})
-	}
-
-	var req struct {
-		CurrentPassword string `json:"current_password"`
-		NewPassword     string `json:"new_password"`
-	}
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-	if req.CurrentPassword == "" || req.NewPassword == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "current_password and new_password are required"})
-	}
-	if !user.CheckPassword(req.CurrentPassword) {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid current password"})
-	}
-	if user.CheckPassword(req.NewPassword) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "new password must be different from current password"})
-	}
-	if shouldEnforcePasswordPolicy(h.settings) {
-		if err := model.ValidatePasswordStrength(req.NewPassword); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-	}
-
-	reused, err := h.passwordHistory.IsRecentlyUsed(c.Context(), userID, req.NewPassword, historyKeep)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to validate password history"})
-	}
-	if reused {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "new password was used recently"})
-	}
-
-	// Save old password hash BEFORE setting new password
-	oldPasswordHash := user.PasswordHash
-
-	if err := user.SetPassword(req.NewPassword); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to hash password"})
-	}
-	if user.TokenVersion < 1 {
-		user.TokenVersion = 1
-	}
-	user.TokenVersion++
-	// Record old password hash in history, not new one
-	if err := h.users.ChangePasswordWithHistory(c.Context(), user, oldPasswordHash); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update password"})
-	}
-
-	_ = h.passwordHistory.TrimByUserID(c.Context(), userID, historyKeep)
-	_ = h.refreshTokens.DeleteByUserID(c.Context(), userID)
-	if h.cache != nil {
-		_ = h.cache.Del(c.Context(), "token_ver:"+userID)
-	}
-
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-		UserID:     userID,
-		Action:     model.AuditPasswordChange,
-		Resource:   "user",
-		ResourceID: userID,
-		Status:     "success",
-		Detail:     "password changed",
-	})
-
-	return c.JSON(fiber.Map{"message": "password updated, please login again"})
-}
-
 // ListSessions handles GET /api/sessions/.
 func (h *UserHandler) ListSessions(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
@@ -339,73 +144,6 @@ func (h *UserHandler) RevokeSession(c fiber.Ctx) error {
 		Detail:     "session revoked",
 	})
 	return c.JSON(fiber.Map{"message": "session revoked"})
-}
-
-// RevokeAllSessions handles DELETE /api/sessions/.
-func (h *UserHandler) RevokeAllSessions(c fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	if err := h.refreshTokens.DeleteByUserID(c.Context(), userID); err != nil {
-		_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-			UserID:   userID,
-			Action:   model.AuditSessionRevoke,
-			Resource: "session",
-			Status:   "failure",
-			Detail:   "revoke all sessions failed",
-			Metadata: map[string]string{
-				"scope":  "all_sessions",
-				"reason": "refresh_tokens_revoke_failed",
-			},
-		})
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke all sessions"})
-	}
-
-	user, err := h.users.GetByID(c.Context(), userID)
-	if err != nil {
-		_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-			UserID:   userID,
-			Action:   model.AuditSessionRevoke,
-			Resource: "session",
-			Status:   "failure",
-			Detail:   "revoke all sessions failed",
-			Metadata: map[string]string{
-				"scope":  "all_sessions",
-				"reason": "user_not_found",
-			},
-		})
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke all sessions"})
-	}
-	if user.TokenVersion < 1 {
-		user.TokenVersion = 1
-	}
-	user.TokenVersion++
-	if err := h.users.Update(c.Context(), user); err != nil {
-		_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-			UserID:   userID,
-			Action:   model.AuditSessionRevoke,
-			Resource: "session",
-			Status:   "failure",
-			Detail:   "revoke all sessions failed",
-			Metadata: map[string]string{
-				"scope":  "all_sessions",
-				"reason": "token_version_update_failed",
-			},
-		})
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke all sessions"})
-	}
-	if h.cache != nil {
-		_ = h.cache.Del(c.Context(), "token_ver:"+userID)
-	}
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-		UserID:   userID,
-		Action:   model.AuditSessionRevoke,
-		Resource: "session",
-		Status:   "success",
-		Detail:   "all sessions revoked",
-		Metadata: map[string]string{
-			"scope": "all_sessions",
-		},
-	})
-	return c.JSON(fiber.Map{"message": "all sessions revoked"})
 }
 
 // GetLoginHistory handles GET /api/users/me/login-history.
@@ -496,8 +234,6 @@ func (h *UserHandler) SetPassword(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
-
-	// Only allow if user has no password set
 	if user.PasswordHash != "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "password already set, use change password instead"})
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"math/big"
-	"slices"
 	"strings"
 	"time"
 
@@ -84,121 +83,6 @@ func NewAdminHandler(deps AdminDeps) *AdminHandler {
 	}
 }
 
-// CreateUser handles POST /api/admin/users.
-func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
-	var req struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		IsAdmin  bool   `json:"is_admin"`
-	}
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	req.Username = strings.TrimSpace(req.Username)
-	req.Email = strings.TrimSpace(req.Email)
-
-	if req.Username == "" || req.Email == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username and email are required"})
-	}
-	if len(req.Username) < 3 || len(req.Username) > 32 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username must be 3-32 characters"})
-	}
-	if !isValidEmail(req.Email) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
-	}
-
-	user := &model.User{
-		Username:   req.Username,
-		Email:      req.Email,
-		Provider:   "local",
-		ProviderID: req.Username,
-		IsAdmin:    req.IsAdmin,
-	}
-	if req.IsAdmin {
-		user.SetPermissions(model.AllAdminPermissions())
-	}
-
-	if err := h.users.Create(c.Context(), user); err != nil {
-		if store.IsUniqueViolation(err) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "username or email already exists"})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create user"})
-	}
-
-	adminID, _ := c.Locals("user_id").(string)
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
-		UserID: adminID, Action: model.AuditUserCreate, Resource: "user", ResourceID: user.ID,
-		IP: ip, UserAgent: ua, Status: "success",
-	})
-
-	setupToken := store.GenerateRandomToken()
-	if err := store.NewEphemeralTokenStore(h.cache).IssueString(c.Context(), "password_setup", "user", setupToken, user.ID, 24*time.Hour); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create password setup token"})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"user":                      NewUserResponse(user),
-		"password_setup_token":      setupToken,
-		"password_setup_expires_at": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339),
-	})
-}
-
-// ListUsers handles GET /api/admin/users.
-func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
-	page, pageSize := parsePagination(c)
-
-	users, total, err := h.users.List(c.Context(), page, pageSize)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})
-	}
-
-	userIDs := make([]string, 0, len(users))
-	for _, user := range users {
-		userIDs = append(userIDs, user.ID)
-	}
-
-	socialProvidersByUserID := map[string][]string{}
-	if h.socialAccounts != nil {
-		socialProvidersByUserID, err = h.socialAccounts.ListProvidersByUserIDs(c.Context(), userIDs)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list user social accounts"})
-		}
-	}
-
-	type userListResp struct {
-		ID              string   `json:"id"`
-		Username        string   `json:"username"`
-		Email           string   `json:"email"`
-		Provider        string   `json:"provider"`
-		IsAdmin         bool     `json:"is_admin"`
-		CreatedAt       string   `json:"created_at"`
-		SocialProviders []string `json:"social_providers"`
-	}
-
-	result := make([]userListResp, 0, len(users))
-	for _, user := range users {
-		socialProviders := slices.Clone(socialProvidersByUserID[user.ID])
-		result = append(result, userListResp{
-			ID:              user.ID,
-			Username:        user.Username,
-			Email:           user.Email,
-			Provider:        user.Provider,
-			IsAdmin:         user.IsAdmin,
-			CreatedAt:       user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-			SocialProviders: socialProviders,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"users":     result,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
-}
-
 // GetUser handles GET /api/admin/users/:id.
 func (h *AdminHandler) GetUser(c fiber.Ctx) error {
 	id := c.Params("id")
@@ -209,114 +93,10 @@ func (h *AdminHandler) GetUser(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
 }
 
-// UpdateUser handles PUT /api/admin/users/:id.
-func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
-	id := c.Params("id")
-	user, err := h.users.GetByID(c.Context(), id)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
-	}
-
-	var req struct {
-		IsAdmin     *bool     `json:"is_admin"`
-		Permissions *[]string `json:"permissions"`
-	}
-	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	permissionChanged := false
-
-	if req.IsAdmin != nil {
-		// Prevent admin from demoting themselves.
-		if currentID, _ := c.Locals("user_id").(string); currentID == id && !*req.IsAdmin {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot remove your own admin role"})
-		}
-		permissionChanged = true
-		user.IsAdmin = *req.IsAdmin
-		if user.IsAdmin {
-			user.SetPermissions(model.AllAdminPermissions())
-		} else {
-			user.Permissions = ""
-		}
-	}
-
-	if req.Permissions != nil {
-		permissionChanged = true
-		perms := make([]string, 0, len(*req.Permissions))
-		for _, perm := range *req.Permissions {
-			perm = strings.TrimSpace(perm)
-			if perm == "" {
-				continue
-			}
-			if !model.IsValidPermission(perm) {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid permission: " + perm})
-			}
-			perms = append(perms, perm)
-		}
-		user.SetPermissions(perms)
-		user.IsAdmin = false
-	}
-
-	if permissionChanged {
-		if user.TokenVersion < 1 {
-			user.TokenVersion = 1
-		}
-		user.TokenVersion++
-	}
-
-	if err := h.users.Update(c.Context(), user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update user"})
-	}
-	if h.cache != nil {
-		for _, perm := range model.AllAdminPermissions() {
-			_ = h.cache.Del(c.Context(), "perm_check:"+id+":"+perm)
-		}
-		if permissionChanged {
-			_ = h.cache.Del(c.Context(), "token_ver:"+id)
-		}
-	}
-
-	adminID, _ := c.Locals("user_id").(string)
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
-		UserID: adminID, Action: model.AuditUserUpdate, Resource: "user", ResourceID: id,
-		IP: ip, UserAgent: ua, Status: "success",
-	})
-
-	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
-}
-
-// DeleteUser handles DELETE /api/admin/users/:id.
-func (h *AdminHandler) DeleteUser(c fiber.Ctx) error {
-	id := c.Params("id")
-	// Prevent admin from deleting themselves.
-	if currentID, _ := c.Locals("user_id").(string); currentID == id {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot delete yourself"})
-	}
-	if _, err := h.users.GetByID(c.Context(), id); err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
-	}
-
-	if err := h.users.DeleteCascade(c.Context(), id); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete user"})
-	}
-
-	delAdminID, _ := c.Locals("user_id").(string)
-	delIP, delUA := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
-		UserID: delAdminID, Action: model.AuditUserDelete, Resource: "user", ResourceID: id,
-		IP: delIP, UserAgent: delUA, Status: "success",
-	})
-
-	return c.JSON(fiber.Map{"message": "user deleted"})
-}
-
 // GetStats handles GET /api/admin/stats.
 func (h *AdminHandler) GetStats(c fiber.Ctx) error {
-	var (
-		totalUsers, totalClients, totalLogins, todayLogins int64
-	)
+	var totalUsers, totalClients, totalLogins, todayLogins int64
+
 	g, ctx := errgroup.WithContext(c.Context())
 	g.Go(func() error {
 		var err error
@@ -341,6 +121,7 @@ func (h *AdminHandler) GetStats(c fiber.Ctx) error {
 	if err := g.Wait(); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get stats"})
 	}
+
 	return c.JSON(fiber.Map{
 		"total_users":   totalUsers,
 		"total_clients": totalClients,
@@ -376,7 +157,6 @@ func GeneratePassword(length int) string {
 		buf[i] = randChar(all)
 	}
 
-	// Shuffle (Fisher-Yates).
 	for i := length - 1; i > 0; i-- {
 		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
 		buf[i], buf[j.Int64()] = buf[j.Int64()], buf[i]
