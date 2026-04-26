@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware"
 
 type ThemeMode = "light" | "dark"
 type Language = "en" | "zh"
@@ -40,6 +40,23 @@ interface AppState {
   applyPrimaryColor: () => void
 }
 
+function resolveBrowserStorage(): Storage | undefined {
+  if (typeof window === "undefined") {
+    return undefined
+  }
+  const storage = window.localStorage
+  if (!storage || typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
+    return undefined
+  }
+  return storage
+}
+
+const noopStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -61,6 +78,9 @@ export const useAppStore = create<AppState>()(
         }
       },
     }),
-    { name: "id-app-store" },
+    {
+      name: "id-app-store",
+      storage: createJSONStorage(() => resolveBrowserStorage() ?? noopStorage),
+    },
   ),
 )

@@ -3,9 +3,20 @@ import { initReactI18next } from "react-i18next"
 import en from "./en/common.json"
 import zh from "./zh/common.json"
 
+function getBrowserStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null
+  }
+  const storage = window.localStorage
+  if (!storage || typeof storage.getItem !== "function") {
+    return null
+  }
+  return storage
+}
+
 const savedLang = (() => {
   try {
-    const raw = localStorage.getItem("id-app-store")
+    const raw = getBrowserStorage()?.getItem("id-app-store")
     if (raw) {
       const store = JSON.parse(raw)
       return store?.state?.language || "zh"

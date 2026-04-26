@@ -14,8 +14,8 @@
 
 - 已完成：`store.ErrNotFound` 契约统一、上层 `store.ErrNotFound` 对齐、client credentials 事务下沉、social login 创建绑定事务下沉、管理员删用户事务下沉。
 - 已完成：`handler/auth.go`、`handler/user.go`、`handler/admin.go`、`handler/mfa.go`、`handler/oauth_social_login.go` 的结构拆分，当前相关函数体均已压到 50 行以内，相关文件均低于 300 行。
-- 已验证：`go test ./...` 通过；`web` 下 `pnpm lint` 通过。
-- 待处理：`web` 下 `pnpm test` 因现有测试环境问题失败，报错为 `localStorage.clear is not a function`，本轮未改前端测试代码。
+- 已验证：`go test ./...` 通过；`web` 下 `pnpm lint`、`pnpm test` 通过。
+- 已完成：前端测试环境已兼容 `Node v25` 的原生 `localStorage` 干扰，`zustand persist` 与 i18n 初始化均已切回可控的浏览器 / 测试 storage。
 
 ---
 
