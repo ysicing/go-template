@@ -110,118 +110,22 @@ func DefaultConfig() *Config {
 
 func LoadConfig() (*Config, error) {
 	cfg := DefaultConfig()
-
-	path := os.Getenv("CONFIG_PATH")
-	if path == "" {
-		path = "config.yaml"
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-	} else if err := yaml.Unmarshal(data, cfg); err != nil {
+	if err := loadConfigFile(cfg, os.Getenv("CONFIG_PATH")); err != nil {
 		return nil, err
 	}
+	applyStringEnv("JWT_SECRET", &cfg.JWT.Secret)
+	applyStringEnv("DB_DSN", &cfg.Database.DSN)
+	applyStringEnv("DB_DRIVER", &cfg.Database.Driver)
+	applyStringEnv("LISTEN_ADDR", &cfg.Server.Addr)
+	applyStringEnv("REDIS_ADDR", &cfg.Redis.Addr)
+	applyStringEnv("REDIS_PASSWORD", &cfg.Redis.Password)
+	applyIntEnv("REDIS_DB", &cfg.Redis.DB)
 
-	if v := os.Getenv("JWT_SECRET"); v != "" {
-		cfg.JWT.Secret = v
-	}
-	if v := os.Getenv("DB_DSN"); v != "" {
-		cfg.Database.DSN = v
-	}
-	if v := os.Getenv("DB_DRIVER"); v != "" {
-		cfg.Database.Driver = v
-	}
-	if v := os.Getenv("LISTEN_ADDR"); v != "" {
-		cfg.Server.Addr = v
-	}
-	if v := os.Getenv("REDIS_ADDR"); v != "" {
-		cfg.Redis.Addr = v
-	}
-	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
-		cfg.Redis.Password = v
-	}
-	if v := os.Getenv("REDIS_DB"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Redis.DB = n
-		}
-	}
-	if v := os.Getenv("LOG_LEVEL"); v != "" {
-		cfg.Log.Level = v
-	}
-	if v := os.Getenv("LOG_FORMAT"); v != "" {
-		cfg.Log.Format = v
-	}
-	if v := os.Getenv("LOG_FILE_ENABLED"); v != "" {
-		if b, err := strconv.ParseBool(v); err == nil {
-			cfg.Log.File.Enabled = b
-		}
-	}
-	if v := os.Getenv("LOG_FILE_PATH"); v != "" {
-		cfg.Log.File.Path = v
-	}
-	if v := os.Getenv("LOG_FILE_MAX_SIZE_MB"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Log.File.MaxSizeMB = n
-		}
-	}
-	if v := os.Getenv("LOG_FILE_MAX_BACKUPS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Log.File.MaxBackups = n
-		}
-	}
-	if v := os.Getenv("LOG_FILE_MAX_AGE_DAYS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.Log.File.MaxAgeDays = n
-		}
-	}
-	if v := os.Getenv("LOG_FILE_COMPRESS"); v != "" {
-		if b, err := strconv.ParseBool(v); err == nil {
-			cfg.Log.File.Compress = b
-		}
-	}
-	if v := os.Getenv("ENCRYPTION_KEY"); v != "" {
-		cfg.Security.EncryptionKey = v
-	}
-	if v := os.Getenv("OIDC_SECRET"); v != "" {
-		cfg.Security.OIDCSecret = v
-	}
-	if v := os.Getenv("SECURITY_ALLOW_INSECURE"); v != "" {
-		if b, err := strconv.ParseBool(v); err == nil {
-			cfg.Security.AllowInsecure = b
-		}
-	}
-	if v := os.Getenv("SECURITY_MODE"); v != "" {
-		cfg.Security.Mode = v
-	}
-	if v := os.Getenv("ADMIN_USERNAME"); v != "" {
-		cfg.Admin.Username = v
-	}
-	if v := os.Getenv("ADMIN_PASSWORD"); v != "" {
-		cfg.Admin.Password = v
-	}
-	if v := os.Getenv("ADMIN_EMAIL"); v != "" {
-		cfg.Admin.Email = v
-	}
-	if v := os.Getenv("TRUSTED_PROXIES"); v != "" {
-		// Parse comma-separated CIDR list
-		proxies := []string{}
-		for _, p := range strings.Split(v, ",") {
-			if trimmed := strings.TrimSpace(p); trimmed != "" {
-				proxies = append(proxies, trimmed)
-			}
-		}
-		cfg.Server.TrustedProxies = proxies
-	}
-	if v := os.Getenv("MONITORING_AGENT_LATEST_VERSION"); v != "" {
-		cfg.Monitoring.AgentLatestVersion = v
-	}
-	if v := os.Getenv("MONITORING_AGENT_INSTALL_COMMAND_TEMPLATE"); v != "" {
-		cfg.Monitoring.AgentInstallCommandTemplate = v
-	}
-
+	applyLogEnv(cfg)
+	applySecurityEnv(cfg)
+	applyAdminEnv(cfg)
+	applyMonitoringEnv(cfg)
+	applyTrustedProxiesEnv(&cfg.Server.TrustedProxies)
 	return cfg, nil
 }
 
@@ -232,4 +136,83 @@ func (c *Config) IsDefaultSecret() bool {
 // IsDemoMode returns true when the application runs in demo/development mode.
 func (c *Config) IsDemoMode() bool {
 	return c.Security.Mode == "demo"
+}
+
+func loadConfigFile(cfg *Config, path string) error {
+	if path == "" {
+		path = "config.yaml"
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return yaml.Unmarshal(data, cfg)
+}
+
+func applyLogEnv(cfg *Config) {
+	applyStringEnv("LOG_LEVEL", &cfg.Log.Level)
+	applyStringEnv("LOG_FORMAT", &cfg.Log.Format)
+	applyBoolEnv("LOG_FILE_ENABLED", &cfg.Log.File.Enabled)
+	applyStringEnv("LOG_FILE_PATH", &cfg.Log.File.Path)
+	applyIntEnv("LOG_FILE_MAX_SIZE_MB", &cfg.Log.File.MaxSizeMB)
+	applyIntEnv("LOG_FILE_MAX_BACKUPS", &cfg.Log.File.MaxBackups)
+	applyIntEnv("LOG_FILE_MAX_AGE_DAYS", &cfg.Log.File.MaxAgeDays)
+	applyBoolEnv("LOG_FILE_COMPRESS", &cfg.Log.File.Compress)
+}
+
+func applySecurityEnv(cfg *Config) {
+	applyStringEnv("ENCRYPTION_KEY", &cfg.Security.EncryptionKey)
+	applyStringEnv("OIDC_SECRET", &cfg.Security.OIDCSecret)
+	applyBoolEnv("SECURITY_ALLOW_INSECURE", &cfg.Security.AllowInsecure)
+	applyStringEnv("SECURITY_MODE", &cfg.Security.Mode)
+}
+
+func applyAdminEnv(cfg *Config) {
+	applyStringEnv("ADMIN_USERNAME", &cfg.Admin.Username)
+	applyStringEnv("ADMIN_PASSWORD", &cfg.Admin.Password)
+	applyStringEnv("ADMIN_EMAIL", &cfg.Admin.Email)
+}
+
+func applyMonitoringEnv(cfg *Config) {
+	applyStringEnv("MONITORING_AGENT_LATEST_VERSION", &cfg.Monitoring.AgentLatestVersion)
+	applyStringEnv("MONITORING_AGENT_INSTALL_COMMAND_TEMPLATE", &cfg.Monitoring.AgentInstallCommandTemplate)
+}
+
+func applyTrustedProxiesEnv(target *[]string) {
+	v := os.Getenv("TRUSTED_PROXIES")
+	if v == "" {
+		return
+	}
+	proxies := make([]string, 0, len(strings.Split(v, ",")))
+	for _, raw := range strings.Split(v, ",") {
+		if trimmed := strings.TrimSpace(raw); trimmed != "" {
+			proxies = append(proxies, trimmed)
+		}
+	}
+	*target = proxies
+}
+
+func applyStringEnv(key string, target *string) {
+	if v := os.Getenv(key); v != "" {
+		*target = v
+	}
+}
+
+func applyIntEnv(key string, target *int) {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			*target = n
+		}
+	}
+}
+
+func applyBoolEnv(key string, target *bool) {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			*target = b
+		}
+	}
 }

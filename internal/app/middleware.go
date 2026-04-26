@@ -3,9 +3,7 @@ package app
 import (
 	"net/url"
 	"runtime/debug"
-	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ysicing/go-template/handler"
@@ -14,7 +12,6 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
-	"github.com/gofiber/fiber/v3/middleware/cors"
 	fiberrecover "github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	fibersession "github.com/gofiber/fiber/v3/middleware/session"
@@ -255,57 +252,5 @@ func requestLogMiddleware() fiber.Handler {
 		}
 		event.Msg("request")
 		return err
-	}
-}
-
-func buildCORSMiddleware(settingStore *store.SettingStore, log *zerolog.Logger) fiber.Handler {
-	var (
-		corsWarnOnce     sync.Once
-		wildcardWarnOnce sync.Once
-	)
-
-	allowOriginsFunc := func(origin string) bool {
-		if origin == "" {
-			return true
-		}
-
-		origins := settingStore.GetStringSlice(store.SettingCORSOrigins, nil)
-		if len(origins) == 0 {
-			corsWarnOnce.Do(func() {
-				log.Warn().Msg("CORS: no origins configured, denying cross-origin requests")
-			})
-			return false
-		}
-
-		for _, o := range origins {
-			if o == "*" || o == origin {
-				return true
-			}
-		}
-		return false
-	}
-
-	withCred := cors.New(cors.Config{
-		AllowOriginsFunc: allowOriginsFunc,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowCredentials: true,
-	})
-	withoutCred := cors.New(cors.Config{
-		AllowOriginsFunc: allowOriginsFunc,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowCredentials: false,
-	})
-
-	return func(c fiber.Ctx) error {
-		origins := settingStore.GetStringSlice(store.SettingCORSOrigins, nil)
-		if slices.Contains(origins, "*") {
-			wildcardWarnOnce.Do(func() {
-				log.Warn().Msg("CORS: wildcard origin detected, credentials disabled for security")
-			})
-			return withoutCred(c)
-		}
-		return withCred(c)
 	}
 }

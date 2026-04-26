@@ -60,3 +60,23 @@ func TestLoadConfigAppliesEnvOverridesWithoutConfigFile(t *testing.T) {
 		t.Fatal("expected LOG_FILE_COMPRESS env override to apply")
 	}
 }
+
+func TestLoadConfigParsesTrustedProxiesEnv(t *testing.T) {
+	t.Setenv("CONFIG_PATH", t.TempDir()+"/missing-config.yaml")
+	t.Setenv("TRUSTED_PROXIES", " 10.0.0.0/8,127.0.0.1/32, , 192.168.0.0/16 ")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig() error = %v", err)
+	}
+
+	want := []string{"10.0.0.0/8", "127.0.0.1/32", "192.168.0.0/16"}
+	if len(cfg.Server.TrustedProxies) != len(want) {
+		t.Fatalf("unexpected trusted proxies length: got %v want %v", cfg.Server.TrustedProxies, want)
+	}
+	for i := range want {
+		if cfg.Server.TrustedProxies[i] != want[i] {
+			t.Fatalf("unexpected trusted proxies: got %v want %v", cfg.Server.TrustedProxies, want)
+		}
+	}
+}

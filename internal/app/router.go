@@ -63,7 +63,13 @@ type builtHandlers struct {
 
 func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 	h := &builtHandlers{}
+	buildIdentityHandlers(h, d, tokenCfg)
+	buildOAuthHandlers(h, d, tokenCfg)
+	buildAdminHandlers(h, d)
+	return h
+}
 
+func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
 	h.email = handler.NewEmailHandler(d.UserStore, d.SettingStore, d.AuditLogStore, d.PointStore, d.Cache)
 	h.auth = handler.NewAuthHandler(handler.AuthDeps{
 		Users:         d.UserStore,
@@ -115,7 +121,9 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 		Cache:         d.Cache,
 		TokenConfig:   tokenCfg,
 	})
+}
 
+func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
 	h.oauth = handler.NewOAuthHandler(handler.OAuthDeps{
 		Users:          d.UserStore,
 		Providers:      d.SocialStore,
@@ -134,7 +142,11 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 	h.socialAcct = handler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
 	h.oauthClient = handler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
 	h.points = handler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
+	h.ghCompat = handler.NewGitHubCompatHandler(d.OIDCHandler, d.OIDCStorage)
+	h.clientCredentials = handler.NewClientCredentialsHandler(d.Services.ClientCredentials, d.OIDCHandler)
+}
 
+func buildAdminHandlers(h *builtHandlers, d *Deps) {
 	h.admin = handler.NewAdminHandler(handler.AdminDeps{
 		Users:          d.UserStore,
 		Clients:        d.ClientStore,
@@ -149,10 +161,6 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 	h.adminProv = handler.NewAdminProviderHandler(d.SocialStore, d.AuditLogStore)
 	h.adminSett = handler.NewAdminSettingHandler(d.SettingStore, d.AuditLogStore, h.email)
 	h.adminPoints = handler.NewAdminPointsHandler(d.PointStore, d.AuditLogStore)
-	h.ghCompat = handler.NewGitHubCompatHandler(d.OIDCHandler, d.OIDCStorage)
-	h.clientCredentials = handler.NewClientCredentialsHandler(d.Services.ClientCredentials, d.OIDCHandler)
-
-	return h
 }
 
 // SetupRoutes registers all API routes on the Fiber app.
