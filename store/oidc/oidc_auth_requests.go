@@ -1,4 +1,4 @@
-package store
+package oidcstore
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ysicing/go-template/model"
+	rootstore "github.com/ysicing/go-template/store"
 
 	"github.com/google/uuid"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -21,8 +22,8 @@ func authRequestFromDB(ar *model.AuthRequest, loginURL string) *oidcAuthRequest 
 		creationDate: ar.CreatedAt,
 		clientID:     ar.ClientID,
 		redirectURI:  ar.RedirectURI,
-		scopes:       splitTrimmed(ar.Scopes),
-		prompt:       splitTrimmed(ar.Prompt),
+		scopes:       rootstore.SplitTrimmed(ar.Scopes),
+		prompt:       rootstore.SplitTrimmed(ar.Prompt),
 		responseType: oidc.ResponseType(ar.ResponseType),
 		responseMode: oidc.ResponseMode(ar.ResponseMode),
 		nonce:        ar.Nonce,
@@ -76,7 +77,7 @@ func (s *OIDCStorage) AuthRequestRequiresConsent(ctx context.Context, id string)
 	if err != nil {
 		return false
 	}
-	for _, prompt := range splitTrimmed(ar.Prompt) {
+	for _, prompt := range rootstore.SplitTrimmed(ar.Prompt) {
 		if prompt == oidc.PromptConsent {
 			return true
 		}

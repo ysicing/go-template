@@ -1,4 +1,4 @@
-package store
+package oidcstore
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ysicing/go-template/model"
+	rootstore "github.com/ysicing/go-template/store"
 
 	"github.com/google/uuid"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -25,7 +26,7 @@ func refreshTokenFromDB(t *model.Token) *oidcRefreshToken {
 		token:    t.RefreshToken,
 		userID:   subjectID,
 		clientID: t.ClientID,
-		scopes:   splitTrimmed(t.Scopes),
+		scopes:   rootstore.SplitTrimmed(t.Scopes),
 		authTime: t.CreatedAt,
 		expiry:   t.ExpiresAt,
 	}

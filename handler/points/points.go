@@ -1,12 +1,14 @@
-package handler
+package points
 
 import (
 	"strconv"
 	"strings"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
-	"github.com/ysicing/go-template/store"
+	rootstore "github.com/ysicing/go-template/store"
+	pointstore "github.com/ysicing/go-template/store/points"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -17,12 +19,12 @@ const (
 )
 
 type PointsHandler struct {
-	points  *store.PointStore
-	checkin *store.CheckInStore
-	audit   *store.AuditLogStore
+	points  *pointstore.PointStore
+	checkin *pointstore.CheckInStore
+	audit   *rootstore.AuditLogStore
 }
 
-func NewPointsHandler(points *store.PointStore, checkin *store.CheckInStore, audit *store.AuditLogStore) *PointsHandler {
+func NewPointsHandler(points *pointstore.PointStore, checkin *pointstore.CheckInStore, audit *rootstore.AuditLogStore) *PointsHandler {
 	return &PointsHandler{points: points, checkin: checkin, audit: audit}
 }
 
@@ -43,7 +45,7 @@ func (h *PointsHandler) GetMyPoints(c fiber.Ctx) error {
 // GetTransactions returns paginated point transactions for the current user.
 func (h *PointsHandler) GetTransactions(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 	txns, total, err := h.points.ListTransactions(c.Context(), userID, page, pageSize)
 	if err != nil {
 		logger.L.Error().Err(err).Str("user_id", userID).Msg("failed to list transactions")
@@ -69,7 +71,7 @@ func (h *PointsHandler) CheckIn(c fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "already checked in today", "record": record})
 	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditPointsCheckIn,
 		Resource: "points",
@@ -98,7 +100,7 @@ func (h *PointsHandler) GetCheckInStatus(c fiber.Ctx) error {
 
 	streak, _ := h.checkin.GetStreak(c.Context(), userID)
 
-	now := store.NowInCheckInLocation()
+	now := pointstore.NowInCheckInLocation()
 	year, _ := strconv.Atoi(c.Query("year", strconv.Itoa(now.Year())))
 	month, _ := strconv.Atoi(c.Query("month", strconv.Itoa(int(now.Month()))))
 	if month < 1 || month > 12 {
@@ -154,7 +156,7 @@ func (h *PointsHandler) SpendPoints(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msg})
 	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditPointsSpend,
 		Resource: "points",

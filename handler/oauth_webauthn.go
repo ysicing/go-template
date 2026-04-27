@@ -9,6 +9,7 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -21,15 +22,15 @@ type oauthWebAuthnCredStore interface {
 }
 
 type oauthWebAuthnManager interface {
-	BeginLogin(user *store.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error)
-	FinishLogin(user *store.WebAuthnUser, session webauthn.SessionData, body []byte) (*webauthn.Credential, error)
+	BeginLogin(user *webauthnstore.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error)
+	FinishLogin(user *webauthnstore.WebAuthnUser, session webauthn.SessionData, body []byte) (*webauthn.Credential, error)
 }
 
 type defaultOAuthWebAuthnManager struct {
 	settings oauthSettingStore
 }
 
-func (m defaultOAuthWebAuthnManager) BeginLogin(user *store.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+func (m defaultOAuthWebAuthnManager) BeginLogin(user *webauthnstore.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
 	wa, err := m.build()
 	if err != nil {
 		return nil, nil, err
@@ -37,7 +38,7 @@ func (m defaultOAuthWebAuthnManager) BeginLogin(user *store.WebAuthnUser) (*prot
 	return wa.BeginLogin(user)
 }
 
-func (m defaultOAuthWebAuthnManager) FinishLogin(user *store.WebAuthnUser, session webauthn.SessionData, body []byte) (*webauthn.Credential, error) {
+func (m defaultOAuthWebAuthnManager) FinishLogin(user *webauthnstore.WebAuthnUser, session webauthn.SessionData, body []byte) (*webauthn.Credential, error) {
 	wa, err := m.build()
 	if err != nil {
 		return nil, err
@@ -76,7 +77,7 @@ func (m defaultOAuthWebAuthnManager) build() (*webauthn.WebAuthn, error) {
 	})
 }
 
-func (h *OAuthHandler) loadSocialLinkWebAuthnUser(c fiber.Ctx, userID string) (*store.WebAuthnUser, error) {
+func (h *OAuthHandler) loadSocialLinkWebAuthnUser(c fiber.Ctx, userID string) (*webauthnstore.WebAuthnUser, error) {
 	if h.webAuthnCreds == nil {
 		return nil, fiber.NewError(fiber.StatusServiceUnavailable, "webauthn not configured")
 	}
@@ -89,7 +90,7 @@ func (h *OAuthHandler) loadSocialLinkWebAuthnUser(c fiber.Ctx, userID string) (*
 	if err != nil {
 		return nil, err
 	}
-	return &store.WebAuthnUser{User: user, Creds: creds}, nil
+	return &webauthnstore.WebAuthnUser{User: user, Creds: creds}, nil
 }
 
 // SocialLinkWebAuthnBegin handles POST /api/auth/social/confirm-link/webauthn/begin.

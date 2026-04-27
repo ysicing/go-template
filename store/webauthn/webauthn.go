@@ -1,10 +1,12 @@
-package store
+package webauthnstore
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/ysicing/go-template/model"
+	rootstore "github.com/ysicing/go-template/store"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -37,7 +39,10 @@ func (s *WebAuthnStore) ListByUserID(ctx context.Context, userID string) ([]mode
 func (s *WebAuthnStore) GetByID(ctx context.Context, id string) (*model.WebAuthnCredential, error) {
 	var cred model.WebAuthnCredential
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&cred).Error; err != nil {
-		return nil, normalizeNotFound(err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, rootstore.ErrNotFound
+		}
+		return nil, err
 	}
 	return &cred, nil
 }

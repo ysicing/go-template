@@ -5,16 +5,17 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	pointstore "github.com/ysicing/go-template/store/points"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type AdminPointsHandler struct {
-	points *store.PointStore
+	points *pointstore.PointStore
 	audit  *store.AuditLogStore
 }
 
-func NewAdminPointsHandler(points *store.PointStore, audit *store.AuditLogStore) *AdminPointsHandler {
+func NewAdminPointsHandler(points *pointstore.PointStore, audit *store.AuditLogStore) *AdminPointsHandler {
 	return &AdminPointsHandler{points: points, audit: audit}
 }
 

@@ -1,12 +1,14 @@
-package handler
+package webauthnhandler
 
 import (
 	"strings"
 	"sync"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/service"
-	"github.com/ysicing/go-template/store"
+	rootstore "github.com/ysicing/go-template/store"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofiber/fiber/v3"
@@ -18,27 +20,27 @@ const (
 
 // WebAuthnDeps aggregates dependencies required by WebAuthnHandler.
 type WebAuthnDeps struct {
-	Settings      *store.SettingStore
-	Users         *store.UserStore
-	Creds         *store.WebAuthnStore
-	MFA           *store.MFAStore
-	Audit         *store.AuditLogStore
-	RefreshTokens *store.APIRefreshTokenStore
+	Settings      *rootstore.SettingStore
+	Users         *rootstore.UserStore
+	Creds         *webauthnstore.WebAuthnStore
+	MFA           *rootstore.MFAStore
+	Audit         *rootstore.AuditLogStore
+	RefreshTokens *rootstore.APIRefreshTokenStore
 	Sessions      *service.SessionService
-	Cache         store.Cache
-	TokenConfig   TokenConfig
+	Cache         rootstore.Cache
+	TokenConfig   handlercommon.TokenConfig
 }
 
 // WebAuthnHandler handles WebAuthn/Passkey endpoints.
 type WebAuthnHandler struct {
-	settings    *store.SettingStore
-	users       *store.UserStore
-	creds       *store.WebAuthnStore
-	mfa         *store.MFAStore
-	audit       *store.AuditLogStore
+	settings    *rootstore.SettingStore
+	users       *rootstore.UserStore
+	creds       *webauthnstore.WebAuthnStore
+	mfa         *rootstore.MFAStore
+	audit       *rootstore.AuditLogStore
 	sessions    *service.SessionService
-	cache       store.Cache
-	tokenConfig TokenConfig
+	cache       rootstore.Cache
+	tokenConfig handlercommon.TokenConfig
 
 	mu        sync.RWMutex
 	cachedWA  *webauthn.WebAuthn
@@ -73,9 +75,9 @@ func NewWebAuthnHandler(deps WebAuthnDeps) *WebAuthnHandler {
 
 // getWebAuthn returns a cached *webauthn.WebAuthn instance, rebuilding when settings change.
 func (h *WebAuthnHandler) getWebAuthn() (*webauthn.WebAuthn, error) {
-	rpID := h.settings.Get(store.SettingWebAuthnRPID, "")
-	rpDisplay := h.settings.Get(store.SettingWebAuthnRPDisplay, "ID Service")
-	rpOrigins := h.settings.Get(store.SettingWebAuthnRPOrigins, "")
+	rpID := h.settings.Get(rootstore.SettingWebAuthnRPID, "")
+	rpDisplay := h.settings.Get(rootstore.SettingWebAuthnRPDisplay, "ID Service")
+	rpOrigins := h.settings.Get(rootstore.SettingWebAuthnRPOrigins, "")
 	cfgKey := rpID + "|" + rpDisplay + "|" + rpOrigins
 
 	h.mu.RLock()
@@ -121,11 +123,11 @@ func (h *WebAuthnHandler) getWebAuthn() (*webauthn.WebAuthn, error) {
 	return wa, nil
 }
 
-func (h *WebAuthnHandler) loadWebAuthnUser(c fiber.Ctx, userID string) (*store.WebAuthnUser, error) {
+func (h *WebAuthnHandler) loadWebAuthnUser(c fiber.Ctx, userID string) (*webauthnstore.WebAuthnUser, error) {
 	user, err := h.users.GetByID(c.Context(), userID)
 	if err != nil {
 		return nil, err
 	}
 	creds, _ := h.creds.ListByUserID(c.Context(), userID)
-	return &store.WebAuthnUser{User: user, Creds: creds}, nil
+	return &webauthnstore.WebAuthnUser{User: user, Creds: creds}, nil
 }

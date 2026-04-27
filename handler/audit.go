@@ -19,6 +19,10 @@ type auditCreator interface {
 	Create(ctx context.Context, log *model.AuditLog) error
 }
 
+type AuditCreator interface {
+	Create(ctx context.Context, log *model.AuditLog) error
+}
+
 type AuditEvent struct {
 	UserID     string
 	Action     string
@@ -105,6 +109,14 @@ func recordAuditFromFiber(c fiber.Ctx, audit auditCreator, event AuditEvent) err
 		}
 	}
 	return recordAuditEvent(c.Context(), audit, event)
+}
+
+func WriteAudit(ctx context.Context, audit AuditCreator, entry *model.AuditLog) error {
+	return writeAudit(ctx, audit, entry)
+}
+
+func RecordAuditFromFiber(c fiber.Ctx, audit AuditCreator, event AuditEvent) error {
+	return recordAuditFromFiber(c, audit, event)
 }
 
 func formatAuditDetail(source, detail string, metadata map[string]string) string {

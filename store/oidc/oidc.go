@@ -1,13 +1,13 @@
-package store
+package oidcstore
 
 import (
 	"context"
 	"crypto/rsa"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/ysicing/go-template/model"
+	rootstore "github.com/ysicing/go-template/store"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -57,7 +57,7 @@ type oidcClient struct {
 
 func (c *oidcClient) GetID() string { return c.client.ClientID }
 func (c *oidcClient) RedirectURIs() []string {
-	return splitTrimmed(c.client.RedirectURIs)
+	return rootstore.SplitTrimmed(c.client.RedirectURIs)
 }
 func (c *oidcClient) PostLogoutRedirectURIs() []string { return nil }
 func (c *oidcClient) ApplicationType() op.ApplicationType {
@@ -68,7 +68,7 @@ func (c *oidcClient) ResponseTypes() []oidc.ResponseType {
 	return []oidc.ResponseType{oidc.ResponseTypeCode}
 }
 func (c *oidcClient) GrantTypes() []oidc.GrantType {
-	raw := splitTrimmed(c.client.GrantTypes)
+	raw := rootstore.SplitTrimmed(c.client.GrantTypes)
 	types := make([]oidc.GrantType, 0, len(raw))
 	for _, g := range raw {
 		types = append(types, oidc.GrantType(g))
@@ -89,7 +89,7 @@ func (c *oidcClient) RestrictAdditionalAccessTokenScopes() func([]string) []stri
 	return nil
 }
 func (c *oidcClient) IsScopeAllowed(scope string) bool {
-	for _, s := range splitTrimmed(c.client.Scopes) {
+	for _, s := range rootstore.SplitTrimmed(c.client.Scopes) {
 		if s == scope {
 			return true
 		}
@@ -145,11 +145,11 @@ const (
 
 type OIDCStorage struct {
 	db              *gorm.DB
-	cache           Cache
+	cache           rootstore.Cache
 	signingKey      signingKeyData
 	encPassphrase   string
-	users           *UserStore
-	clients         *OAuthClientStore
+	users           *rootstore.UserStore
+	clients         *rootstore.OAuthClientStore
 	loginURL        string
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
@@ -159,7 +159,7 @@ type OIDCStorage struct {
 }
 
 // NewOIDCStorage creates a new DB-backed OIDCStorage.
-func NewOIDCStorage(ctx context.Context, db *gorm.DB, cache Cache, users *UserStore, clients *OAuthClientStore, loginURL string, encryptionKey string, accessTTL, refreshTTL, authReqTTL time.Duration) (*OIDCStorage, error) {
+func NewOIDCStorage(ctx context.Context, db *gorm.DB, cache rootstore.Cache, users *rootstore.UserStore, clients *rootstore.OAuthClientStore, loginURL string, encryptionKey string, accessTTL, refreshTTL, authReqTTL time.Duration) (*OIDCStorage, error) {
 	if accessTTL == 0 {
 		accessTTL = 5 * time.Minute
 	}
@@ -185,19 +185,4 @@ func NewOIDCStorage(ctx context.Context, db *gorm.DB, cache Cache, users *UserSt
 	}
 	go s.cleanupLoop(ctx)
 	return s, nil
-}
-
-func splitTrimmed(s string) []string {
-	if s == "" {
-		return nil
-	}
-	normalized := strings.ReplaceAll(s, ",", " ")
-	parts := strings.Fields(normalized)
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if p != "" {
-			result = append(result, p)
-		}
-	}
-	return result
 }

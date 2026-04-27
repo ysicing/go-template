@@ -11,6 +11,7 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	oidcstore "github.com/ysicing/go-template/store/oidc"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
@@ -46,7 +47,7 @@ func TestOIDCLoginSubmit_MFARequired(t *testing.T) {
 	clientStore := store.NewOAuthClientStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -135,7 +136,7 @@ func TestOIDCLoginSubmit_ConsentPromptRedirectsToConsentPage(t *testing.T) {
 	clientStore := store.NewOAuthClientStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -194,7 +195,7 @@ func TestMFAVerify_OIDCFlowReturnsRedirect(t *testing.T) {
 	clientStore := store.NewOAuthClientStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -304,7 +305,7 @@ func TestMFAVerify_OIDCConsentPromptRedirectsToConsentPage(t *testing.T) {
 	clientStore := store.NewOAuthClientStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -395,7 +396,7 @@ func TestMFAVerify_OIDCRequireConsentWithoutGrantRedirectsToConsentPage(t *testi
 	grantStore := store.NewOAuthConsentGrantStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -497,7 +498,7 @@ func TestMFAVerify_OIDCRememberedGrantSkipsConsent(t *testing.T) {
 	grantStore := store.NewOAuthConsentGrantStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -605,7 +606,7 @@ func TestOIDCLoginSubmit_RequireConsentWithoutGrantRedirectsToConsentPage(t *tes
 	clientStore := store.NewOAuthClientStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -674,7 +675,7 @@ func TestOIDCConsentApproveStoresGrantAndNextLoginSkipsConsent(t *testing.T) {
 	grantStore := store.NewOAuthConsentGrantStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -787,7 +788,7 @@ func TestOIDCLoginSubmit_RevokedGrantRequiresConsentAgain(t *testing.T) {
 	grantStore := store.NewOAuthConsentGrantStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}
@@ -871,7 +872,7 @@ func TestOIDCLoginSubmit_PromptConsentOverridesRememberedGrant(t *testing.T) {
 	grantStore := store.NewOAuthConsentGrantStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, userStore, clientStore, "/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatalf("new oidc storage: %v", err)
 	}

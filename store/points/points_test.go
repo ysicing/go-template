@@ -1,4 +1,4 @@
-package store
+package points
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestPointStoreAddPoints(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	s := NewPointStore(db)
 	ctx := context.Background()
 
@@ -40,7 +40,7 @@ func TestPointStoreAddPoints(t *testing.T) {
 }
 
 func TestPointStoreSpendPoints_FreeFirstThenPaid(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	s := NewPointStore(db)
 	ctx := context.Background()
 
@@ -75,7 +75,7 @@ func TestPointStoreSpendPoints_FreeFirstThenPaid(t *testing.T) {
 }
 
 func TestPointStoreAdminAdjust_RejectsNegativeBalance(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	s := NewPointStore(db)
 	ctx := context.Background()
 
@@ -97,7 +97,7 @@ func TestPointStoreAdminAdjust_RejectsNegativeBalance(t *testing.T) {
 }
 
 func TestPointStoreSpendPoints_UserNotFound(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	s := NewPointStore(db)
 
 	err := s.SpendPoints(context.Background(), "missing-user", 1, model.PointKindSpend, "buy")

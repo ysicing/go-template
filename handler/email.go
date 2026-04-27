@@ -8,6 +8,7 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	pointstore "github.com/ysicing/go-template/store/points"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -17,12 +18,12 @@ type EmailHandler struct {
 	users    *store.UserStore
 	settings *store.SettingStore
 	audit    *store.AuditLogStore
-	points   *store.PointStore
+	points   *pointstore.PointStore
 	cache    store.Cache
 }
 
 // NewEmailHandler creates an EmailHandler.
-func NewEmailHandler(users *store.UserStore, settings *store.SettingStore, audit *store.AuditLogStore, points *store.PointStore, cache store.Cache) *EmailHandler {
+func NewEmailHandler(users *store.UserStore, settings *store.SettingStore, audit *store.AuditLogStore, points *pointstore.PointStore, cache store.Cache) *EmailHandler {
 	return &EmailHandler{users: users, settings: settings, audit: audit, points: points, cache: cache}
 }
 

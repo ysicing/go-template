@@ -1,4 +1,4 @@
-package store
+package oidcstore
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ysicing/go-template/model"
+	rootstore "github.com/ysicing/go-template/store"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -53,7 +54,7 @@ func (s *OIDCStorage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.U
 	if err != nil {
 		return fmt.Errorf("user not found: %w", err)
 	}
-	populateUserinfo(userinfo, user, splitTrimmed(t.Scopes))
+	populateUserinfo(userinfo, user, rootstore.SplitTrimmed(t.Scopes))
 	return nil
 }
 
@@ -69,7 +70,7 @@ func (s *OIDCStorage) SetIntrospectionFromToken(ctx context.Context, resp *oidc.
 	resp.Active = true
 	resp.Subject = persistedSubjectID(&t, subject)
 	resp.ClientID = t.ClientID
-	resp.Scope = oidc.SpaceDelimitedArray(splitTrimmed(t.Scopes))
+	resp.Scope = oidc.SpaceDelimitedArray(rootstore.SplitTrimmed(t.Scopes))
 	resp.TokenType = t.TokenType
 	if !isUserSubjectToken(&t) {
 		return nil

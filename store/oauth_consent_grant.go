@@ -48,7 +48,7 @@ func (s *OAuthConsentGrantStore) HasGrantedScopes(ctx context.Context, userID, c
 		}
 		return false, err
 	}
-	granted := splitTrimmed(grant.Scopes)
+	granted := SplitTrimmed(grant.Scopes)
 	for _, scope := range requested {
 		found := false
 		for _, grantedScope := range granted {
@@ -104,13 +104,13 @@ func (s *OAuthConsentGrantStore) DeleteByIDAndUserID(ctx context.Context, id, us
 }
 
 func normalizeScopes(raw string) string {
-	scopes := splitTrimmed(raw)
+	scopes := SplitTrimmed(raw)
 	sort.Strings(scopes)
 	return joinUniqueScopes(scopes)
 }
 
 func mergeScopeSets(left, right string) string {
-	scopes := append(splitTrimmed(left), splitTrimmed(right)...)
+	scopes := append(SplitTrimmed(left), SplitTrimmed(right)...)
 	sort.Strings(scopes)
 	return joinUniqueScopes(scopes)
 }

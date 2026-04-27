@@ -1,4 +1,4 @@
-package store
+package points
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func withFixedCheckInReward(t *testing.T, points int64) {
 }
 
 func TestCheckIn_CreatesRecordAndAwardsDailyPoints(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	points := NewPointStore(db)
 	checkins := NewCheckInStore(db, points)
 	ctx := context.Background()
@@ -55,7 +55,7 @@ func TestCheckIn_CreatesRecordAndAwardsDailyPoints(t *testing.T) {
 }
 
 func TestCheckIn_AddsStreakBonusOnSeventhDay(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	points := NewPointStore(db)
 	checkins := NewCheckInStore(db, points)
 	ctx := context.Background()
@@ -105,7 +105,7 @@ func TestCheckIn_AddsStreakBonusOnSeventhDay(t *testing.T) {
 }
 
 func TestGetTodayRecord_ReturnsNilWhenMissing(t *testing.T) {
-	db := setupUserStoreTestDB(t)
+	db := setupPointsTestDB(t)
 	checkins := NewCheckInStore(db, NewPointStore(db))
 
 	record, err := checkins.GetTodayRecord(context.Background(), "missing-user")

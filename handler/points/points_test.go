@@ -1,4 +1,4 @@
-package handler
+package points
 
 import (
 	"context"
@@ -6,8 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
-	"github.com/ysicing/go-template/store"
+	rootstore "github.com/ysicing/go-template/store"
+	pointstore "github.com/ysicing/go-template/store/points"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -15,15 +17,15 @@ import (
 
 func TestPointsHandler_CheckIn_WritesAuditLog(t *testing.T) {
 	db := setupTestDB(t)
-	points := store.NewPointStore(db)
-	checkins := store.NewCheckInStore(db, points)
-	audit := store.NewAuditLogStore(db)
+	points := pointstore.NewPointStore(db)
+	checkins := pointstore.NewCheckInStore(db, points)
+	audit := rootstore.NewAuditLogStore(db)
 	user := createLocalUser(t, db, "points-user", "points-user@example.com", "Password123!abcd")
 
 	h := NewPointsHandler(points, checkins, audit)
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
 		return c.Next()

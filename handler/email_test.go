@@ -12,6 +12,7 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	pointstore "github.com/ysicing/go-template/store/points"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -30,7 +31,7 @@ func setupEmailHandler(t *testing.T) (*EmailHandler, *store.UserStore, *store.Se
 	cache := store.NewMemoryCache()
 	settings := store.NewSettingStore(db, cache)
 	audit := store.NewAuditLogStore(db)
-	points := store.NewPointStore(db)
+	points := pointstore.NewPointStore(db)
 	h := NewEmailHandler(users, settings, audit, points, cache)
 	return h, users, settings, cache
 }
@@ -282,7 +283,7 @@ func TestRegister_WithEmailVerification_SendQueuedWhenSMTPMissing(t *testing.T) 
 	// Enable email verification and keep SMTP unconfigured.
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
-	emailH := NewEmailHandler(users, settings, audit, store.NewPointStore(db), cache)
+	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
 	authH := NewAuthHandler(AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
@@ -437,7 +438,7 @@ func TestRegister_WithInviteCode_BindsInviterAndInviteIP(t *testing.T) {
 		t.Fatalf("update inviter invite code: %v", err)
 	}
 
-	emailH := NewEmailHandler(users, settings, audit, store.NewPointStore(db), cache)
+	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
 	authH := NewAuthHandler(AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
@@ -508,7 +509,7 @@ func TestRegister_WithInvalidInviteCode_ReturnsBadRequest(t *testing.T) {
 	audit := store.NewAuditLogStore(db)
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
-	emailH := NewEmailHandler(users, settings, audit, store.NewPointStore(db), cache)
+	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
 	authH := NewAuthHandler(AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
@@ -569,7 +570,7 @@ func TestRegister_WithoutInviteCode_StillSucceeds(t *testing.T) {
 	audit := store.NewAuditLogStore(db)
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
-	emailH := NewEmailHandler(users, settings, audit, store.NewPointStore(db), cache)
+	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
 	authH := NewAuthHandler(AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
@@ -683,7 +684,7 @@ func TestVerifyEmail_InviteRewardGrantedWhenIPsDiffer(t *testing.T) {
 	cache := store.NewMemoryCache()
 	settings := store.NewSettingStore(db, cache)
 	audit := store.NewAuditLogStore(db)
-	h := NewEmailHandler(users, settings, audit, store.NewPointStore(db), cache)
+	h := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
 	ephemeral := store.NewEphemeralTokenStore(cache)
 	ctx := context.Background()
 
@@ -729,7 +730,7 @@ func TestVerifyEmail_InviteRewardGrantedWhenIPsDiffer(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	pointStore := store.NewPointStore(db)
+	pointStore := pointstore.NewPointStore(db)
 	points, err := pointStore.GetOrCreateUserPoints(ctx, inviter.ID)
 	if err != nil {
 		t.Fatalf("get inviter points: %v", err)
@@ -775,7 +776,7 @@ func TestVerifyEmail_InviteRewardSkippedWhenIPsSame(t *testing.T) {
 	cache := store.NewMemoryCache()
 	settings := store.NewSettingStore(db, cache)
 	audit := store.NewAuditLogStore(db)
-	h := NewEmailHandler(users, settings, audit, store.NewPointStore(db), cache)
+	h := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
 	ephemeral := store.NewEphemeralTokenStore(cache)
 	ctx := context.Background()
 
@@ -821,7 +822,7 @@ func TestVerifyEmail_InviteRewardSkippedWhenIPsSame(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	pointStore := store.NewPointStore(db)
+	pointStore := pointstore.NewPointStore(db)
 	points, err := pointStore.GetOrCreateUserPoints(ctx, inviter.ID)
 	if err != nil {
 		t.Fatalf("get inviter points: %v", err)

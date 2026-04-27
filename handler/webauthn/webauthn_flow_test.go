@@ -1,8 +1,10 @@
-package handler
+package webauthnhandler
 
 import (
 	"testing"
 	"time"
+
+	handlercommon "github.com/ysicing/go-template/handler"
 )
 
 func TestNormalizeWebAuthnCredentialName(t *testing.T) {
@@ -39,7 +41,7 @@ func TestSplitCachedLoginSession(t *testing.T) {
 }
 
 func TestRememberMeRefreshTTL(t *testing.T) {
-	cfg := TokenConfig{
+	cfg := handlercommon.TokenConfig{
 		RefreshTTL:    24 * time.Hour,
 		RememberMeTTL: 30 * 24 * time.Hour,
 	}

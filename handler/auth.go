@@ -8,6 +8,7 @@ import (
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -31,7 +32,7 @@ type authRefreshTokenStore interface {
 // AuthDeps aggregates dependencies required by AuthHandler.
 type AuthDeps struct {
 	Users         authUserStore
-	WebAuthnCreds *store.WebAuthnStore
+	WebAuthnCreds *webauthnstore.WebAuthnStore
 	RefreshTokens authRefreshTokenStore
 	Sessions      *service.SessionService
 	AuthService   *service.AuthService
@@ -46,7 +47,7 @@ type AuthDeps struct {
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
 	users         authUserStore
-	webauthnCreds *store.WebAuthnStore
+	webauthnCreds *webauthnstore.WebAuthnStore
 	refreshTokens authRefreshTokenStore
 	sessions      *service.SessionService
 	authService   *service.AuthService

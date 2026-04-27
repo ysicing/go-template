@@ -9,6 +9,7 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/sync/errgroup"
@@ -49,7 +50,7 @@ type AdminDeps struct {
 	Audit          adminAuditLogStore
 	RefreshTokens  *store.APIRefreshTokenStore
 	MFA            *store.MFAStore
-	WebAuthnCreds  *store.WebAuthnStore
+	WebAuthnCreds  *webauthnstore.WebAuthnStore
 	SocialAccounts *store.SocialAccountStore
 	PasswordHist   *store.PasswordHistoryStore
 	Cache          adminCache
@@ -62,7 +63,7 @@ type AdminHandler struct {
 	audit          adminAuditLogStore
 	refreshTokens  *store.APIRefreshTokenStore
 	mfa            *store.MFAStore
-	webauthnCreds  *store.WebAuthnStore
+	webauthnCreds  *webauthnstore.WebAuthnStore
 	socialAccounts *store.SocialAccountStore
 	passwordHist   *store.PasswordHistoryStore
 	cache          adminCache

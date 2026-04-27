@@ -4,8 +4,13 @@ import (
 	"net/http"
 
 	"github.com/ysicing/go-template/handler"
+	pointshandler "github.com/ysicing/go-template/handler/points"
+	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/store"
+	oidcstore "github.com/ysicing/go-template/store/oidc"
+	pointstore "github.com/ysicing/go-template/store/points"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -26,16 +31,16 @@ type Deps struct {
 	PasswordHistory        *store.PasswordHistoryStore
 	ClientStore            *store.OAuthClientStore
 	OAuthConsentGrantStore *store.OAuthConsentGrantStore
-	OIDCStorage            *store.OIDCStorage
+	OIDCStorage            *oidcstore.OIDCStorage
 	SocialStore            *store.SocialProviderStore
 	SocialAccountStore     *store.SocialAccountStore
 	SettingStore           *store.SettingStore
 	RefreshTokenStore      *store.APIRefreshTokenStore
 	AuditLogStore          *store.AuditLogStore
 	MFAStore               *store.MFAStore
-	WebAuthnStore          *store.WebAuthnStore
-	PointStore             *store.PointStore
-	CheckInStore           *store.CheckInStore
+	WebAuthnStore          *webauthnstore.WebAuthnStore
+	PointStore             *pointstore.PointStore
+	CheckInStore           *pointstore.CheckInStore
 	Cache                  store.Cache
 	OIDCHandler            http.Handler
 	Services               Services
@@ -47,7 +52,7 @@ type builtHandlers struct {
 	email             *handler.EmailHandler
 	user              *handler.UserHandler
 	mfa               *handler.MFAHandler
-	webauthn          *handler.WebAuthnHandler
+	webauthn          *webauthnhandler.WebAuthnHandler
 	oauth             *handler.OAuthHandler
 	oidcLogin         *handler.OIDCLoginHandler
 	socialAcct        *handler.SocialAccountHandler
@@ -56,7 +61,7 @@ type builtHandlers struct {
 	adminProv         *handler.AdminProviderHandler
 	adminSett         *handler.AdminSettingHandler
 	adminPoints       *handler.AdminPointsHandler
-	points            *handler.PointsHandler
+	points            *pointshandler.PointsHandler
 	ghCompat          *handler.GitHubCompatHandler
 	clientCredentials *handler.ClientCredentialsHandler
 }
@@ -110,7 +115,7 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 		TokenConfig:   tokenCfg,
 	})
 
-	h.webauthn = handler.NewWebAuthnHandler(handler.WebAuthnDeps{
+	h.webauthn = webauthnhandler.NewWebAuthnHandler(webauthnhandler.WebAuthnDeps{
 		Settings:      d.SettingStore,
 		Users:         d.UserStore,
 		Creds:         d.WebAuthnStore,
@@ -141,7 +146,7 @@ func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig)
 	h.oidcLogin = handler.NewOIDCLoginHandler(d.OIDCStorage, d.ClientStore, d.OAuthConsentGrantStore, d.UserStore, d.MFAStore, d.AuditLogStore, d.Cache)
 	h.socialAcct = handler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
 	h.oauthClient = handler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
-	h.points = handler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
+	h.points = pointshandler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
 	h.ghCompat = handler.NewGitHubCompatHandler(d.OIDCHandler, d.OIDCStorage)
 	h.clientCredentials = handler.NewClientCredentialsHandler(d.Services.ClientCredentials, d.OIDCHandler)
 }

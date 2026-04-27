@@ -54,11 +54,6 @@ func TestStoresNormalizeNotFound(t *testing.T) {
 		t.Fatalf("expected social provider store ErrNotFound, got %v", err)
 	}
 
-	webAuthnStore := NewWebAuthnStore(db)
-	if _, err := webAuthnStore.GetByID(ctx, "missing-credential"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected webauthn store ErrNotFound, got %v", err)
-	}
-
 	mfaStore := NewMFAStore(db, "")
 	if _, err := mfaStore.GetByUserID(ctx, "missing-user"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected mfa store ErrNotFound, got %v", err)

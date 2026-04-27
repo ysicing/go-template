@@ -276,6 +276,10 @@ func parsePagination(c fiber.Ctx) (page, pageSize int) {
 	return page, pageSize
 }
 
+func ParsePagination(c fiber.Ctx) (page, pageSize int) {
+	return parsePagination(c)
+}
+
 // SetTokenCookies sets access and refresh tokens as HttpOnly cookies.
 // This provides better security against XSS attacks compared to localStorage.
 func SetTokenCookies(c fiber.Ctx, accessToken, refreshToken string, accessTTL, refreshTTL time.Duration) {

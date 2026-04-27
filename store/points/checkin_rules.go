@@ -1,4 +1,4 @@
-package store
+package points
 
 import "github.com/ysicing/go-template/model"
 

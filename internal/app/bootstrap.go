@@ -8,6 +8,9 @@ import (
 	"github.com/ysicing/go-template/internal/service"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	oidcstore "github.com/ysicing/go-template/store/oidc"
+	pointstore "github.com/ysicing/go-template/store/points"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
@@ -77,10 +80,10 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 		RefreshTokenStore:      store.NewAPIRefreshTokenStore(db, cache),
 		AuditLogStore:          store.NewAuditLogStore(db),
 		MFAStore:               store.NewMFAStore(db, cfg.Security.EncryptionKey),
-		WebAuthnStore:          store.NewWebAuthnStore(db),
-		PointStore:             store.NewPointStore(db),
+		WebAuthnStore:          webauthnstore.NewWebAuthnStore(db),
+		PointStore:             pointstore.NewPointStore(db),
 	}
-	deps.CheckInStore = store.NewCheckInStore(db, deps.PointStore)
+	deps.CheckInStore = pointstore.NewCheckInStore(db, deps.PointStore)
 	deps.Services = Services{
 		ClientCredentials: service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
 			Clients: deps.ClientStore,
@@ -99,7 +102,7 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 		Cache: cache,
 	})
 
-	oidcStorage, err := store.NewOIDCStorage(ctx, db, cache, deps.UserStore, deps.ClientStore, "/login", cfg.Security.EncryptionKey, 0, 0, 0)
+	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, deps.UserStore, deps.ClientStore, "/login", cfg.Security.EncryptionKey, 0, 0, 0)
 	if err != nil {
 		log.Fatal().Err(err).Msg("create oidc storage")
 	}

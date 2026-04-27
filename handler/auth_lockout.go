@@ -18,3 +18,15 @@ func recordFailedAuthAttempt(ctx context.Context, cache store.Cache, userID stri
 func clearFailedAuthAttempts(ctx context.Context, cache store.Cache, userID string) {
 	service.ClearFailedAuthAttempts(ctx, cache, userID)
 }
+
+func IsAccountLocked(ctx context.Context, cache store.Cache, userID string) bool {
+	return isAccountLocked(ctx, cache, userID)
+}
+
+func RecordFailedAuthAttempt(ctx context.Context, cache store.Cache, userID string) {
+	recordFailedAuthAttempt(ctx, cache, userID)
+}
+
+func ClearFailedAuthAttempts(ctx context.Context, cache store.Cache, userID string) {
+	clearFailedAuthAttempts(ctx, cache, userID)
+}

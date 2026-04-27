@@ -1,4 +1,4 @@
-package store
+package oidcstore
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ysicing/go-template/model"
+	rootstore "github.com/ysicing/go-template/store"
 
 	"github.com/glebarez/sqlite"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -23,9 +24,9 @@ func newTestOIDCStorage(t *testing.T) *OIDCStorage {
 	if err := model.AutoMigrate(db); err != nil {
 		t.Fatal(err)
 	}
-	cache := NewMemoryCache()
+	cache := rootstore.NewMemoryCache()
 	t.Cleanup(func() { _ = cache.Close() })
-	s, err := NewOIDCStorage(context.Background(), db, cache, NewUserStore(db), NewOAuthClientStore(db), "http://localhost:3206/login", "", 0, 0, 0)
+	s, err := NewOIDCStorage(context.Background(), db, cache, rootstore.NewUserStore(db), rootstore.NewOAuthClientStore(db), "http://localhost:3206/login", "", 0, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -914,14 +915,14 @@ func TestSplitTrimmed(t *testing.T) {
 		{",,,", nil},
 	}
 	for _, tt := range tests {
-		got := splitTrimmed(tt.input)
+		got := rootstore.SplitTrimmed(tt.input)
 		if len(got) != len(tt.expected) {
-			t.Errorf("splitTrimmed(%q): expected %v, got %v", tt.input, tt.expected, got)
+			t.Errorf("SplitTrimmed(%q): expected %v, got %v", tt.input, tt.expected, got)
 			continue
 		}
 		for i := range got {
 			if got[i] != tt.expected[i] {
-				t.Errorf("splitTrimmed(%q)[%d]: expected %q, got %q", tt.input, i, tt.expected[i], got[i])
+				t.Errorf("SplitTrimmed(%q)[%d]: expected %q, got %q", tt.input, i, tt.expected[i], got[i])
 			}
 		}
 	}

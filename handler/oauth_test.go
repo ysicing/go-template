@@ -13,6 +13,7 @@ import (
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
+	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/glebarez/sqlite"
 	"github.com/go-webauthn/webauthn/protocol"
@@ -427,7 +428,7 @@ func TestSocialLinkWebAuthnBegin_ReturnsOptionsAndStoresSession(t *testing.T) {
 	t.Cleanup(func() { _ = cache.Close() })
 
 	users := store.NewUserStore(db)
-	creds := store.NewWebAuthnStore(db)
+	creds := webauthnstore.NewWebAuthnStore(db)
 	user := createLocalUser(t, db, "social-passkey", "social-passkey@example.com", "Password123!abcd")
 	if err := creds.Create(context.Background(), &model.WebAuthnCredential{
 		UserID:       user.ID,
@@ -512,7 +513,7 @@ func TestSocialLinkWebAuthnFinish_LinksAccountAndWritesAuditLog(t *testing.T) {
 	t.Cleanup(func() { _ = cache.Close() })
 
 	users := store.NewUserStore(db)
-	creds := store.NewWebAuthnStore(db)
+	creds := webauthnstore.NewWebAuthnStore(db)
 	socialAccounts := store.NewSocialAccountStore(db)
 	audit := store.NewAuditLogStore(db)
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
@@ -643,11 +644,11 @@ type fakeOAuthWebAuthnManager struct {
 	finishErr        error
 }
 
-func (f fakeOAuthWebAuthnManager) BeginLogin(*store.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+func (f fakeOAuthWebAuthnManager) BeginLogin(*webauthnstore.WebAuthnUser) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
 	return f.beginOptions, f.beginSession, f.beginErr
 }
 
-func (f fakeOAuthWebAuthnManager) FinishLogin(*store.WebAuthnUser, webauthn.SessionData, []byte) (*webauthn.Credential, error) {
+func (f fakeOAuthWebAuthnManager) FinishLogin(*webauthnstore.WebAuthnUser, webauthn.SessionData, []byte) (*webauthn.Credential, error) {
 	return f.finishCredential, f.finishErr
 }
 

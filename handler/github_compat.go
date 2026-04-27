@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/ysicing/go-template/store"
+	oidcstore "github.com/ysicing/go-template/store/oidc"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -20,10 +20,10 @@ import (
 // replacement by pointing their endpoint URLs here.
 type GitHubCompatHandler struct {
 	oidcHandler http.Handler
-	oidcStorage *store.OIDCStorage
+	oidcStorage *oidcstore.OIDCStorage
 }
 
-func NewGitHubCompatHandler(oidcHandler http.Handler, oidcStorage *store.OIDCStorage) *GitHubCompatHandler {
+func NewGitHubCompatHandler(oidcHandler http.Handler, oidcStorage *oidcstore.OIDCStorage) *GitHubCompatHandler {
 	return &GitHubCompatHandler{oidcHandler: oidcHandler, oidcStorage: oidcStorage}
 }
 

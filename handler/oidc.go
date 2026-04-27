@@ -10,13 +10,14 @@ import (
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
+	oidcstore "github.com/ysicing/go-template/store/oidc"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 // OIDCLoginHandler handles the OIDC login submission.
 type OIDCLoginHandler struct {
-	storage *store.OIDCStorage
+	storage *oidcstore.OIDCStorage
 	clients *store.OAuthClientStore
 	grants  *store.OAuthConsentGrantStore
 	mfa     *store.MFAStore
@@ -26,7 +27,7 @@ type OIDCLoginHandler struct {
 }
 
 // NewOIDCLoginHandler creates an OIDCLoginHandler.
-func NewOIDCLoginHandler(storage *store.OIDCStorage, clients *store.OAuthClientStore, grants *store.OAuthConsentGrantStore, users *store.UserStore, mfa *store.MFAStore, audit *store.AuditLogStore, cache store.Cache) *OIDCLoginHandler {
+func NewOIDCLoginHandler(storage *oidcstore.OIDCStorage, clients *store.OAuthClientStore, grants *store.OAuthConsentGrantStore, users *store.UserStore, mfa *store.MFAStore, audit *store.AuditLogStore, cache store.Cache) *OIDCLoginHandler {
 	return &OIDCLoginHandler{
 		storage: storage,
 		clients: clients,
