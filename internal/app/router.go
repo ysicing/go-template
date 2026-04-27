@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"github.com/ysicing/go-template/handler"
+	emailhandler "github.com/ysicing/go-template/handler/email"
+	mfahandler "github.com/ysicing/go-template/handler/mfa"
+	oauthhandler "github.com/ysicing/go-template/handler/oauth"
 	pointshandler "github.com/ysicing/go-template/handler/points"
 	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
@@ -51,11 +54,11 @@ type Deps struct {
 // builtHandlers holds all handler instances created during route setup.
 type builtHandlers struct {
 	auth              *handler.AuthHandler
-	email             *handler.EmailHandler
+	email             *emailhandler.EmailHandler
 	user              *handler.UserHandler
-	mfa               *handler.MFAHandler
+	mfa               *mfahandler.MFAHandler
 	webauthn          *webauthnhandler.WebAuthnHandler
-	oauth             *handler.OAuthHandler
+	oauth             *oauthhandler.OAuthHandler
 	oidcLogin         *handler.OIDCLoginHandler
 	socialAcct        *handler.SocialAccountHandler
 	oauthClient       *handler.OAuthClientHandler
@@ -77,7 +80,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 }
 
 func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
-	h.email = handler.NewEmailHandler(d.UserStore, d.SettingStore, d.AuditLogStore, d.PointStore, d.Cache)
+	h.email = emailhandler.NewEmailHandler(d.UserStore, d.SettingStore, d.AuditLogStore, d.PointStore, d.Cache)
 	h.auth = handler.NewAuthHandler(handler.AuthDeps{
 		Users:         d.UserStore,
 		WebAuthnCreds: d.WebAuthnStore,
@@ -104,7 +107,7 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 		Cache:           d.Cache,
 	})
 
-	h.mfa = handler.NewMFAHandler(handler.MFADeps{
+	h.mfa = mfahandler.NewMFAHandler(mfahandler.MFADeps{
 		Users:         d.UserStore,
 		MFA:           d.MFAStore,
 		Audit:         d.AuditLogStore,
@@ -131,7 +134,7 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 }
 
 func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
-	h.oauth = handler.NewOAuthHandler(handler.OAuthDeps{
+	h.oauth = oauthhandler.NewOAuthHandler(oauthhandler.OAuthDeps{
 		Users:          d.UserStore,
 		Providers:      d.SocialStore,
 		SocialAccounts: d.SocialAccountStore,

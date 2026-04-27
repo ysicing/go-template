@@ -52,7 +52,7 @@ type UserDeps struct {
 	ConsentGrants   userConsentGrantStore
 	Clients         userOAuthClientStore
 	Settings        settingReader
-	EmailHandler    *EmailHandler
+	EmailHandler    emailVerificationSender
 	Cache           store.Cache
 }
 
@@ -65,7 +65,7 @@ type UserHandler struct {
 	consentGrants   userConsentGrantStore
 	clients         userOAuthClientStore
 	settings        settingReader
-	emailHandler    *EmailHandler
+	emailHandler    emailVerificationSender
 	cache           store.Cache
 }
 

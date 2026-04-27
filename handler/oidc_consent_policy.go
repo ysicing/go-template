@@ -14,6 +14,11 @@ type oidcConsentStorage interface {
 	AuthRequestByID(ctx context.Context, id string) (op.AuthRequest, error)
 }
 
+type OIDCConsentStorage interface {
+	AuthRequestRequiresConsent(ctx context.Context, id string) bool
+	AuthRequestByID(ctx context.Context, id string) (op.AuthRequest, error)
+}
+
 func shouldPromptOIDCConsent(ctx context.Context, storage oidcConsentStorage, clients *store.OAuthClientStore, grants *store.OAuthConsentGrantStore, authRequestID, userID string) (bool, error) {
 	if storage.AuthRequestRequiresConsent(ctx, authRequestID) {
 		return true, nil
@@ -37,6 +42,10 @@ func shouldPromptOIDCConsent(ctx context.Context, storage oidcConsentStorage, cl
 		return false, err
 	}
 	return !granted, nil
+}
+
+func ShouldPromptOIDCConsent(ctx context.Context, storage OIDCConsentStorage, clients *store.OAuthClientStore, grants *store.OAuthConsentGrantStore, authRequestID, userID string) (bool, error) {
+	return shouldPromptOIDCConsent(ctx, storage, clients, grants, authRequestID, userID)
 }
 
 func oidcConsentContextRequired(ctx context.Context, storage oidcConsentStorage, clients *store.OAuthClientStore, authRequestID string) (bool, error) {

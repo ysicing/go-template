@@ -1,10 +1,11 @@
-package handler
+package oauthhandler
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -72,9 +73,9 @@ func (h *OAuthHandler) completeSocialLink(c fiber.Ctx, user *model.User, pending
 		_ = h.cache.Del(c.Context(), key)
 	}
 
-	clearFailedAuthAttempts(c.Context(), h.cache, user.ID)
+	handlercommon.ClearFailedAuthAttempts(c.Context(), h.cache, user.ID)
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     user.ID,
 		Action:     model.AuditSocialAccountLink,
 		Resource:   "social_account",
@@ -156,7 +157,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user not found"})
 	}
 
-	if isAccountLocked(c.Context(), h.cache, user.ID) {
+	if handlercommon.IsAccountLocked(c.Context(), h.cache, user.ID) {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
 
@@ -174,7 +175,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 			verified = true
 			verificationMethod = "password"
 		} else {
-			_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+			_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 				UserID:   user.ID,
 				Action:   model.AuditSocialAccountLink,
 				Resource: "social_account",
@@ -184,7 +185,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 					"reason": "invalid_password",
 				},
 			})
-			recordFailedAuthAttempt(c.Context(), h.cache, user.ID)
+			handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, user.ID)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid password"})
 		}
 	}
@@ -204,7 +205,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 			verified = true
 			verificationMethod = "totp"
 		} else {
-			_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+			_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 				UserID:   user.ID,
 				Action:   model.AuditSocialAccountLink,
 				Resource: "social_account",
@@ -214,7 +215,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 					"reason": "invalid_totp",
 				},
 			})
-			recordFailedAuthAttempt(c.Context(), h.cache, user.ID)
+			handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, user.ID)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid TOTP code"})
 		}
 	}

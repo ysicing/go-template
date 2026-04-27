@@ -1,4 +1,4 @@
-package handler
+package mfahandler
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -27,6 +28,10 @@ type mfaStore interface {
 	Delete(ctx context.Context, userID string) error
 }
 
+type refreshTokenCreator interface {
+	Create(ctx context.Context, rt *model.APIRefreshToken) error
+}
+
 type oidcAuthCompleter interface {
 	CompleteAuthRequest(ctx context.Context, id, userID string) error
 	AssignAuthRequestUser(ctx context.Context, id, userID string) error
@@ -45,7 +50,7 @@ type MFADeps struct {
 	OIDC          oidcAuthCompleter
 	Clients       *store.OAuthClientStore
 	ConsentGrants *store.OAuthConsentGrantStore
-	TokenConfig   TokenConfig
+	TokenConfig   handlercommon.TokenConfig
 }
 
 // MFAHandler handles MFA endpoints.
@@ -58,7 +63,7 @@ type MFAHandler struct {
 	oidc          oidcAuthCompleter
 	clients       *store.OAuthClientStore
 	consentGrants *store.OAuthConsentGrantStore
-	tokenConfig   TokenConfig
+	tokenConfig   handlercommon.TokenConfig
 }
 
 const (

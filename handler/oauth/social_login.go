@@ -1,4 +1,4 @@
-package handler
+package oauthhandler
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -133,7 +134,7 @@ func (h *OAuthHandler) createSocialLoginUser(ctx context.Context, provider, prov
 
 // handleSocialCallback stores user info in a temporary code and redirects to the SPA.
 func (h *OAuthHandler) handleSocialCallback(c fiber.Ctx, user *model.User, provider string) error {
-	if isAccountLocked(c.Context(), h.cache, user.ID) {
+	if handlercommon.IsAccountLocked(c.Context(), h.cache, user.ID) {
 		return c.Redirect().To("/login?error=account_locked")
 	}
 
@@ -177,7 +178,7 @@ func (h *OAuthHandler) handleSocialLink(c fiber.Ctx, userID, provider, providerI
 		_ = h.users.Update(c.Context(), user)
 	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditSocialAccountLink,
 		Resource: "social_account",

@@ -1,8 +1,9 @@
-package handler
+package mfahandler
 
 import (
 	"encoding/json"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,11 +14,11 @@ import (
 func (h *MFAHandler) TOTPEnable(c fiber.Ctx) error {
 	userID, secret, err := h.loadPendingTOTPSecret(c)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 	backupCodes, err := h.persistTOTPEnable(c, userID, secret)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 	return c.JSON(fiber.Map{"message": "TOTP enabled", "backup_codes": backupCodes})
 }
@@ -28,14 +29,14 @@ func (h *MFAHandler) loadPendingTOTPSecret(c fiber.Ctx) (string, string, error) 
 		Code string `json:"code"`
 	}
 	if err := c.Bind().JSON(&req); err != nil || req.Code == "" {
-		return "", "", jsonError(fiber.StatusBadRequest, "code is required")
+		return "", "", handlercommon.JSONError(fiber.StatusBadRequest, "code is required")
 	}
 	secret, err := h.cache.Get(c.Context(), "totp_setup:"+userID)
 	if err != nil || secret == "" {
-		return "", "", jsonError(fiber.StatusBadRequest, "no pending TOTP setup, call /api/mfa/totp/setup first")
+		return "", "", handlercommon.JSONError(fiber.StatusBadRequest, "no pending TOTP setup, call /api/mfa/totp/setup first")
 	}
 	if !totp.Validate(req.Code, secret) {
-		return "", "", jsonError(fiber.StatusUnauthorized, "invalid TOTP code")
+		return "", "", handlercommon.JSONError(fiber.StatusUnauthorized, "invalid TOTP code")
 	}
 	return userID, secret, nil
 }
@@ -45,7 +46,7 @@ func (h *MFAHandler) persistTOTPEnable(c fiber.Ctx, userID, secret string) ([]st
 	hashedCodes := hashBackupCodes(backupCodes)
 	codesJSON, err := json.Marshal(hashedCodes)
 	if err != nil {
-		return nil, jsonError(fiber.StatusInternalServerError, "failed to encode backup codes")
+		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to encode backup codes")
 	}
 
 	cfg := &model.MFAConfig{
@@ -55,12 +56,12 @@ func (h *MFAHandler) persistTOTPEnable(c fiber.Ctx, userID, secret string) ([]st
 		BackupCodes: string(codesJSON),
 	}
 	if err := h.mfa.Upsert(c.Context(), cfg); err != nil {
-		return nil, jsonError(fiber.StatusInternalServerError, "failed to enable TOTP")
+		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to enable TOTP")
 	}
 
 	_ = h.cache.Del(c.Context(), "totp_setup:"+userID)
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	ip, ua := handlercommon.GetRealIPAndUA(c)
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFAEnable, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "success",
 	})
@@ -71,14 +72,14 @@ func (h *MFAHandler) persistTOTPEnable(c fiber.Ctx, userID, secret string) ([]st
 func (h *MFAHandler) TOTPDisable(c fiber.Ctx) error {
 	userID, err := h.verifyDisableTOTPRequest(c)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 	if err := h.mfa.Delete(c.Context(), userID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to disable TOTP"})
 	}
 
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	ip, ua := handlercommon.GetRealIPAndUA(c)
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFADisable, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "success",
 	})
@@ -92,15 +93,15 @@ func (h *MFAHandler) verifyDisableTOTPRequest(c fiber.Ctx) (string, error) {
 		Code     string `json:"code"`
 	}
 	if err := c.Bind().JSON(&req); err != nil {
-		return "", jsonError(fiber.StatusBadRequest, "invalid request body")
+		return "", handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
-	if isAccountLocked(c.Context(), h.cache, userID) {
-		return "", jsonError(fiber.StatusTooManyRequests, "too many attempts, try again later")
+	if handlercommon.IsAccountLocked(c.Context(), h.cache, userID) {
+		return "", handlercommon.JSONError(fiber.StatusTooManyRequests, "too many attempts, try again later")
 	}
 
 	user, err := h.users.GetByID(c.Context(), userID)
 	if err != nil {
-		return "", jsonError(fiber.StatusNotFound, "user not found")
+		return "", handlercommon.JSONError(fiber.StatusNotFound, "user not found")
 	}
 	if user.PasswordHash == "" {
 		return userID, h.verifySocialUserTOTPDisable(c, userID, req.Code)
@@ -110,26 +111,26 @@ func (h *MFAHandler) verifyDisableTOTPRequest(c fiber.Ctx) (string, error) {
 
 func (h *MFAHandler) verifySocialUserTOTPDisable(c fiber.Ctx, userID, code string) error {
 	if code == "" {
-		return jsonError(fiber.StatusBadRequest, "totp code is required")
+		return handlercommon.JSONError(fiber.StatusBadRequest, "totp code is required")
 	}
 	cfg, err := h.mfa.GetByUserID(c.Context(), userID)
 	if err != nil || !cfg.TOTPEnabled {
-		return jsonError(fiber.StatusBadRequest, "TOTP not enabled")
+		return handlercommon.JSONError(fiber.StatusBadRequest, "TOTP not enabled")
 	}
 	if !totp.Validate(code, cfg.TOTPSecret) {
-		recordFailedAuthAttempt(c.Context(), h.cache, userID)
-		return jsonError(fiber.StatusUnauthorized, "invalid TOTP code")
+		handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, userID)
+		return handlercommon.JSONError(fiber.StatusUnauthorized, "invalid TOTP code")
 	}
 	return nil
 }
 
 func (h *MFAHandler) verifyLocalUserTOTPDisable(c fiber.Ctx, userID string, user *model.User, password string) error {
 	if password == "" {
-		return jsonError(fiber.StatusBadRequest, "password is required")
+		return handlercommon.JSONError(fiber.StatusBadRequest, "password is required")
 	}
 	if !user.CheckPassword(password) {
-		recordFailedAuthAttempt(c.Context(), h.cache, userID)
-		return jsonError(fiber.StatusUnauthorized, "invalid password")
+		handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, userID)
+		return handlercommon.JSONError(fiber.StatusUnauthorized, "invalid password")
 	}
 	return nil
 }
@@ -138,16 +139,16 @@ func (h *MFAHandler) verifyLocalUserTOTPDisable(c fiber.Ctx, userID string, user
 func (h *MFAHandler) RegenerateBackupCodes(c fiber.Ctx) error {
 	userID, cfg, err := h.verifyBackupCodeRegeneration(c)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	backupCodes, err := h.replaceBackupCodes(c, cfg)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	ip, ua := handlercommon.GetRealIPAndUA(c)
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFABackupRegenerate, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "success",
 	})
@@ -161,19 +162,19 @@ func (h *MFAHandler) verifyBackupCodeRegeneration(c fiber.Ctx) (string, *model.M
 		Code     string `json:"code"`
 	}
 	if err := c.Bind().JSON(&req); err != nil {
-		return "", nil, jsonError(fiber.StatusBadRequest, "invalid request body")
+		return "", nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
-	if isAccountLocked(c.Context(), h.cache, userID) {
-		return "", nil, jsonError(fiber.StatusTooManyRequests, "too many attempts, try again later")
+	if handlercommon.IsAccountLocked(c.Context(), h.cache, userID) {
+		return "", nil, handlercommon.JSONError(fiber.StatusTooManyRequests, "too many attempts, try again later")
 	}
 
 	user, err := h.users.GetByID(c.Context(), userID)
 	if err != nil {
-		return "", nil, jsonError(fiber.StatusNotFound, "user not found")
+		return "", nil, handlercommon.JSONError(fiber.StatusNotFound, "user not found")
 	}
 	cfg, err := h.mfa.GetByUserID(c.Context(), userID)
 	if err != nil || !cfg.TOTPEnabled {
-		return "", nil, jsonError(fiber.StatusBadRequest, "TOTP not enabled")
+		return "", nil, handlercommon.JSONError(fiber.StatusBadRequest, "TOTP not enabled")
 	}
 
 	if user.PasswordHash == "" {
@@ -193,11 +194,11 @@ func (h *MFAHandler) replaceBackupCodes(c fiber.Ctx, cfg *model.MFAConfig) ([]st
 	hashedCodes := hashBackupCodes(backupCodes)
 	codesJSON, err := json.Marshal(hashedCodes)
 	if err != nil {
-		return nil, jsonError(fiber.StatusInternalServerError, "failed to encode backup codes")
+		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to encode backup codes")
 	}
 	cfg.BackupCodes = string(codesJSON)
 	if err := h.mfa.Upsert(c.Context(), cfg); err != nil {
-		return nil, jsonError(fiber.StatusInternalServerError, "failed to regenerate backup codes")
+		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to regenerate backup codes")
 	}
 	return backupCodes, nil
 }

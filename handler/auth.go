@@ -30,6 +30,10 @@ type authRefreshTokenStore interface {
 	GetUsedFamily(ctx context.Context, hash string) (string, error)
 }
 
+type emailVerificationSender interface {
+	SendVerificationEmail(c fiber.Ctx, user *model.User, baseURL string) error
+}
+
 // AuthDeps aggregates dependencies required by AuthHandler.
 type AuthDeps struct {
 	Users         authUserStore
@@ -41,7 +45,7 @@ type AuthDeps struct {
 	Audit         *store.AuditLogStore
 	Cache         store.Cache
 	Settings      settingReader
-	EmailHandler  *EmailHandler
+	EmailHandler  emailVerificationSender
 	TokenConfig   TokenConfig
 }
 
@@ -56,7 +60,7 @@ type AuthHandler struct {
 	audit         *store.AuditLogStore
 	cache         store.Cache
 	settings      settingReader
-	emailHandler  *EmailHandler
+	emailHandler  emailVerificationSender
 	tokenConfig   TokenConfig
 }
 
@@ -90,7 +94,7 @@ func NewAuthHandler(deps AuthDeps) *AuthHandler {
 }
 
 // SetEmailHandler sets the email handler (used to break init cycle in router).
-func (h *AuthHandler) SetEmailHandler(eh *EmailHandler) {
+func (h *AuthHandler) SetEmailHandler(eh emailVerificationSender) {
 	h.emailHandler = eh
 }
 

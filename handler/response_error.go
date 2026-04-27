@@ -32,3 +32,11 @@ func finishHandlerError(c fiber.Ctx, err error) error {
 	}
 	return err
 }
+
+func JSONError(status int, msg string) error {
+	return jsonError(status, msg)
+}
+
+func FinishHandlerError(c fiber.Ctx, err error) error {
+	return finishHandlerError(c, err)
+}

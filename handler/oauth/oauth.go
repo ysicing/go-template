@@ -1,9 +1,10 @@
-package handler
+package oauthhandler
 
 import (
 	"context"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -35,6 +36,14 @@ type oauthSettingStore interface {
 	GetBool(key string, defaultVal bool) bool
 }
 
+type refreshTokenCreator interface {
+	Create(ctx context.Context, rt *model.APIRefreshToken) error
+}
+
+type mfaReader interface {
+	GetByUserID(ctx context.Context, userID string) (*model.MFAConfig, error)
+}
+
 // OAuthDeps aggregates dependencies required by OAuthHandler.
 type OAuthDeps struct {
 	Users          oauthUserStore
@@ -47,7 +56,7 @@ type OAuthDeps struct {
 	Cache          store.Cache
 	Settings       oauthSettingStore
 	WebAuthnCreds  oauthWebAuthnCredStore
-	TokenConfig    TokenConfig
+	TokenConfig    handlercommon.TokenConfig
 }
 
 // OAuthHandler handles social login flows using database-managed provider configs.
@@ -62,7 +71,7 @@ type OAuthHandler struct {
 	settings       oauthSettingStore
 	webAuthnCreds  oauthWebAuthnCredStore
 	webAuthn       oauthWebAuthnManager
-	tokenConfig    TokenConfig
+	tokenConfig    handlercommon.TokenConfig
 }
 
 // NewOAuthHandler creates an OAuthHandler with database-backed social providers.
@@ -103,7 +112,7 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		}
 	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     user.ID,
 		Action:     model.AuditLogin,
 		Resource:   "user",
@@ -115,7 +124,7 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		},
 	})
 
-	ip, ua := GetRealIPAndUA(c)
+	ip, ua := handlercommon.GetRealIPAndUA(c)
 	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         ip,
@@ -126,9 +135,9 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 	// Set tokens in cookies for web clients
-	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
 	return c.JSON(fiber.Map{
-		"user": NewUserResponse(user),
+		"user": handlercommon.NewUserResponse(user),
 	})
 }

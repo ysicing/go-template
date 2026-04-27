@@ -1,4 +1,4 @@
-package handler
+package emailhandler
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -284,14 +285,14 @@ func TestRegister_WithEmailVerification_SendQueuedWhenSMTPMissing(t *testing.T) 
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := NewAuthHandler(AuthDeps{
+	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: TokenConfig{
+		TokenConfig: handlercommon.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -374,13 +375,13 @@ func TestAuthSetupPassword_ConsumesSetupToken(t *testing.T) {
 		t.Fatalf("issue setup token: %v", err)
 	}
 
-	authH := NewAuthHandler(AuthDeps{
+	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
-		TokenConfig: TokenConfig{
+		TokenConfig: handlercommon.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -439,14 +440,14 @@ func TestRegister_WithInviteCode_BindsInviterAndInviteIP(t *testing.T) {
 	}
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := NewAuthHandler(AuthDeps{
+	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: TokenConfig{
+		TokenConfig: handlercommon.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -510,14 +511,14 @@ func TestRegister_WithInvalidInviteCode_ReturnsBadRequest(t *testing.T) {
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := NewAuthHandler(AuthDeps{
+	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: TokenConfig{
+		TokenConfig: handlercommon.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -571,14 +572,14 @@ func TestRegister_WithoutInviteCode_StillSucceeds(t *testing.T) {
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := NewAuthHandler(AuthDeps{
+	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: TokenConfig{
+		TokenConfig: handlercommon.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -634,13 +635,13 @@ func TestRegister_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
 	// Explicitly disable password policy for this test.
 	_ = settings.Set(context.Background(), store.SettingPasswordPolicyEnabled, "false")
 
-	authH := NewAuthHandler(AuthDeps{
+	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
-		TokenConfig: TokenConfig{
+		TokenConfig: handlercommon.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -864,7 +865,7 @@ func TestEmailVerifiedMiddleware_Enabled(t *testing.T) {
 	user := createTestUser(t, users, "unverified@example.com", false)
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
-	mw := EmailVerifiedMiddleware(users, settings, cache)
+	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
@@ -892,7 +893,7 @@ func TestEmailVerifiedMiddleware_Disabled(t *testing.T) {
 	user := createTestUser(t, users, "unverified@example.com", false)
 	// email_verification_enabled defaults to false
 
-	mw := EmailVerifiedMiddleware(users, settings, cache)
+	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
@@ -920,7 +921,7 @@ func TestEmailVerifiedMiddleware_CachesVerifiedUser(t *testing.T) {
 
 	user := createTestUser(t, users, "verified@example.com", true)
 
-	mw := EmailVerifiedMiddleware(users, settings, cache)
+	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
@@ -960,7 +961,7 @@ func TestEmailVerifiedMiddleware_UserLookupError(t *testing.T) {
 	settings := store.NewSettingStore(db, cache)
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
-	mw := EmailVerifiedMiddleware(users, settings, cache)
+	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", "missing-user-id")

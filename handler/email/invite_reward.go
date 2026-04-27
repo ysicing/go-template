@@ -1,4 +1,4 @@
-package handler
+package emailhandler
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"strconv"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
@@ -30,7 +31,7 @@ func (h *EmailHandler) handleInviteReward(ctx context.Context, invitee *model.Us
 		return
 	}
 
-	_ = writeAudit(ctx, h.audit, &model.AuditLog{
+	_ = handlercommon.WriteAudit(ctx, h.audit, &model.AuditLog{
 		UserID:     invitee.InvitedByUserID,
 		Action:     model.AuditInviteRewardGranted,
 		Resource:   "user",
@@ -51,7 +52,7 @@ func (h *EmailHandler) sameInviteIP(invitee *model.User, requestIP string) bool 
 }
 
 func (h *EmailHandler) writeInviteRewardSkippedAudit(ctx context.Context, invitee *model.User, requestIP, userAgent string) {
-	_ = writeAudit(ctx, h.audit, &model.AuditLog{
+	_ = handlercommon.WriteAudit(ctx, h.audit, &model.AuditLog{
 		UserID:     invitee.InvitedByUserID,
 		Action:     model.AuditInviteRewardSkipped,
 		Resource:   "user",
