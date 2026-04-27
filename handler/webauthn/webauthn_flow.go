@@ -8,7 +8,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
-	"github.com/ysicing/go-template/internal/service"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/go-webauthn/webauthn/protocol"
@@ -73,7 +73,7 @@ func (h *WebAuthnHandler) saveSessionData(ctx context.Context, key string, sessi
 
 func (h *WebAuthnHandler) issueBrowserSession(c fiber.Ctx, user *model.User, refreshTTL time.Duration) error {
 	ip, ua := handlercommon.GetRealIPAndUA(c)
-	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         ip,
 		UserAgent:  ua,

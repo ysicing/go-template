@@ -3,7 +3,7 @@ package handler
 import (
 	"time"
 
-	"github.com/ysicing/go-template/internal/service"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 )
 
 // TokenConfig aggregates JWT token configuration parameters.
@@ -16,6 +16,6 @@ type TokenConfig struct {
 }
 
 // ToServiceConfig converts to the equivalent service-layer config.
-func (tc TokenConfig) ToServiceConfig() service.TokenConfig {
-	return service.TokenConfig(tc)
+func (tc TokenConfig) ToServiceConfig() sessionservice.TokenConfig {
+	return sessionservice.TokenConfig(tc)
 }

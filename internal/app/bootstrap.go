@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"errors"
 
-	"github.com/ysicing/go-template/internal/service"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
+	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	oidcstore "github.com/ysicing/go-template/store/oidc"
@@ -85,11 +87,11 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 	}
 	deps.CheckInStore = pointstore.NewCheckInStore(db, deps.PointStore)
 	deps.Services = Services{
-		ClientCredentials: service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
+		ClientCredentials: clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
 			Clients: deps.ClientStore,
 			Audit:   deps.AuditLogStore,
 		}),
-		Sessions: service.NewSessionService(deps.RefreshTokenStore, service.TokenConfig{
+		Sessions: sessionservice.NewSessionService(deps.RefreshTokenStore, sessionservice.TokenConfig{
 			Secret:        cfg.JWT.Secret,
 			Issuer:        cfg.JWT.Issuer,
 			AccessTTL:     cfg.JWT.AccessTokenTTL,
@@ -97,7 +99,7 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 			RememberMeTTL: cfg.JWT.RememberMeTTL,
 		}),
 	}
-	deps.Services.Auth = service.NewAuthService(service.AuthServiceDeps{
+	deps.Services.Auth = authservice.NewAuthService(authservice.AuthServiceDeps{
 		Users: deps.UserStore,
 		Cache: cache,
 	})

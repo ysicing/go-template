@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ysicing/go-template/internal/service"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -56,18 +57,18 @@ func parseLoginRequest(c fiber.Ctx) (*loginRequest, error) {
 }
 
 func (h *AuthHandler) loginUser(c fiber.Ctx, req *loginRequest) (*model.User, error) {
-	user, err := h.authService.Login(c.Context(), service.LoginInput{
+	user, err := h.authService.Login(c.Context(), authservice.LoginInput{
 		Identity: req.Username,
 		Password: req.Password,
 	})
-	if errors.Is(err, service.ErrAccountLocked) {
+	if errors.Is(err, authservice.ErrAccountLocked) {
 		if user != nil {
 			h.recordAudit(c, user.ID, model.AuditLoginFailed, "user", user.ID, "failure", "account locked")
 		}
 		RecordAuthAttempt("login", "failure")
 		return nil, jsonError(fiber.StatusTooManyRequests, "account temporarily locked, try again later")
 	}
-	if errors.Is(err, service.ErrInvalidCredentials) {
+	if errors.Is(err, authservice.ErrInvalidCredentials) {
 		RecordAuthAttempt("login", "failure")
 		return nil, jsonError(fiber.StatusUnauthorized, "invalid credentials")
 	}
@@ -169,7 +170,7 @@ func (h *AuthHandler) refreshTTLForToken(c fiber.Ctx, tokenHash string) time.Dur
 }
 
 func (h *AuthHandler) finishRefresh(c fiber.Ctx, user *model.User, family, oldTokenHash string, refreshTTL time.Duration) error {
-	issuedSession, err := h.sessions.RotateBrowserSession(c.Context(), service.SessionRequest{
+	issuedSession, err := h.sessions.RotateBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         GetRealIP(c),
 		UserAgent:  c.Get("User-Agent"),
@@ -190,8 +191,8 @@ func (h *AuthHandler) finishRefresh(c fiber.Ctx, user *model.User, family, oldTo
 	return c.JSON(fiber.Map{"message": "tokens refreshed"})
 }
 
-func browserSessionRequest(c fiber.Ctx, user *model.User, refreshTTL time.Duration) service.SessionRequest {
-	return service.SessionRequest{
+func browserSessionRequest(c fiber.Ctx, user *model.User, refreshTTL time.Duration) sessionservice.SessionRequest {
+	return sessionservice.SessionRequest{
 		User:       user,
 		IP:         GetRealIP(c),
 		UserAgent:  c.Get("User-Agent"),

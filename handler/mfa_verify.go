@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ysicing/go-template/internal/service"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -141,7 +141,7 @@ func (h *MFAHandler) finishBrowserMFAVerify(c fiber.Ctx, userID string, refreshT
 		IP: ip, UserAgent: ua, Status: "success", Detail: "local",
 	})
 
-	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         ip,
 		UserAgent:  ua,

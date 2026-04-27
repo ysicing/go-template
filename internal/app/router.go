@@ -6,7 +6,9 @@ import (
 	"github.com/ysicing/go-template/handler"
 	pointshandler "github.com/ysicing/go-template/handler/points"
 	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
-	"github.com/ysicing/go-template/internal/service"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
+	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/store"
 	oidcstore "github.com/ysicing/go-template/store/oidc"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -18,9 +20,9 @@ import (
 
 // Services groups application-level services shared across handlers.
 type Services struct {
-	ClientCredentials *service.ClientCredentialsService
-	Sessions          *service.SessionService
-	Auth              *service.AuthService
+	ClientCredentials *clientcredentialsservice.ClientCredentialsService
+	Sessions          *sessionservice.SessionService
+	Auth              *authservice.AuthService
 }
 
 // Deps aggregates all dependencies needed by the route setup.

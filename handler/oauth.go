@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ysicing/go-template/internal/service"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -42,7 +42,7 @@ type OAuthDeps struct {
 	SocialAccounts oauthSocialAccountStore
 	Audit          *store.AuditLogStore
 	RefreshTokens  refreshTokenCreator
-	Sessions       *service.SessionService
+	Sessions       *sessionservice.SessionService
 	MFA            mfaReader
 	Cache          store.Cache
 	Settings       oauthSettingStore
@@ -56,7 +56,7 @@ type OAuthHandler struct {
 	providers      oauthProviderStore
 	socialAccounts oauthSocialAccountStore
 	audit          *store.AuditLogStore
-	sessions       *service.SessionService
+	sessions       *sessionservice.SessionService
 	mfa            mfaReader
 	cache          store.Cache
 	settings       oauthSettingStore
@@ -69,7 +69,7 @@ type OAuthHandler struct {
 func NewOAuthHandler(deps OAuthDeps) *OAuthHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = service.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
 	}
 
 	return &OAuthHandler{
@@ -116,7 +116,7 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 	})
 
 	ip, ua := GetRealIPAndUA(c)
-	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), service.SessionRequest{
+	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         ip,
 		UserAgent:  ua,

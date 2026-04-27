@@ -5,7 +5,8 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/ysicing/go-template/internal/service"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -34,8 +35,8 @@ type AuthDeps struct {
 	Users         authUserStore
 	WebAuthnCreds *webauthnstore.WebAuthnStore
 	RefreshTokens authRefreshTokenStore
-	Sessions      *service.SessionService
-	AuthService   *service.AuthService
+	Sessions      *sessionservice.SessionService
+	AuthService   *authservice.AuthService
 	MFA           mfaReader
 	Audit         *store.AuditLogStore
 	Cache         store.Cache
@@ -49,8 +50,8 @@ type AuthHandler struct {
 	users         authUserStore
 	webauthnCreds *webauthnstore.WebAuthnStore
 	refreshTokens authRefreshTokenStore
-	sessions      *service.SessionService
-	authService   *service.AuthService
+	sessions      *sessionservice.SessionService
+	authService   *authservice.AuthService
 	mfa           mfaReader
 	audit         *store.AuditLogStore
 	cache         store.Cache
@@ -63,11 +64,11 @@ type AuthHandler struct {
 func NewAuthHandler(deps AuthDeps) *AuthHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = service.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
 	}
 	authService := deps.AuthService
 	if authService == nil {
-		authService = service.NewAuthService(service.AuthServiceDeps{
+		authService = authservice.NewAuthService(authservice.AuthServiceDeps{
 			Users: deps.Users,
 			Cache: deps.Cache,
 		})

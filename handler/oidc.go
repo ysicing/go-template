@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ysicing/go-template/internal/service"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
@@ -23,7 +23,7 @@ type OIDCLoginHandler struct {
 	mfa     *store.MFAStore
 	audit   *store.AuditLogStore
 	cache   store.Cache
-	auth    *service.AuthService
+	auth    *authservice.AuthService
 }
 
 // NewOIDCLoginHandler creates an OIDCLoginHandler.
@@ -35,7 +35,7 @@ func NewOIDCLoginHandler(storage *oidcstore.OIDCStorage, clients *store.OAuthCli
 		mfa:     mfa,
 		audit:   audit,
 		cache:   cache,
-		auth: service.NewAuthService(service.AuthServiceDeps{
+		auth: authservice.NewAuthService(authservice.AuthServiceDeps{
 			Users: users,
 			Cache: cache,
 		}),
@@ -68,11 +68,11 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 			JSON(fiber.Map{"error": "missing auth request id"})
 	}
 
-	user, err := h.auth.LoginForAudit(c.Context(), service.LoginInput{
+	user, err := h.auth.LoginForAudit(c.Context(), authservice.LoginInput{
 		Identity: req.Username,
 		Password: req.Password,
 	})
-	if errors.Is(err, service.ErrAccountLocked) {
+	if errors.Is(err, authservice.ErrAccountLocked) {
 		_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
 			UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,
 			IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: "oidc: account locked",
@@ -80,7 +80,7 @@ func (h *OIDCLoginHandler) LoginSubmit(c fiber.Ctx) error {
 		return c.Status(fiber.StatusTooManyRequests).
 			JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
-	if errors.Is(err, service.ErrInvalidCredentials) {
+	if errors.Is(err, authservice.ErrInvalidCredentials) {
 		if user != nil {
 			_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
 				UserID: user.ID, Action: model.AuditLoginFailed, Resource: "user", ResourceID: user.ID,

@@ -6,17 +6,17 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/ysicing/go-template/internal/service"
+	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type ClientCredentialsHandler struct {
-	service  *service.ClientCredentialsService
+	service  *clientcredentialsservice.ClientCredentialsService
 	fallback http.Handler
 }
 
-func NewClientCredentialsHandler(service *service.ClientCredentialsService, fallback http.Handler) *ClientCredentialsHandler {
+func NewClientCredentialsHandler(service *clientcredentialsservice.ClientCredentialsService, fallback http.Handler) *ClientCredentialsHandler {
 	return &ClientCredentialsHandler{service: service, fallback: fallback}
 }
 
@@ -26,7 +26,7 @@ func (h *ClientCredentialsHandler) Token(c fiber.Ctx) error {
 	}
 
 	clientID, clientSecret := extractOAuthClientCredentials(c)
-	resp, err := h.service.Exchange(c.Context(), service.ClientCredentialsExchangeInput{
+	resp, err := h.service.Exchange(c.Context(), clientcredentialsservice.ClientCredentialsExchangeInput{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		GrantType:    "client_credentials",
@@ -34,12 +34,12 @@ func (h *ClientCredentialsHandler) Token(c fiber.Ctx) error {
 	})
 	if err != nil {
 		switch err {
-		case service.ErrClientCredentialsInvalidClient:
+		case clientcredentialsservice.ErrClientCredentialsInvalidClient:
 			c.Set("WWW-Authenticate", `Basic realm="oauth"`)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid_client"})
-		case service.ErrClientCredentialsUnauthorizedClient:
+		case clientcredentialsservice.ErrClientCredentialsUnauthorizedClient:
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "unauthorized_client"})
-		case service.ErrClientCredentialsInvalidScope:
+		case clientcredentialsservice.ErrClientCredentialsInvalidScope:
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid_scope"})
 		default:
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "server_error"})
@@ -51,13 +51,13 @@ func (h *ClientCredentialsHandler) Token(c fiber.Ctx) error {
 
 func (h *ClientCredentialsHandler) Introspect(c fiber.Ctx) error {
 	clientID, clientSecret := extractOAuthClientCredentials(c)
-	resp, handled, err := h.service.Introspect(c.Context(), service.ClientCredentialsIntrospectionInput{
+	resp, handled, err := h.service.Introspect(c.Context(), clientcredentialsservice.ClientCredentialsIntrospectionInput{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Token:        strings.TrimSpace(c.FormValue("token")),
 	})
 	if err != nil {
-		if err == service.ErrClientCredentialsInvalidClient {
+		if err == clientcredentialsservice.ErrClientCredentialsInvalidClient {
 			c.Set("WWW-Authenticate", `Basic realm="oauth"`)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid_client"})
 		}
@@ -71,13 +71,13 @@ func (h *ClientCredentialsHandler) Introspect(c fiber.Ctx) error {
 
 func (h *ClientCredentialsHandler) Revoke(c fiber.Ctx) error {
 	clientID, clientSecret := extractOAuthClientCredentials(c)
-	handled, err := h.service.Revoke(c.Context(), service.ClientCredentialsRevokeInput{
+	handled, err := h.service.Revoke(c.Context(), clientcredentialsservice.ClientCredentialsRevokeInput{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Token:        strings.TrimSpace(c.FormValue("token")),
 	})
 	if err != nil {
-		if err == service.ErrClientCredentialsInvalidClient {
+		if err == clientcredentialsservice.ErrClientCredentialsInvalidClient {
 			c.Set("WWW-Authenticate", `Basic realm="oauth"`)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid_client"})
 		}

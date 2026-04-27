@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ysicing/go-template/internal/service"
+	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -44,7 +44,7 @@ func TestClientCredentialsHandlerTokenHandlesClientCredentialsGrant(t *testing.T
 
 	fallbackCalled := false
 	h := NewClientCredentialsHandler(
-		service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
+		clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
 			Clients: clients,
 			Audit:   audit,
 		}),
@@ -101,7 +101,7 @@ func TestClientCredentialsHandlerTokenDelegatesOtherGrantTypes(t *testing.T) {
 
 	fallbackCalled := false
 	h := NewClientCredentialsHandler(
-		service.NewClientCredentialsService(service.ClientCredentialsServiceDeps{
+		clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
 			Clients: store.NewOAuthClientStore(db),
 			Audit:   store.NewAuditLogStore(db),
 		}),

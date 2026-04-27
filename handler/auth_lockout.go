@@ -3,20 +3,20 @@ package handler
 import (
 	"context"
 
-	"github.com/ysicing/go-template/internal/service"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/store"
 )
 
 func isAccountLocked(ctx context.Context, cache store.Cache, userID string) bool {
-	return service.IsAccountLocked(ctx, cache, userID)
+	return authservice.IsAccountLocked(ctx, cache, userID)
 }
 
 func recordFailedAuthAttempt(ctx context.Context, cache store.Cache, userID string) {
-	service.RecordFailedAuthAttempt(ctx, cache, userID)
+	authservice.RecordFailedAuthAttempt(ctx, cache, userID)
 }
 
 func clearFailedAuthAttempts(ctx context.Context, cache store.Cache, userID string) {
-	service.ClearFailedAuthAttempts(ctx, cache, userID)
+	authservice.ClearFailedAuthAttempts(ctx, cache, userID)
 }
 
 func IsAccountLocked(ctx context.Context, cache store.Cache, userID string) bool {

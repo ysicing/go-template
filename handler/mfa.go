@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ysicing/go-template/internal/service"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -40,7 +40,7 @@ type MFADeps struct {
 	MFA           mfaStore
 	Audit         *store.AuditLogStore
 	RefreshTokens refreshTokenCreator
-	Sessions      *service.SessionService
+	Sessions      *sessionservice.SessionService
 	Cache         store.Cache
 	OIDC          oidcAuthCompleter
 	Clients       *store.OAuthClientStore
@@ -53,7 +53,7 @@ type MFAHandler struct {
 	users         mfaUserStore
 	mfa           mfaStore
 	audit         *store.AuditLogStore
-	sessions      *service.SessionService
+	sessions      *sessionservice.SessionService
 	cache         store.Cache
 	oidc          oidcAuthCompleter
 	clients       *store.OAuthClientStore
@@ -70,7 +70,7 @@ const (
 func NewMFAHandler(deps MFADeps) *MFAHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = service.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
 	}
 
 	return &MFAHandler{
