@@ -4,10 +4,14 @@ import (
 	"net/http"
 
 	"github.com/ysicing/go-template/handler"
+	clientcredentialshandler "github.com/ysicing/go-template/handler/clientcredentials"
 	emailhandler "github.com/ysicing/go-template/handler/email"
+	githubcompathandler "github.com/ysicing/go-template/handler/githubcompat"
 	mfahandler "github.com/ysicing/go-template/handler/mfa"
 	oauthhandler "github.com/ysicing/go-template/handler/oauth"
+	oauthclienthandler "github.com/ysicing/go-template/handler/oauthclient"
 	pointshandler "github.com/ysicing/go-template/handler/points"
+	socialaccounthandler "github.com/ysicing/go-template/handler/socialaccount"
 	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
@@ -60,15 +64,15 @@ type builtHandlers struct {
 	webauthn          *webauthnhandler.WebAuthnHandler
 	oauth             *oauthhandler.OAuthHandler
 	oidcLogin         *handler.OIDCLoginHandler
-	socialAcct        *handler.SocialAccountHandler
-	oauthClient       *handler.OAuthClientHandler
+	socialAcct        *socialaccounthandler.SocialAccountHandler
+	oauthClient       *oauthclienthandler.OAuthClientHandler
 	admin             *handler.AdminHandler
 	adminProv         *handler.AdminProviderHandler
 	adminSett         *handler.AdminSettingHandler
 	adminPoints       *handler.AdminPointsHandler
 	points            *pointshandler.PointsHandler
-	ghCompat          *handler.GitHubCompatHandler
-	clientCredentials *handler.ClientCredentialsHandler
+	ghCompat          *githubcompathandler.GitHubCompatHandler
+	clientCredentials *clientcredentialshandler.ClientCredentialsHandler
 }
 
 func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
@@ -149,11 +153,11 @@ func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig)
 	})
 
 	h.oidcLogin = handler.NewOIDCLoginHandler(d.OIDCStorage, d.ClientStore, d.OAuthConsentGrantStore, d.UserStore, d.MFAStore, d.AuditLogStore, d.Cache)
-	h.socialAcct = handler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
-	h.oauthClient = handler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
+	h.socialAcct = socialaccounthandler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
+	h.oauthClient = oauthclienthandler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
 	h.points = pointshandler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
-	h.ghCompat = handler.NewGitHubCompatHandler(d.OIDCHandler, d.OIDCStorage)
-	h.clientCredentials = handler.NewClientCredentialsHandler(d.Services.ClientCredentials, d.OIDCHandler)
+	h.ghCompat = githubcompathandler.NewGitHubCompatHandler(d.OIDCHandler, d.OIDCStorage)
+	h.clientCredentials = clientcredentialshandler.NewClientCredentialsHandler(d.Services.ClientCredentials, d.OIDCHandler)
 }
 
 func buildAdminHandlers(h *builtHandlers, d *Deps) {

@@ -1,8 +1,9 @@
-package handler
+package socialaccounthandler
 
 import (
 	"context"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -124,7 +125,7 @@ func (h *SocialAccountHandler) UnlinkSocialAccount(c fiber.Ctx) error {
 	}
 
 	// Audit log
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     userID,
 		Action:     model.AuditSocialAccountUnlink,
 		Resource:   "social_account",

@@ -1,4 +1,4 @@
-package handler
+package oauthclienthandler
 
 import (
 	"crypto/rand"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -134,7 +135,7 @@ func (h *OAuthClientHandler) Create(c fiber.Ctx) error {
 	}
 
 	adminID, _ := c.Locals("user_id").(string)
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     adminID,
 		Action:     model.AuditAppCreate,
 		Resource:   "oauth_client",
@@ -155,7 +156,7 @@ func (h *OAuthClientHandler) Create(c fiber.Ctx) error {
 
 // List handles GET /api/admin/clients.
 func (h *OAuthClientHandler) List(c fiber.Ctx) error {
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 
 	clients, total, err := h.clients.List(c.Context(), page, pageSize)
 	if err != nil {
@@ -231,7 +232,7 @@ func (h *OAuthClientHandler) Update(c fiber.Ctx) error {
 	}
 
 	adminID, _ := c.Locals("user_id").(string)
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     adminID,
 		Action:     model.AuditAppUpdate,
 		Resource:   "oauth_client",
@@ -259,7 +260,7 @@ func (h *OAuthClientHandler) Delete(c fiber.Ctx) error {
 	}
 
 	adminID, _ := c.Locals("user_id").(string)
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     adminID,
 		Action:     model.AuditAppDelete,
 		Resource:   "oauth_client",

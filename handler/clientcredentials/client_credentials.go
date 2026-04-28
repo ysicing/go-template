@@ -1,4 +1,4 @@
-package handler
+package clientcredentialshandler
 
 import (
 	"encoding/base64"

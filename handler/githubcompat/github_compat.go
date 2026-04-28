@@ -1,4 +1,4 @@
-package handler
+package githubcompathandler
 
 import (
 	"crypto/sha256"
