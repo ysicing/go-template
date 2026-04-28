@@ -1,4 +1,4 @@
-package handler
+package adminhandler
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -148,7 +149,7 @@ func (h *AdminSettingHandler) TestEmail(c fiber.Ctx) error {
 	}
 
 	settingUserID, _ := c.Locals("user_id").(string)
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:   settingUserID,
 		Action:   model.AuditSettingUpdate,
 		Resource: "setting_email_test",
@@ -231,7 +232,7 @@ func (h *AdminSettingHandler) Update(c fiber.Ctx) error {
 	}
 
 	settingUserID, _ := c.Locals("user_id").(string)
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:   settingUserID,
 		Action:   model.AuditSettingUpdate,
 		Resource: "setting",

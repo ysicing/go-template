@@ -1,8 +1,9 @@
-package handler
+package adminhandler
 
 import (
 	"errors"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -75,9 +76,9 @@ func (h *AdminProviderHandler) Create(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create provider"})
 	}
 	adminID, _ := c.Locals("user_id").(string)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: adminID, Action: model.AuditProviderCreate, Resource: "social_provider", ResourceID: provider.ID,
-		IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "success", Detail: provider.Name,
+		IP: handlercommon.GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "success", Detail: provider.Name,
 	})
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"provider": provider})
 }
@@ -118,9 +119,9 @@ func (h *AdminProviderHandler) Update(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update provider"})
 	}
 	adminID, _ := c.Locals("user_id").(string)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: adminID, Action: model.AuditProviderUpdate, Resource: "social_provider", ResourceID: provider.ID,
-		IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "success", Detail: provider.Name,
+		IP: handlercommon.GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "success", Detail: provider.Name,
 	})
 	return c.JSON(fiber.Map{"provider": provider})
 }
@@ -131,9 +132,9 @@ func (h *AdminProviderHandler) Delete(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete provider"})
 	}
 	adminID, _ := c.Locals("user_id").(string)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: adminID, Action: model.AuditProviderDelete, Resource: "social_provider", ResourceID: id,
-		IP: GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "success",
+		IP: handlercommon.GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "success",
 	})
 	return c.JSON(fiber.Map{"message": "provider deleted"})
 }

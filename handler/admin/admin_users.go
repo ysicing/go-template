@@ -1,10 +1,11 @@
-package handler
+package adminhandler
 
 import (
 	"slices"
 	"strings"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -21,7 +22,7 @@ type createAdminUserRequest struct {
 func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 	req, err := parseCreateAdminUserRequest(c)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	user := newAdminCreatedUser(req)
@@ -35,11 +36,11 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 	h.auditAdminUserMutation(c, model.AuditUserCreate, user.ID)
 	setupToken, expiresAt, err := h.issuePasswordSetupToken(c, user.ID)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"user":                      NewUserResponse(user),
+		"user":                      handlercommon.NewUserResponse(user),
 		"password_setup_token":      setupToken,
 		"password_setup_expires_at": expiresAt,
 	})
@@ -48,18 +49,18 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 func parseCreateAdminUserRequest(c fiber.Ctx) (*createAdminUserRequest, error) {
 	var req createAdminUserRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return nil, jsonError(fiber.StatusBadRequest, "invalid request body")
+		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	req.Email = strings.TrimSpace(req.Email)
 	if req.Username == "" || req.Email == "" {
-		return nil, jsonError(fiber.StatusBadRequest, "username and email are required")
+		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "username and email are required")
 	}
 	if len(req.Username) < 3 || len(req.Username) > 32 {
-		return nil, jsonError(fiber.StatusBadRequest, "username must be 3-32 characters")
+		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "username must be 3-32 characters")
 	}
-	if !isValidEmail(req.Email) {
-		return nil, jsonError(fiber.StatusBadRequest, "invalid email format")
+	if !handlercommon.IsValidEmail(req.Email) {
+		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid email format")
 	}
 	return &req, nil
 }
@@ -82,14 +83,14 @@ func (h *AdminHandler) issuePasswordSetupToken(c fiber.Ctx, userID string) (stri
 	setupToken := store.GenerateRandomToken()
 	expiresAt := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
 	if err := store.NewEphemeralTokenStore(h.cache).IssueString(c.Context(), "password_setup", "user", setupToken, userID, 24*time.Hour); err != nil {
-		return "", "", jsonError(fiber.StatusInternalServerError, "failed to create password setup token")
+		return "", "", handlercommon.JSONError(fiber.StatusInternalServerError, "failed to create password setup token")
 	}
 	return setupToken, expiresAt, nil
 }
 
 // ListUsers handles GET /api/admin/users.
 func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 	users, total, err := h.users.List(c.Context(), page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})
@@ -97,7 +98,7 @@ func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
 
 	socialProvidersByUserID, err := h.listUserSocialProviders(c, users)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -118,7 +119,7 @@ func (h *AdminHandler) listUserSocialProviders(c fiber.Ctx, users []model.User) 
 	}
 	result, err := h.socialAccounts.ListProvidersByUserIDs(c.Context(), userIDs)
 	if err != nil {
-		return nil, jsonError(fiber.StatusInternalServerError, "failed to list user social accounts")
+		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to list user social accounts")
 	}
 	return result, nil
 }
@@ -154,11 +155,11 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 
 	req, err := parseUpdateAdminUserRequest(c)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 	permissionChanged, err := h.applyAdminUserUpdate(c, id, user, req)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 	if err := h.users.Update(c.Context(), user); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update user"})
@@ -166,13 +167,13 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 
 	h.clearAdminUserCaches(c, id, permissionChanged)
 	h.auditAdminUserMutation(c, model.AuditUserUpdate, id)
-	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
 }
 
 func parseUpdateAdminUserRequest(c fiber.Ctx) (*updateAdminUserRequest, error) {
 	var req updateAdminUserRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return nil, jsonError(fiber.StatusBadRequest, "invalid request body")
+		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
 	return &req, nil
 }
@@ -200,7 +201,7 @@ func (h *AdminHandler) applyAdminRoleUpdate(c fiber.Ctx, id string, user *model.
 		return false, nil
 	}
 	if currentID, _ := c.Locals("user_id").(string); currentID == id && !*isAdmin {
-		return false, jsonError(fiber.StatusBadRequest, "cannot remove your own admin role")
+		return false, handlercommon.JSONError(fiber.StatusBadRequest, "cannot remove your own admin role")
 	}
 	user.IsAdmin = *isAdmin
 	if user.IsAdmin {
@@ -222,7 +223,7 @@ func applyAdminPermissionUpdate(user *model.User, permissions *[]string) (bool, 
 			continue
 		}
 		if !model.IsValidPermission(perm) {
-			return false, jsonError(fiber.StatusBadRequest, "invalid permission: "+perm)
+			return false, handlercommon.JSONError(fiber.StatusBadRequest, "invalid permission: "+perm)
 		}
 		perms = append(perms, perm)
 	}
@@ -262,8 +263,8 @@ func (h *AdminHandler) DeleteUser(c fiber.Ctx) error {
 
 func (h *AdminHandler) auditAdminUserMutation(c fiber.Ctx, action, resourceID string) {
 	adminID, _ := c.Locals("user_id").(string)
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	ip, ua := handlercommon.GetRealIPAndUA(c)
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: adminID, Action: action, Resource: "user", ResourceID: resourceID,
 		IP: ip, UserAgent: ua, Status: "success",
 	})

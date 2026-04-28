@@ -114,6 +114,10 @@ func isValidEmail(email string) bool {
 	return domain != "" && strings.Contains(domain, ".") && !strings.HasSuffix(domain, ".")
 }
 
+func IsValidEmail(email string) bool {
+	return isValidEmail(email)
+}
+
 func (h *AuthHandler) recordAudit(c fiber.Ctx, userID, action, resource, resourceID, status, detail string) {
 	ip, ua := GetRealIPAndUA(c)
 	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{

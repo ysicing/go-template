@@ -1,4 +1,4 @@
-package handler
+package adminhandler
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -85,8 +86,8 @@ func TestAdminSettingUpdate_UpdatesSiteTitle(t *testing.T) {
 	h := NewAdminSettingHandler(settings, audit, nil)
 
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -118,8 +119,8 @@ func TestAdminSettingUpdate_UpdatesPasswordPolicyEnabled(t *testing.T) {
 	h := NewAdminSettingHandler(settings, audit, nil)
 
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -154,8 +155,8 @@ func TestAdminSettingUpdate_ReturnsErrorWhenSecretSettingEncryptionFails(t *test
 	t.Cleanup(func() { crand.Reader = originalReader })
 
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -190,8 +191,8 @@ func TestAdminSettingUpdate_IsAtomicWhenSecretSettingEncryptionFails(t *testing.
 	t.Cleanup(func() { crand.Reader = originalReader })
 
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -228,8 +229,8 @@ func TestAdminSettingTestEmail_SendsToProvidedRecipient(t *testing.T) {
 	h := NewAdminSettingHandler(settings, audit, sender)
 
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Post("/api/admin/settings/test-email", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.TestEmail(c)

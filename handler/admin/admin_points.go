@@ -1,8 +1,9 @@
-package handler
+package adminhandler
 
 import (
 	"strconv"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -47,7 +48,7 @@ func (h *AdminPointsHandler) AdjustPoints(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msg})
 	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     operatorID,
 		Action:     model.AuditPointsAdjust,
 		Resource:   "points",
@@ -82,7 +83,7 @@ func (h *AdminPointsHandler) GetUserPoints(c fiber.Ctx) error {
 
 // GetAllTransactions returns paginated transactions for all users (admin).
 func (h *AdminPointsHandler) GetAllTransactions(c fiber.Ctx) error {
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 	txns, total, err := h.points.ListAllTransactions(c.Context(), page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list transactions"})

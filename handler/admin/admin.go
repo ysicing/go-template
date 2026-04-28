@@ -1,4 +1,4 @@
-package handler
+package adminhandler
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -91,7 +92,7 @@ func (h *AdminHandler) GetUser(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
-	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
 }
 
 // GetStats handles GET /api/admin/stats.
@@ -168,7 +169,7 @@ func GeneratePassword(length int) string {
 
 // GetLoginHistory handles GET /api/admin/login-history.
 func (h *AdminHandler) GetLoginHistory(c fiber.Ctx) error {
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 	rows, total, err := h.audit.ListLoginAllPaged(c.Context(), page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list login history"})
@@ -183,7 +184,7 @@ func (h *AdminHandler) GetLoginHistory(c fiber.Ctx) error {
 
 // GetAuditLogs handles GET /api/admin/audit-logs.
 func (h *AdminHandler) GetAuditLogs(c fiber.Ctx) error {
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 
 	filter := store.AuditLogFilter{
 		UserID:   strings.TrimSpace(c.Query("user_id")),

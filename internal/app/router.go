@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ysicing/go-template/handler"
+	adminhandler "github.com/ysicing/go-template/handler/admin"
 	clientcredentialshandler "github.com/ysicing/go-template/handler/clientcredentials"
 	emailhandler "github.com/ysicing/go-template/handler/email"
 	githubcompathandler "github.com/ysicing/go-template/handler/githubcompat"
@@ -66,10 +67,10 @@ type builtHandlers struct {
 	oidcLogin         *handler.OIDCLoginHandler
 	socialAcct        *socialaccounthandler.SocialAccountHandler
 	oauthClient       *oauthclienthandler.OAuthClientHandler
-	admin             *handler.AdminHandler
-	adminProv         *handler.AdminProviderHandler
-	adminSett         *handler.AdminSettingHandler
-	adminPoints       *handler.AdminPointsHandler
+	admin             *adminhandler.AdminHandler
+	adminProv         *adminhandler.AdminProviderHandler
+	adminSett         *adminhandler.AdminSettingHandler
+	adminPoints       *adminhandler.AdminPointsHandler
 	points            *pointshandler.PointsHandler
 	ghCompat          *githubcompathandler.GitHubCompatHandler
 	clientCredentials *clientcredentialshandler.ClientCredentialsHandler
@@ -161,7 +162,7 @@ func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig)
 }
 
 func buildAdminHandlers(h *builtHandlers, d *Deps) {
-	h.admin = handler.NewAdminHandler(handler.AdminDeps{
+	h.admin = adminhandler.NewAdminHandler(adminhandler.AdminDeps{
 		Users:          d.UserStore,
 		Clients:        d.ClientStore,
 		Audit:          d.AuditLogStore,
@@ -172,9 +173,9 @@ func buildAdminHandlers(h *builtHandlers, d *Deps) {
 		PasswordHist:   d.PasswordHistory,
 		Cache:          d.Cache,
 	})
-	h.adminProv = handler.NewAdminProviderHandler(d.SocialStore, d.AuditLogStore)
-	h.adminSett = handler.NewAdminSettingHandler(d.SettingStore, d.AuditLogStore, h.email)
-	h.adminPoints = handler.NewAdminPointsHandler(d.PointStore, d.AuditLogStore)
+	h.adminProv = adminhandler.NewAdminProviderHandler(d.SocialStore, d.AuditLogStore)
+	h.adminSett = adminhandler.NewAdminSettingHandler(d.SettingStore, d.AuditLogStore, h.email)
+	h.adminPoints = adminhandler.NewAdminPointsHandler(d.PointStore, d.AuditLogStore)
 }
 
 // SetupRoutes registers all API routes on the Fiber app.
