@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
-import { ExternalLink, Languages, LogOut, Moon, PanelLeft, PanelLeftClose, Sun, UserCircle, Coins } from "lucide-react"
+import { ExternalLink, Languages, LogOut, Moon, PanelLeft, PanelLeftClose, Sun, UserCircle, Coins, Home } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { authApi, versionApi } from "@/api/services"
@@ -39,6 +39,14 @@ export default function AppShell() {
   const activeNavItem = sidebarSections
     .flatMap((section) => section.items)
     .find((item) => isConsoleNavItemActive(item, location.pathname))
+  const moduleOptions = modules.map((module) => {
+    const moduleItems = getConsoleSidebarSections(module.id, user).flatMap((section) => section.items)
+    return {
+      ...module,
+      icon: moduleItems[0]?.icon ?? Home,
+    }
+  })
+  const currentModuleOption = moduleOptions.find((module) => module.id === currentModule.id) ?? moduleOptions[0]
 
   const handleModuleChange = (moduleID: string) => {
     const target = getConsoleModuleEntry(moduleID as ConsoleModuleID, user)
@@ -94,25 +102,47 @@ export default function AppShell() {
           </div>
 
           <div className="border-b p-2">
-            <Select value={currentModule.id} onValueChange={handleModuleChange}>
-              <SelectTrigger
-                aria-label={t("nav.subsystem")}
-                className={cn("w-full justify-between border-0 bg-muted/50 shadow-none", collapsed && "px-2")}
-              >
-                {collapsed ? (
-                  <span className="truncate text-xs font-medium">{currentModuleLabel}</span>
-                ) : (
+            {collapsed ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("nav.subsystem")}
+                    className="w-full bg-muted/50"
+                  >
+                    {currentModuleOption && <currentModuleOption.icon className="h-4 w-4" />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="right">
+                  {moduleOptions.map((module) => {
+                    const Icon = module.icon
+                    return (
+                      <DropdownMenuItem key={module.id} onClick={() => handleModuleChange(module.id)}>
+                        <Icon className="mr-2 h-4 w-4" />
+                        {t(module.labelKey)}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Select value={currentModule.id} onValueChange={handleModuleChange}>
+                <SelectTrigger
+                  aria-label={t("nav.subsystem")}
+                  className="w-full justify-between border-0 bg-muted/50 shadow-none"
+                >
                   <SelectValue placeholder={t("nav.subsystem")} />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                {modules.map((module) => (
-                  <SelectItem key={module.id} value={module.id}>
-                    {t(module.labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                </SelectTrigger>
+                <SelectContent>
+                  {modules.map((module) => (
+                    <SelectItem key={module.id} value={module.id}>
+                      {t(module.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <nav className="flex-1 p-2">
@@ -189,6 +219,7 @@ export default function AppShell() {
           <div className="border-t p-2">
             <button
               onClick={() => setCollapsed((value) => !value)}
+              aria-label={collapsed ? "expand sidebar" : "collapse sidebar"}
               className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent"
             >
               {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}

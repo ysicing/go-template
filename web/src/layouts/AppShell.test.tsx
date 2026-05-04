@@ -1,5 +1,6 @@
-import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import AppShell from "@/layouts/AppShell"
 import { adminPermissions } from "@/lib/permissions"
@@ -19,11 +20,16 @@ vi.mock("@/api/services", () => ({
 }))
 
 function renderShell(initialEntry: string) {
+  function LocationProbe() {
+    const location = useLocation()
+    return <div data-testid="pathname">{location.pathname}</div>
+  }
+
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="*" element={<AppShell />}>
-          <Route path="*" element={<div>content</div>} />
+          <Route path="*" element={<LocationProbe />} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -83,6 +89,30 @@ describe("AppShell", () => {
     expect(screen.queryByRole("link", { name: "Quotes" })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument()
+  })
+
+  it("keeps module switching available after sidebar collapse", async () => {
+    useAuthStore.setState({
+      user: {
+        id: "user-4",
+        username: "dave",
+        email: "dave@example.com",
+        is_admin: false,
+        permissions: [],
+        email_verified: true,
+      },
+      initStatus: "ready",
+    })
+
+    renderShell("/profile")
+
+    const user = userEvent.setup()
+    await screen.findByRole("button", { name: "collapse sidebar" })
+    await user.click(screen.getByRole("button", { name: "collapse sidebar" }))
+    await user.click(screen.getByRole("button", { name: "Subsystem" }))
+    await user.click(screen.getByRole("menuitem", { name: "Home" }))
+
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/")
   })
 
   it("shows admin tools group inside admin module", async () => {
