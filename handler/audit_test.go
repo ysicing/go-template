@@ -11,7 +11,6 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/prometheus/client_golang/prometheus"
-	io_prometheus_client "github.com/prometheus/client_model/go"
 	"gorm.io/gorm"
 )
 
@@ -89,27 +88,34 @@ func TestWriteAuditRecordsDroppedMetricOnFailure(t *testing.T) {
 	}
 	as := store.NewAuditLogStore(db)
 
-	before := readCounterValue(t, auditDropped)
+	before := readCounterMetricValue(t, "id_audit_dropped_total")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	entry := &model.AuditLog{Action: model.AuditLogin, Resource: "user", Status: "failure"}
 	_ = writeAudit(ctx, as, entry)
 
-	after := readCounterValue(t, auditDropped)
+	after := readCounterMetricValue(t, "id_audit_dropped_total")
 	if after != before+1 {
 		t.Fatalf("expected dropped audit metric to increase by 1, before=%v after=%v", before, after)
 	}
 }
 
-func readCounterValue(t *testing.T, counter prometheus.Counter) float64 {
+func readCounterMetricValue(t *testing.T, name string) float64 {
 	t.Helper()
-	metric := &io_prometheus_client.Metric{}
-	if err := counter.Write(metric); err != nil {
-		t.Fatalf("write metric: %v", err)
+	families, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		t.Fatalf("gather metrics: %v", err)
 	}
-	if metric.Counter == nil {
-		t.Fatal("counter metric is nil")
+	for _, family := range families {
+		if family.GetName() != name {
+			continue
+		}
+		if len(family.Metric) == 0 || family.Metric[0].Counter == nil {
+			t.Fatalf("counter metric %q is empty", name)
+		}
+		return family.Metric[0].Counter.GetValue()
 	}
-	return metric.Counter.GetValue()
+	t.Fatalf("counter metric %q not found", name)
+	return 0
 }

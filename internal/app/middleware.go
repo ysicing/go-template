@@ -9,6 +9,7 @@ import (
 	"github.com/ysicing/go-template/handler"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/pkg/logger"
+	"github.com/ysicing/go-template/pkg/metrics"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
@@ -47,7 +48,7 @@ func setupMiddlewareChain(app *fiber.App, settingStore *store.SettingStore, sess
 	app.Use(traceContextMiddleware())
 	app.Use(cookieCSRFMiddleware())
 	app.Use(requestLogMiddleware())
-	app.Use(handler.PrometheusMiddleware())
+	app.Use(metrics.PrometheusMiddleware())
 	app.Use(buildCORSMiddleware(settingStore, log))
 	app.Use(compress.New())
 	app.Use(securityHeadersMiddleware(settingStore))

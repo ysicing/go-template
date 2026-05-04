@@ -1,4 +1,4 @@
-package handler
+package metrics
 
 import (
 	"strconv"
@@ -103,12 +103,12 @@ var (
 	)
 )
 
-// PrometheusMiddleware records HTTP request metrics.
+// PrometheusMiddleware 记录 HTTP 请求指标。
 func PrometheusMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		start := time.Now()
 
-		// Process request
+		// 先执行请求链，确保能记录最终状态码。
 		err := c.Next()
 
 		path := c.Path()
@@ -116,7 +116,7 @@ func PrometheusMiddleware() fiber.Handler {
 			return err
 		}
 
-		// Record metrics
+		// 仅记录 API 请求，避免静态资源和抓取端点污染指标。
 		duration := time.Since(start).Seconds()
 		status := c.Response().StatusCode()
 		method := strings.Clone(c.Method())
@@ -130,11 +130,11 @@ func PrometheusMiddleware() fiber.Handler {
 }
 
 func shouldRecordHTTPMetrics(path string) bool {
-	// Do not track static assets and other non-API traffic.
+	// 不记录静态资源和其他非 API 流量。
 	if !strings.HasPrefix(path, "/api/") {
 		return false
 	}
-	// Avoid scraping endpoint self-observation noise.
+	// 避免 metrics 抓取端点自观测噪声。
 	if path == "/api/admin/metrics" {
 		return false
 	}
@@ -150,42 +150,42 @@ func metricRoutePath(c fiber.Ctx, fallbackPath string) string {
 	return strings.Clone(fallbackPath)
 }
 
-// RecordAuthAttempt records an authentication attempt.
+// RecordAuthAttempt 记录认证尝试结果。
 func RecordAuthAttempt(authType, status string) {
 	authAttemptsTotal.WithLabelValues(authType, status).Inc()
 }
 
-// RecordEmailSent records an email send attempt.
+// RecordEmailSent 记录邮件发送结果。
 func RecordEmailSent(emailType, status string) {
 	emailSentTotal.WithLabelValues(emailType, status).Inc()
 }
 
-// RecordEmailRetry records an email retry.
+// RecordEmailRetry 记录邮件重试次数。
 func RecordEmailRetry() {
 	emailRetries.Inc()
 }
 
-// UpdateAuditQueueSize updates the audit queue size metric.
+// UpdateAuditQueueSize 更新审计队列长度指标。
 func UpdateAuditQueueSize(size int) {
 	auditQueueSize.Set(float64(size))
 }
 
-// RecordAuditDropped records a dropped audit log entry.
+// RecordAuditDropped 记录被丢弃的审计日志数量。
 func RecordAuditDropped() {
 	auditDropped.Inc()
 }
 
-// RecordCacheHit records a cache hit.
+// RecordCacheHit 记录缓存命中。
 func RecordCacheHit() {
 	cacheHits.Inc()
 }
 
-// RecordCacheMiss records a cache miss.
+// RecordCacheMiss 记录缓存未命中。
 func RecordCacheMiss() {
 	cacheMisses.Inc()
 }
 
-// RecordDBQuery records a database query.
+// RecordDBQuery 记录数据库查询耗时。
 func RecordDBQuery(operation string, duration time.Duration) {
 	dbQueriesTotal.WithLabelValues(operation).Inc()
 	dbQueryDuration.WithLabelValues(operation).Observe(duration.Seconds())

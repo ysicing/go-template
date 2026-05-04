@@ -7,6 +7,7 @@ import (
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/pkg/metrics"
 	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
 
@@ -42,7 +43,7 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 	}
 
 	h.recordAudit(c, user.ID, model.AuditRegister, "user", user.ID, "success", "")
-	handlercommon.RecordAuthAttempt("register", "success")
+	metrics.RecordAuthAttempt("register", "success")
 	return h.finishRegister(c, user)
 }
 
@@ -137,7 +138,7 @@ func (h *AuthHandler) buildRegisteredUser(c fiber.Ctx, req *registerRequest, inv
 
 func (h *AuthHandler) persistRegisteredUser(c fiber.Ctx, user *model.User) error {
 	if err := h.users.Create(c.Context(), user); err != nil {
-		handlercommon.RecordAuthAttempt("register", "failure")
+		metrics.RecordAuthAttempt("register", "failure")
 		if store.IsUniqueViolation(err) {
 			return handlercommon.JSONError(fiber.StatusConflict, "username or email already exists")
 		}

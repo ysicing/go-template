@@ -11,6 +11,7 @@ import (
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/pkg/metrics"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
@@ -43,7 +44,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	}
 
 	h.recordAudit(c, user.ID, model.AuditLogin, "user", user.ID, "success", "local")
-	handlercommon.RecordAuthAttempt("login", "success")
+	metrics.RecordAuthAttempt("login", "success")
 	return h.finishLogin(c, user, refreshTTL, req.RememberMe)
 }
 
@@ -68,11 +69,11 @@ func (h *AuthHandler) loginUser(c fiber.Ctx, req *loginRequest) (*model.User, er
 		if user != nil {
 			h.recordAudit(c, user.ID, model.AuditLoginFailed, "user", user.ID, "failure", "account locked")
 		}
-		handlercommon.RecordAuthAttempt("login", "failure")
+		metrics.RecordAuthAttempt("login", "failure")
 		return nil, handlercommon.JSONError(fiber.StatusTooManyRequests, "account temporarily locked, try again later")
 	}
 	if errors.Is(err, authservice.ErrInvalidCredentials) {
-		handlercommon.RecordAuthAttempt("login", "failure")
+		metrics.RecordAuthAttempt("login", "failure")
 		return nil, handlercommon.JSONError(fiber.StatusUnauthorized, "invalid credentials")
 	}
 	if err != nil {

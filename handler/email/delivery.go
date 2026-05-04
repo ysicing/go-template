@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/pkg/logger"
+	"github.com/ysicing/go-template/pkg/metrics"
 	"github.com/ysicing/go-template/store"
 )
 
@@ -32,7 +32,7 @@ func (h *EmailHandler) sendVerificationEmailAsync(userID, userEmail, body string
 				Msg("failed to send verification email, will retry")
 
 			if attempt > 1 {
-				handlercommon.RecordEmailRetry()
+				metrics.RecordEmailRetry()
 			}
 			if !waitEmailRetryDelay(ctx, attempt) {
 				break
@@ -45,7 +45,7 @@ func (h *EmailHandler) sendVerificationEmailAsync(userID, userEmail, body string
 			Str("email", userEmail).
 			Int("attempt", attempt).
 			Msg("verification email sent successfully")
-		handlercommon.RecordEmailSent("verification", "success")
+		metrics.RecordEmailSent("verification", "success")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *EmailHandler) sendVerificationEmailAsync(userID, userEmail, body string
 		Str("email", userEmail).
 		Int("attempts", emailMaxRetries).
 		Msg("failed to send verification email after all retries")
-	handlercommon.RecordEmailSent("verification", "failure")
+	metrics.RecordEmailSent("verification", "failure")
 }
 
 func waitEmailRetryDelay(ctx context.Context, attempt int) bool {

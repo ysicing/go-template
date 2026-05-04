@@ -10,6 +10,7 @@ import (
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
+	"github.com/ysicing/go-template/pkg/metrics"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -50,7 +51,7 @@ func writeAudit(ctx context.Context, audit auditCreator, entry *model.AuditLog) 
 	defer cancel()
 	err := audit.Create(auditCtx, entry)
 	if err != nil {
-		RecordAuditDropped()
+		metrics.RecordAuditDropped()
 		logger.L.Warn().Err(err).Str("action", entry.Action).Str("resource", entry.Resource).Msg("failed to write audit log")
 	}
 	return err
