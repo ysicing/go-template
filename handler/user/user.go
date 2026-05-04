@@ -1,14 +1,26 @@
-package handler
+package user
 
 import (
 	"context"
 	"errors"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
 )
+
+type settingReader interface {
+	Get(key, defaultVal string) string
+	GetBool(key string, defaultVal bool) bool
+	GetInt(key string, defaultVal int) int
+	GetStringSlice(key string, defaultVal []string) []string
+}
+
+type emailVerificationSender interface {
+	SendVerificationEmail(c fiber.Ctx, user *model.User, baseURL string) error
+}
 
 type userStore interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
@@ -75,13 +87,13 @@ func (h *UserHandler) GetMe(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
-	return c.JSON(fiber.Map{"user": NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
 }
 
 // ListSessions handles GET /api/sessions/.
 func (h *UserHandler) ListSessions(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 	tokens, total, err := h.refreshTokens.ListByUserIDPaged(c.Context(), userID, page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list sessions"})
@@ -119,7 +131,7 @@ func (h *UserHandler) RevokeSession(c fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke session"})
 	}
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     userID,
 		Action:     model.AuditSessionRevoke,
 		Resource:   "session",
@@ -133,7 +145,7 @@ func (h *UserHandler) RevokeSession(c fiber.Ctx) error {
 // GetLoginHistory handles GET /api/users/me/login-history.
 func (h *UserHandler) GetLoginHistory(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
-	page, pageSize := parsePagination(c)
+	page, pageSize := handlercommon.ParsePagination(c)
 	rows, total, err := h.audit.ListLoginByUserIDPaged(c.Context(), userID, page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list login history"})
@@ -179,7 +191,7 @@ func (h *UserHandler) SetPassword(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to set password"})
 	}
 
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
+	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     userID,
 		Action:     model.AuditPasswordSet,
 		Resource:   "user",
@@ -189,4 +201,11 @@ func (h *UserHandler) SetPassword(c fiber.Ctx) error {
 	})
 
 	return c.JSON(fiber.Map{"message": "password set successfully"})
+}
+
+func shouldEnforcePasswordPolicy(settings settingReader) bool {
+	if settings == nil {
+		return true
+	}
+	return settings.GetBool(store.SettingPasswordPolicyEnabled, true)
 }

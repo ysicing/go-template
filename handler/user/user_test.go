@@ -1,4 +1,4 @@
-package handler
+package user
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -45,8 +46,8 @@ func newUserTestApp(t *testing.T, h *UserHandler, userID string) *fiber.App {
 	t.Helper()
 
 	app := fiber.New()
-	app.Use(RequestIDMiddleware())
-	app.Use(AuditContextMiddleware())
+	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(handlercommon.AuditContextMiddleware())
 	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", userID)
 		return c.Next()

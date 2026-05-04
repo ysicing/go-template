@@ -11,6 +11,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	authhandler "github.com/ysicing/go-template/handler/auth"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -285,7 +286,7 @@ func TestRegister_WithEmailVerification_SendQueuedWhenSMTPMissing(t *testing.T) 
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
+	authH := authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
@@ -375,7 +376,7 @@ func TestAuthSetupPassword_ConsumesSetupToken(t *testing.T) {
 		t.Fatalf("issue setup token: %v", err)
 	}
 
-	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
+	authH := authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
@@ -440,7 +441,7 @@ func TestRegister_WithInviteCode_BindsInviterAndInviteIP(t *testing.T) {
 	}
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
+	authH := authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
@@ -511,7 +512,7 @@ func TestRegister_WithInvalidInviteCode_ReturnsBadRequest(t *testing.T) {
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
+	authH := authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
@@ -572,7 +573,7 @@ func TestRegister_WithoutInviteCode_StillSucceeds(t *testing.T) {
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 
 	emailH := NewEmailHandler(users, settings, audit, pointstore.NewPointStore(db), cache)
-	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
+	authH := authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,
@@ -635,7 +636,7 @@ func TestRegister_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
 	// Explicitly disable password policy for this test.
 	_ = settings.Set(context.Background(), store.SettingPasswordPolicyEnabled, "false")
 
-	authH := handlercommon.NewAuthHandler(handlercommon.AuthDeps{
+	authH := authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         users,
 		RefreshTokens: refreshTokens,
 		Audit:         audit,

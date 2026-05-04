@@ -1,10 +1,10 @@
-package handler
+package auth
 
 import (
 	"context"
-	"net/mail"
 	"strings"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
@@ -13,6 +13,17 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 )
+
+type settingReader interface {
+	Get(key, defaultVal string) string
+	GetBool(key string, defaultVal bool) bool
+	GetInt(key string, defaultVal int) int
+	GetStringSlice(key string, defaultVal []string) []string
+}
+
+type mfaReader interface {
+	GetByUserID(ctx context.Context, userID string) (*model.MFAConfig, error)
+}
 
 type authUserStore interface {
 	Create(ctx context.Context, user *model.User) error
@@ -46,7 +57,7 @@ type AuthDeps struct {
 	Cache         store.Cache
 	Settings      settingReader
 	EmailHandler  emailVerificationSender
-	TokenConfig   TokenConfig
+	TokenConfig   handlercommon.TokenConfig
 }
 
 // AuthHandler handles authentication endpoints.
@@ -61,7 +72,7 @@ type AuthHandler struct {
 	cache         store.Cache
 	settings      settingReader
 	emailHandler  emailVerificationSender
-	tokenConfig   TokenConfig
+	tokenConfig   handlercommon.TokenConfig
 }
 
 // NewAuthHandler creates an AuthHandler.
@@ -100,27 +111,9 @@ func (h *AuthHandler) SetEmailHandler(eh emailVerificationSender) {
 
 func rtRememberKey(tokenHash string) string { return "rt_remember:" + tokenHash }
 
-// isValidEmail performs basic email format validation.
-func isValidEmail(email string) bool {
-	parsed, err := mail.ParseAddress(email)
-	if err != nil {
-		return false
-	}
-	parts := strings.SplitN(parsed.Address, "@", 2)
-	if len(parts) != 2 {
-		return false
-	}
-	domain := parts[1]
-	return domain != "" && strings.Contains(domain, ".") && !strings.HasSuffix(domain, ".")
-}
-
-func IsValidEmail(email string) bool {
-	return isValidEmail(email)
-}
-
 func (h *AuthHandler) recordAudit(c fiber.Ctx, userID, action, resource, resourceID, status, detail string) {
-	ip, ua := GetRealIPAndUA(c)
-	_ = writeAudit(c.Context(), h.audit, &model.AuditLog{
+	ip, ua := handlercommon.GetRealIPAndUA(c)
+	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID:     userID,
 		Action:     action,
 		Resource:   resource,
@@ -183,11 +176,18 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 		_ = h.refreshTokens.DeleteByTokenHash(c.Context(), tokenHash)
 	}
 
-	ClearTokenCookies(c)
+	handlercommon.ClearTokenCookies(c)
 
 	userID, _ := c.Locals("user_id").(string)
 	if userID != "" {
 		h.recordAudit(c, userID, model.AuditLogout, "user", userID, "success", "")
 	}
 	return c.JSON(fiber.Map{"message": "logged out"})
+}
+
+func shouldEnforcePasswordPolicy(settings settingReader) bool {
+	if settings == nil {
+		return true
+	}
+	return settings.GetBool(store.SettingPasswordPolicyEnabled, true)
 }

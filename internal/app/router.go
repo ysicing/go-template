@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/ysicing/go-template/handler"
 	adminhandler "github.com/ysicing/go-template/handler/admin"
+	authhandler "github.com/ysicing/go-template/handler/auth"
 	clientcredentialshandler "github.com/ysicing/go-template/handler/clientcredentials"
 	emailhandler "github.com/ysicing/go-template/handler/email"
 	mfahandler "github.com/ysicing/go-template/handler/mfa"
@@ -10,6 +11,7 @@ import (
 	oauthclienthandler "github.com/ysicing/go-template/handler/oauthclient"
 	pointshandler "github.com/ysicing/go-template/handler/points"
 	socialaccounthandler "github.com/ysicing/go-template/handler/socialaccount"
+	userhandler "github.com/ysicing/go-template/handler/user"
 	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
@@ -31,29 +33,29 @@ type Services struct {
 
 // Deps aggregates all dependencies needed by the route setup.
 type Deps struct {
-	Config                 *Config
-	DB                     *gorm.DB
-	UserStore              *store.UserStore
-	PasswordHistory        *store.PasswordHistoryStore
-	ClientStore            *store.OAuthClientStore
-	SocialStore            *store.SocialProviderStore
-	SocialAccountStore     *store.SocialAccountStore
-	SettingStore           *store.SettingStore
-	RefreshTokenStore      *store.APIRefreshTokenStore
-	AuditLogStore          *store.AuditLogStore
-	MFAStore               *store.MFAStore
-	WebAuthnStore          *webauthnstore.WebAuthnStore
-	PointStore             *pointstore.PointStore
-	CheckInStore           *pointstore.CheckInStore
-	Cache                  store.Cache
-	Services               Services
+	Config             *Config
+	DB                 *gorm.DB
+	UserStore          *store.UserStore
+	PasswordHistory    *store.PasswordHistoryStore
+	ClientStore        *store.OAuthClientStore
+	SocialStore        *store.SocialProviderStore
+	SocialAccountStore *store.SocialAccountStore
+	SettingStore       *store.SettingStore
+	RefreshTokenStore  *store.APIRefreshTokenStore
+	AuditLogStore      *store.AuditLogStore
+	MFAStore           *store.MFAStore
+	WebAuthnStore      *webauthnstore.WebAuthnStore
+	PointStore         *pointstore.PointStore
+	CheckInStore       *pointstore.CheckInStore
+	Cache              store.Cache
+	Services           Services
 }
 
 // builtHandlers holds all handler instances created during route setup.
 type builtHandlers struct {
-	auth              *handler.AuthHandler
+	auth              *authhandler.AuthHandler
 	email             *emailhandler.EmailHandler
-	user              *handler.UserHandler
+	user              *userhandler.UserHandler
 	mfa               *mfahandler.MFAHandler
 	webauthn          *webauthnhandler.WebAuthnHandler
 	oauth             *oauthhandler.OAuthHandler
@@ -77,7 +79,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 
 func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
 	h.email = emailhandler.NewEmailHandler(d.UserStore, d.SettingStore, d.AuditLogStore, d.PointStore, d.Cache)
-	h.auth = handler.NewAuthHandler(handler.AuthDeps{
+	h.auth = authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         d.UserStore,
 		WebAuthnCreds: d.WebAuthnStore,
 		RefreshTokens: d.RefreshTokenStore,
@@ -91,7 +93,7 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 	})
 	h.auth.SetEmailHandler(h.email)
 
-	h.user = handler.NewUserHandler(handler.UserDeps{
+	h.user = userhandler.NewUserHandler(userhandler.UserDeps{
 		Users:           d.UserStore,
 		PasswordHistory: d.PasswordHistory,
 		RefreshTokens:   d.RefreshTokenStore,

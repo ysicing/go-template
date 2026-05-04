@@ -1,8 +1,9 @@
-package handler
+package auth
 
 import (
 	"strings"
 
+	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
@@ -22,31 +23,31 @@ type registerRequest struct {
 func (h *AuthHandler) Register(c fiber.Ctx) error {
 	req, err := h.parseRegisterRequest(c)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	invitedByUserID, err := h.resolveRegisterInvite(c, req.InviteCode)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	user, err := h.buildRegisteredUser(c, req, invitedByUserID)
 	if err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 	if err := h.persistRegisteredUser(c, user); err != nil {
-		return finishHandlerError(c, err)
+		return handlercommon.FinishHandlerError(c, err)
 	}
 
 	h.recordAudit(c, user.ID, model.AuditRegister, "user", user.ID, "success", "")
-	RecordAuthAttempt("register", "success")
+	handlercommon.RecordAuthAttempt("register", "success")
 	return h.finishRegister(c, user)
 }
 
 func (h *AuthHandler) parseRegisterRequest(c fiber.Ctx) (*registerRequest, error) {
 	var req registerRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return nil, jsonError(fiber.StatusBadRequest, "invalid request body")
+		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
 
 	req.Username = strings.TrimSpace(req.Username)
@@ -60,20 +61,20 @@ func (h *AuthHandler) parseRegisterRequest(c fiber.Ctx) (*registerRequest, error
 
 func (h *AuthHandler) validateRegisterRequest(req registerRequest) error {
 	if req.Username == "" || req.Email == "" || req.Password == "" {
-		return jsonError(fiber.StatusBadRequest, "username, email and password are required")
+		return handlercommon.JSONError(fiber.StatusBadRequest, "username, email and password are required")
 	}
 	if len(req.Username) < 3 || len(req.Username) > 32 {
-		return jsonError(fiber.StatusBadRequest, "username must be 3-32 characters")
+		return handlercommon.JSONError(fiber.StatusBadRequest, "username must be 3-32 characters")
 	}
-	if !isValidEmail(req.Email) {
-		return jsonError(fiber.StatusBadRequest, "invalid email format")
+	if !handlercommon.IsValidEmail(req.Email) {
+		return handlercommon.JSONError(fiber.StatusBadRequest, "invalid email format")
 	}
 	if err := h.validateRegisterEmailDomain(req.Email); err != nil {
 		return err
 	}
 	if shouldEnforcePasswordPolicy(h.settings) {
 		if err := model.ValidatePasswordStrength(req.Password); err != nil {
-			return jsonError(fiber.StatusBadRequest, err.Error())
+			return handlercommon.JSONError(fiber.StatusBadRequest, err.Error())
 		}
 	}
 	return nil
@@ -92,7 +93,7 @@ func (h *AuthHandler) validateRegisterEmailDomain(email string) error {
 	whitelist := h.settings.GetStringSlice(store.SettingEmailDomainWhitelist, nil)
 	blacklist := h.settings.GetStringSlice(store.SettingEmailDomainBlacklist, nil)
 	if err := validator.ValidateEmailDomain(email, mode, whitelist, blacklist); err != nil {
-		return jsonError(fiber.StatusBadRequest, "email domain not allowed")
+		return handlercommon.JSONError(fiber.StatusBadRequest, "email domain not allowed")
 	}
 	return nil
 }
@@ -104,7 +105,7 @@ func (h *AuthHandler) resolveRegisterInvite(c fiber.Ctx, inviteCode string) (str
 
 	inviter, err := h.users.GetByInviteCode(c.Context(), inviteCode)
 	if err != nil || inviter == nil {
-		return "", jsonError(fiber.StatusBadRequest, "invalid invite code")
+		return "", handlercommon.JSONError(fiber.StatusBadRequest, "invalid invite code")
 	}
 	return inviter.ID, nil
 }
@@ -124,27 +125,27 @@ func (h *AuthHandler) buildRegisteredUser(c fiber.Ctx, req *registerRequest, inv
 		InvitedByUserID: invitedByUserID,
 	}
 	if invitedByUserID != "" {
-		user.InviteIP = GetRealIP(c)
+		user.InviteIP = handlercommon.GetRealIP(c)
 	}
 	if err := user.SetPassword(req.Password); err != nil {
-		return nil, jsonError(fiber.StatusInternalServerError, "failed to hash password")
+		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to hash password")
 	}
 	return user, nil
 }
 
 func (h *AuthHandler) persistRegisteredUser(c fiber.Ctx, user *model.User) error {
 	if err := h.users.Create(c.Context(), user); err != nil {
-		RecordAuthAttempt("register", "failure")
+		handlercommon.RecordAuthAttempt("register", "failure")
 		if store.IsUniqueViolation(err) {
-			return jsonError(fiber.StatusConflict, "username or email already exists")
+			return handlercommon.JSONError(fiber.StatusConflict, "username or email already exists")
 		}
-		return jsonError(fiber.StatusInternalServerError, "failed to create user")
+		return handlercommon.JSONError(fiber.StatusInternalServerError, "failed to create user")
 	}
 	return nil
 }
 
 func (h *AuthHandler) finishRegister(c fiber.Ctx, user *model.User) error {
-	resp := fiber.Map{"user": NewUserResponse(user)}
+	resp := fiber.Map{"user": handlercommon.NewUserResponse(user)}
 	emailVerificationRequired := h.settings != nil && h.settings.GetBool(store.SettingEmailVerificationEnabled, false)
 	if emailVerificationRequired {
 		resp["email_verification_required"] = true
@@ -157,7 +158,7 @@ func (h *AuthHandler) finishRegister(c fiber.Ctx, user *model.User) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 
-	SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 	return c.Status(fiber.StatusCreated).JSON(resp)
 }
 
