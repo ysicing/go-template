@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -144,7 +145,7 @@ func (h *OAuthClientHandler) Create(c fiber.Ctx) error {
 
 // List handles GET /api/admin/clients.
 func (h *OAuthClientHandler) List(c fiber.Ctx) error {
-	page, pageSize := handlercommon.ParsePagination(c)
+	page, pageSize := httprequest.ParsePagination(c)
 
 	clients, total, err := h.clients.List(c.Context(), page, pageSize)
 	if err != nil {

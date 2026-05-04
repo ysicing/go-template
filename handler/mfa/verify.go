@@ -4,6 +4,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
@@ -122,6 +123,6 @@ func (h *MFAHandler) finishBrowserMFAVerify(c fiber.Ctx, userID string, refreshT
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 
-	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
+	httpcookie.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
 }

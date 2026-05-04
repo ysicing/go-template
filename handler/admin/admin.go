@@ -8,6 +8,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -169,7 +170,7 @@ func GeneratePassword(length int) string {
 
 // GetLoginHistory handles GET /api/admin/login-history.
 func (h *AdminHandler) GetLoginHistory(c fiber.Ctx) error {
-	page, pageSize := handlercommon.ParsePagination(c)
+	page, pageSize := httprequest.ParsePagination(c)
 	rows, total, err := h.audit.ListLoginAllPaged(c.Context(), page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list login history"})
@@ -184,7 +185,7 @@ func (h *AdminHandler) GetLoginHistory(c fiber.Ctx) error {
 
 // GetAuditLogs handles GET /api/admin/audit-logs.
 func (h *AdminHandler) GetAuditLogs(c fiber.Ctx) error {
-	page, pageSize := handlercommon.ParsePagination(c)
+	page, pageSize := httprequest.ParsePagination(c)
 
 	filter := store.AuditLogFilter{
 		UserID:   strings.TrimSpace(c.Query("user_id")),

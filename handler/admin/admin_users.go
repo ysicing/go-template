@@ -91,7 +91,7 @@ func (h *AdminHandler) issuePasswordSetupToken(c fiber.Ctx, userID string) (stri
 
 // ListUsers handles GET /api/admin/users.
 func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
-	page, pageSize := handlercommon.ParsePagination(c)
+	page, pageSize := httprequest.ParsePagination(c)
 	users, total, err := h.users.List(c.Context(), page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})

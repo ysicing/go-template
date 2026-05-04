@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	rootstore "github.com/ysicing/go-template/store"
@@ -45,7 +46,7 @@ func (h *PointsHandler) GetMyPoints(c fiber.Ctx) error {
 // GetTransactions returns paginated point transactions for the current user.
 func (h *PointsHandler) GetTransactions(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
-	page, pageSize := handlercommon.ParsePagination(c)
+	page, pageSize := httprequest.ParsePagination(c)
 	txns, total, err := h.points.ListTransactions(c.Context(), userID, page, pageSize)
 	if err != nil {
 		logger.L.Error().Err(err).Str("user_id", userID).Msg("failed to list transactions")

@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -83,7 +84,7 @@ func (h *AdminPointsHandler) GetUserPoints(c fiber.Ctx) error {
 
 // GetAllTransactions returns paginated transactions for all users (admin).
 func (h *AdminPointsHandler) GetAllTransactions(c fiber.Ctx) error {
-	page, pageSize := handlercommon.ParsePagination(c)
+	page, pageSize := httprequest.ParsePagination(c)
 	txns, total, err := h.points.ListAllTransactions(c.Context(), page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list transactions"})

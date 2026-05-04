@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
@@ -177,7 +178,7 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 		_ = h.refreshTokens.DeleteByTokenHash(c.Context(), tokenHash)
 	}
 
-	handlercommon.ClearTokenCookies(c)
+	httpcookie.ClearTokenCookies(c)
 
 	userID, _ := c.Locals("user_id").(string)
 	if userID != "" {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
@@ -136,7 +137,7 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
 	// Set tokens in cookies for web clients
-	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
+	httpcookie.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, h.tokenConfig.RefreshTTL)
 
 	return c.JSON(fiber.Map{
 		"user": handlercommon.NewUserResponse(user),

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
@@ -83,7 +84,7 @@ func (h *WebAuthnHandler) issueBrowserSession(c fiber.Ctx, user *model.User, ref
 	if err != nil {
 		return err
 	}
-	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
+	httpcookie.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 	return nil
 }
 

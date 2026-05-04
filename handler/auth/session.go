@@ -6,6 +6,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
@@ -112,7 +113,7 @@ func (h *AuthHandler) finishLogin(c fiber.Ctx, user *model.User, refreshTTL time
 		tokenHash := store.HashToken(issuedSession.RefreshToken)
 		_ = h.cache.Set(c.Context(), rtRememberKey(tokenHash), "1", h.tokenConfig.RememberMeTTL)
 	}
-	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
+	httpcookie.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
 }
 
@@ -189,7 +190,7 @@ func (h *AuthHandler) finishRefresh(c fiber.Ctx, user *model.User, family, oldTo
 		_ = h.cache.Set(c.Context(), rtRememberKey(newTokenHash), "1", h.tokenConfig.RememberMeTTL)
 	}
 
-	handlercommon.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
+	httpcookie.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
 	return c.JSON(fiber.Map{"message": "tokens refreshed"})
 }
 
