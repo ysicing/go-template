@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -39,17 +38,17 @@ type MFADeps struct {
 	RefreshTokens refreshTokenCreator
 	Sessions      *sessionservice.SessionService
 	Cache         store.Cache
-	TokenConfig   handlercommon.TokenConfig
+	TokenConfig   sessionservice.TokenConfig
 }
 
 // MFAHandler handles MFA endpoints.
 type MFAHandler struct {
-	users         mfaUserStore
-	mfa           mfaStore
-	audit         *store.AuditLogStore
-	sessions      *sessionservice.SessionService
-	cache         store.Cache
-	tokenConfig   handlercommon.TokenConfig
+	users       mfaUserStore
+	mfa         mfaStore
+	audit       *store.AuditLogStore
+	sessions    *sessionservice.SessionService
+	cache       store.Cache
+	tokenConfig sessionservice.TokenConfig
 }
 
 const (
@@ -61,16 +60,16 @@ const (
 func NewMFAHandler(deps MFADeps) *MFAHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig)
 	}
 
 	return &MFAHandler{
-		users:         deps.Users,
-		mfa:           deps.MFA,
-		audit:         deps.Audit,
-		sessions:      sessions,
-		cache:         deps.Cache,
-		tokenConfig:   deps.TokenConfig,
+		users:       deps.Users,
+		mfa:         deps.MFA,
+		audit:       deps.Audit,
+		sessions:    sessions,
+		cache:       deps.Cache,
+		tokenConfig: deps.TokenConfig,
 	}
 }
 

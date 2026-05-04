@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
@@ -60,7 +59,7 @@ type AuthDeps struct {
 	Cache         store.Cache
 	Settings      settingReader
 	EmailHandler  emailVerificationSender
-	TokenConfig   handlercommon.TokenConfig
+	TokenConfig   sessionservice.TokenConfig
 }
 
 // AuthHandler handles authentication endpoints.
@@ -75,14 +74,14 @@ type AuthHandler struct {
 	cache         store.Cache
 	settings      settingReader
 	emailHandler  emailVerificationSender
-	tokenConfig   handlercommon.TokenConfig
+	tokenConfig   sessionservice.TokenConfig
 }
 
 // NewAuthHandler creates an AuthHandler.
 func NewAuthHandler(deps AuthDeps) *AuthHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig)
 	}
 	authService := deps.AuthService
 	if authService == nil {

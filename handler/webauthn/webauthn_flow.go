@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
@@ -62,7 +61,7 @@ func splitCachedLoginSession(raw string) (string, string, bool) {
 	return strings.Cut(raw, "|")
 }
 
-func rememberMeRefreshTTL(rememberMeValue string, tokenCfg handlercommon.TokenConfig) time.Duration {
+func rememberMeRefreshTTL(rememberMeValue string, tokenCfg sessionservice.TokenConfig) time.Duration {
 	if rememberMeValue == "1" {
 		return tokenCfg.RememberMeTTL
 	}

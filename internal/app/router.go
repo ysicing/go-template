@@ -1,7 +1,6 @@
 package app
 
 import (
-	"github.com/ysicing/go-template/handler"
 	adminhandler "github.com/ysicing/go-template/handler/admin"
 	authhandler "github.com/ysicing/go-template/handler/auth"
 	clientcredentialshandler "github.com/ysicing/go-template/handler/clientcredentials"
@@ -69,7 +68,7 @@ type builtHandlers struct {
 	clientCredentials *clientcredentialshandler.ClientCredentialsHandler
 }
 
-func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
+func buildAllHandlers(d *Deps, tokenCfg sessionservice.TokenConfig) *builtHandlers {
 	h := &builtHandlers{}
 	buildIdentityHandlers(h, d, tokenCfg)
 	buildOAuthHandlers(h, d, tokenCfg)
@@ -77,7 +76,7 @@ func buildAllHandlers(d *Deps, tokenCfg handler.TokenConfig) *builtHandlers {
 	return h
 }
 
-func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
+func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg sessionservice.TokenConfig) {
 	h.email = emailhandler.NewEmailHandler(d.UserStore, d.SettingStore, d.AuditLogStore, d.PointStore, d.Cache)
 	h.auth = authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         d.UserStore,
@@ -126,7 +125,7 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 	})
 }
 
-func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig) {
+func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg sessionservice.TokenConfig) {
 	h.oauth = oauthhandler.NewOAuthHandler(oauthhandler.OAuthDeps{
 		Users:          d.UserStore,
 		Providers:      d.SocialStore,
@@ -167,7 +166,7 @@ func buildAdminHandlers(h *builtHandlers, d *Deps) {
 // SetupRoutes registers all API routes on the Fiber app.
 func SetupRoutes(app *fiber.App, d *Deps) {
 	cfg := d.Config
-	tokenCfg := handler.TokenConfig{
+	tokenCfg := sessionservice.TokenConfig{
 		Secret:        cfg.JWT.Secret,
 		Issuer:        cfg.JWT.Issuer,
 		AccessTTL:     cfg.JWT.AccessTokenTTL,

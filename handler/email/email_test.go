@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	authhandler "github.com/ysicing/go-template/handler/auth"
 	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -294,7 +294,7 @@ func TestRegister_WithEmailVerification_SendQueuedWhenSMTPMissing(t *testing.T) 
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -383,7 +383,7 @@ func TestAuthSetupPassword_ConsumesSetupToken(t *testing.T) {
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -449,7 +449,7 @@ func TestRegister_WithInviteCode_BindsInviterAndInviteIP(t *testing.T) {
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -520,7 +520,7 @@ func TestRegister_WithInvalidInviteCode_ReturnsBadRequest(t *testing.T) {
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -581,7 +581,7 @@ func TestRegister_WithoutInviteCode_StillSucceeds(t *testing.T) {
 		Cache:         cache,
 		Settings:      settings,
 		EmailHandler:  emailH,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,
@@ -643,7 +643,7 @@ func TestRegister_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
 		Audit:         audit,
 		Cache:         cache,
 		Settings:      settings,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "test-secret",
 			Issuer:        "test-issuer",
 			AccessTTL:     time.Hour,

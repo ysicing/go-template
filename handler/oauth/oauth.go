@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
@@ -60,7 +59,7 @@ type OAuthDeps struct {
 	Cache          store.Cache
 	Settings       oauthSettingStore
 	WebAuthnCreds  oauthWebAuthnCredStore
-	TokenConfig    handlercommon.TokenConfig
+	TokenConfig    sessionservice.TokenConfig
 }
 
 // OAuthHandler handles social login flows using database-managed provider configs.
@@ -75,14 +74,14 @@ type OAuthHandler struct {
 	settings       oauthSettingStore
 	webAuthnCreds  oauthWebAuthnCredStore
 	webAuthn       oauthWebAuthnManager
-	tokenConfig    handlercommon.TokenConfig
+	tokenConfig    sessionservice.TokenConfig
 }
 
 // NewOAuthHandler creates an OAuthHandler with database-backed social providers.
 func NewOAuthHandler(deps OAuthDeps) *OAuthHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig.ToServiceConfig())
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig)
 	}
 
 	return &OAuthHandler{

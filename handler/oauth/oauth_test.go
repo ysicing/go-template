@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	auditcore "github.com/ysicing/go-template/internal/audit"
 	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
+	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -28,7 +28,7 @@ import (
 func TestNewOAuthHandler_Fields(t *testing.T) {
 	db := setupTestDB(t)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	if h.providers != sp {
 		t.Error("expected providers store to be set")
@@ -41,7 +41,7 @@ func TestNewOAuthHandler_Fields(t *testing.T) {
 func TestGitHubLogin_NotConfigured(t *testing.T) {
 	db := setupTestDB(t)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/github", h.GitHubLogin)
@@ -69,7 +69,7 @@ func TestGitHubLogin_Disabled(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "github", "gh-id", "gh-secret", "http://localhost/cb", false)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/github", h.GitHubLogin)
@@ -98,7 +98,7 @@ func TestGitHubLogin_ProviderSecretUnavailable(t *testing.T) {
 	}
 
 	sp := store.NewSocialProviderStore(db, "wrong-reader-key")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/github", h.GitHubLogin)
@@ -117,7 +117,7 @@ func TestGitHubLogin_Redirect(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "github", "test-id", "test-secret", "http://localhost/cb", true)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/github", h.GitHubLogin)
@@ -144,7 +144,7 @@ func TestGitHubLogin_Redirect(t *testing.T) {
 func TestGoogleLogin_NotConfigured(t *testing.T) {
 	db := setupTestDB(t)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/google", h.GoogleLogin)
@@ -163,7 +163,7 @@ func TestGoogleLogin_Redirect(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "google", "g-id", "g-secret", "http://localhost/gcb", true)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/google", h.GoogleLogin)
@@ -190,7 +190,7 @@ func TestGoogleLogin_Redirect(t *testing.T) {
 func TestGitHubCallback_NotConfigured(t *testing.T) {
 	db := setupTestDB(t)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/github/callback", h.GitHubCallback)
@@ -209,7 +209,7 @@ func TestGitHubCallback_MissingCode(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "github", "id", "secret", "http://localhost/cb", true)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/github/callback", h.GitHubCallback)
@@ -260,7 +260,7 @@ func TestConfirmSocialLink_WritesAuditLog(t *testing.T) {
 		Audit:          audit,
 		RefreshTokens:  refreshTokens,
 		Cache:          cache,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "secret",
 			Issuer:        "id",
 			AccessTTL:     time.Hour,
@@ -315,7 +315,7 @@ func TestConfirmSocialLink_RequiresPasswordOrTOTP(t *testing.T) {
 		Audit:          store.NewAuditLogStore(db),
 		RefreshTokens:  store.NewAPIRefreshTokenStore(db),
 		Cache:          cache,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "secret",
 			Issuer:        "id",
 			AccessTTL:     time.Hour,
@@ -358,7 +358,7 @@ func TestConfirmSocialLink_RejectsUnsupportedChallengeVerification(t *testing.T)
 		Audit:          store.NewAuditLogStore(db),
 		RefreshTokens:  store.NewAPIRefreshTokenStore(db),
 		Cache:          cache,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "secret",
 			Issuer:        "id",
 			AccessTTL:     time.Hour,
@@ -425,7 +425,7 @@ func TestSocialLinkWebAuthnBegin_ReturnsOptionsAndStoresSession(t *testing.T) {
 		RefreshTokens:  store.NewAPIRefreshTokenStore(db),
 		WebAuthnCreds:  creds,
 		Cache:          cache,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "secret",
 			Issuer:        "id",
 			AccessTTL:     time.Hour,
@@ -524,7 +524,7 @@ func TestSocialLinkWebAuthnFinish_LinksAccountAndWritesAuditLog(t *testing.T) {
 		RefreshTokens:  refreshTokens,
 		WebAuthnCreds:  creds,
 		Cache:          cache,
-		TokenConfig: handlercommon.TokenConfig{
+		TokenConfig: sessionservice.TokenConfig{
 			Secret:        "secret",
 			Issuer:        "id",
 			AccessTTL:     time.Hour,
@@ -623,7 +623,7 @@ func (f fakeOAuthWebAuthnManager) FinishLogin(*webauthnstore.WebAuthnUser, webau
 func TestGoogleCallback_NotConfigured(t *testing.T) {
 	db := setupTestDB(t)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/google/callback", h.GoogleCallback)
@@ -642,7 +642,7 @@ func TestGoogleCallback_MissingCode(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "google", "id", "secret", "http://localhost/cb", true)
 	sp := store.NewSocialProviderStore(db, "")
-	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	h := NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	app := fiber.New()
 	app.Get("/auth/google/callback", h.GoogleCallback)
@@ -745,7 +745,7 @@ func TestGitHubCallback_InvalidExchange(t *testing.T) {
 	db := setupTestDB(t)
 	seedProvider(t, db, "github", "id", "s", "http://localhost/cb", true)
 	sp := store.NewSocialProviderStore(db, "")
-	_ = NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: handlercommon.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
+	_ = NewOAuthHandler(OAuthDeps{Providers: sp, Cache: store.NewMemoryCache(), TokenConfig: sessionservice.TokenConfig{Secret: "secret", Issuer: "id", AccessTTL: time.Hour, RefreshTTL: 24 * time.Hour, RememberMeTTL: 30 * 24 * time.Hour}})
 
 	// We need to override the endpoint after the config is built.
 	// Since the config is built on the fly, we test via a custom approach:

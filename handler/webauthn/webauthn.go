@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	rootstore "github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -28,7 +27,7 @@ type WebAuthnDeps struct {
 	RefreshTokens *rootstore.APIRefreshTokenStore
 	Sessions      *sessionservice.SessionService
 	Cache         rootstore.Cache
-	TokenConfig   handlercommon.TokenConfig
+	TokenConfig   sessionservice.TokenConfig
 }
 
 // WebAuthnHandler handles WebAuthn/Passkey endpoints.
@@ -40,7 +39,7 @@ type WebAuthnHandler struct {
 	audit       *rootstore.AuditLogStore
 	sessions    *sessionservice.SessionService
 	cache       rootstore.Cache
-	tokenConfig handlercommon.TokenConfig
+	tokenConfig sessionservice.TokenConfig
 
 	mu        sync.RWMutex
 	cachedWA  *webauthn.WebAuthn
@@ -52,13 +51,7 @@ type WebAuthnHandler struct {
 func NewWebAuthnHandler(deps WebAuthnDeps) *WebAuthnHandler {
 	sessions := deps.Sessions
 	if sessions == nil {
-		sessions = sessionservice.NewSessionService(deps.RefreshTokens, sessionservice.TokenConfig{
-			Secret:        deps.TokenConfig.Secret,
-			Issuer:        deps.TokenConfig.Issuer,
-			AccessTTL:     deps.TokenConfig.AccessTTL,
-			RefreshTTL:    deps.TokenConfig.RefreshTTL,
-			RememberMeTTL: deps.TokenConfig.RememberMeTTL,
-		})
+		sessions = sessionservice.NewSessionService(deps.RefreshTokens, deps.TokenConfig)
 	}
 
 	return &WebAuthnHandler{
