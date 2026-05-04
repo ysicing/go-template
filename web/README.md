@@ -20,12 +20,12 @@ pnpm build
 
 ## 当前模板前端范围
 
-- 登录、注册、MFA、Consent
+- 登录、注册、MFA、邮箱验证
 - Dashboard
 - Applications
 - Users / Clients / Providers
-- Settings / Audit Logs
-- Profile / Security / Points
+- Settings / Audit Logs / Login History
+- Profile / Security / Sessions / Points
 
 已移出模板的页面不再作为默认控制台能力维护。
 

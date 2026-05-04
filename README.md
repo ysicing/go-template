@@ -1,35 +1,48 @@
 # go-template
 
-`go-template` 是一个面向个人项目和团队内部脚手架的 `Go + React` 全栈模板。
+`go-template` 是一个带嵌入式控制台的身份与权限服务模板，使用 `Go + React` 实现。
 
-它保留了开箱即用的认证与控制台底座：
+后端提供认证、授权、管理 API；前端提供默认控制台，构建后嵌入最终二进制。
+
+## 当前范围
 
 - 本地账号登录、刷新、注销
 - Social Login Provider 管理
 - MFA / WebAuthn
 - 用户、权限、系统设置、审计日志
-- 机器客户端与积分示例模块
+- OAuth2 机器客户端与令牌接口
+- 积分示例模块
 
-它刻意移除了与模板定位不匹配的业务域：
+## 技术栈
 
-- 组织与工作空间
-- Webhook、监控、Telegram 管理
-- 报价与其他强业务模块
+- 后端：Go、Fiber、GORM
+- 前端：React、Vite、TypeScript
+- 默认存储：SQLite
+- 交付形态：单二进制，可选 Docker 运行
 
 ## 快速开始
 
 ```bash
 cp config.example.yaml config.yaml
 $EDITOR config.yaml
+task web:install
 task build
 ./id
 ```
 
 默认启动后访问 `http://localhost:3206`。
 
+首次本地开发如果只想直接跑后端，也可以执行：
+
+```bash
+task run
+```
+
+`task run` 默认会注入 `SECURITY_ALLOW_INSECURE=true`，便于在本地快速启动；生产环境请显式配置 `jwt.secret`，并保持 `security.allow_insecure: false`。
+
 ## Docker 运行
 
-镜像会先修正 `/data` 权限，再以非 root 用户启动应用，并将运行时数据目录固定在 `/data`：
+镜像会先修正 `/data` 权限，再以非 root 用户启动应用，并将运行时数据目录固定在 `/data`。
 
 - 默认 SQLite 数据库：`/data/go-template.db`
 - 默认配置文件路径：`/data/config.yaml`
@@ -66,7 +79,7 @@ docker run -d \
 - 绑定宿主机目录到 `/data` 时，入口脚本会自动修正权限
 - 若改用 MySQL / Postgres，可通过 `/data/config.yaml` 指定数据库连接
 
-## 模板能力
+## 控制台与 API
 
 - 控制台首页：`http://localhost:3206/`
 - Swagger UI：`http://localhost:3206/swagger/index.html`
@@ -84,7 +97,7 @@ Swagger 文档会按当前登录用户权限动态裁剪：
 
 ## 核心配置
 
-从 `config.example.yaml` 开始，优先关注：
+从 `config.example.yaml` 开始，优先关注这些字段：
 
 - `server.addr`
 - `database.driver`
@@ -104,22 +117,38 @@ Swagger 文档会按当前登录用户权限动态裁剪：
 ## 开发命令
 
 ```bash
+task web:install
 task run
 task dev
 task build
 task fmt
-task openapi:check
-go test ./...
-cd web && pnpm test
+task test
+task verify
 ```
 
-`task run` 默认按本地开发模式启动：`Taskfile.yml` 会在未显式设置 `SECURITY_ALLOW_INSECURE` 时默认注入 `true`，便于在没有 `config.yaml` 的情况下直接运行。生产环境请显式配置 `jwt.secret`，并保持 `security.allow_insecure: false`。
+- `task run`：启动后端
+- `task dev`：启动前端开发服务器，默认 `http://localhost:3000`
+- `task build`：构建前端并打包后端二进制
+- `task test`：执行后端和前端测试
+- `task verify`：执行接近 CI 的完整校验
 
-OpenAPI 维护约束：
+如需只跑某一侧：
 
-- 新增或修改受管路由后，先运行 `task openapi:check`
-- 需要添加文档元数据时，可用 `task openapi:scaffold METHOD=GET PATH=/api/example SUMMARY='示例接口' TAG=example AUTH=true`
-- 若接口需要权限，可追加 `PERMISSIONS='admin.users.read,admin.stats.read'`
+```bash
+go test ./...
+cd web && pnpm test
+cd web && pnpm lint
+cd web && pnpm build
+```
+
+## OpenAPI 维护
+
+- 新增或修改受管路由后，运行 `task openapi:check`
+- 需要添加文档元数据时，可用：
+
+```bash
+task openapi:scaffold METHOD=GET PATH=/api/example SUMMARY='示例接口' TAG=example AUTH=true
+```
 
 ## 参考
 
