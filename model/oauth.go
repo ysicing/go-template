@@ -39,14 +39,14 @@ func (c *OAuthClient) CheckSecret(secret string) bool {
 // Token represents a persisted access or refresh token.
 type Token struct {
 	Base
-	TokenID      string `gorm:"uniqueIndex;type:varchar(36)" json:"token_id"`
-	UserID       string `gorm:"type:varchar(36);index" json:"user_id"`
-	SubjectType  string `gorm:"type:varchar(32);index" json:"subject_type"`
-	SubjectID    string `gorm:"type:varchar(255);index" json:"subject_id"`
-	ClientID     string `gorm:"type:varchar(255);index" json:"client_id"`
-	Scopes       string `gorm:"type:varchar(512)" json:"scopes"`
-	TokenType    string `gorm:"type:varchar(20);default:'access'" json:"token_type"`
-	RefreshToken string `gorm:"type:varchar(512);index" json:"-"`
+	TokenID      string    `gorm:"uniqueIndex;type:varchar(36)" json:"token_id"`
+	UserID       string    `gorm:"type:varchar(36);index" json:"user_id"`
+	SubjectType  string    `gorm:"type:varchar(32);index" json:"subject_type"`
+	SubjectID    string    `gorm:"type:varchar(255);index" json:"subject_id"`
+	ClientID     string    `gorm:"type:varchar(255);index" json:"client_id"`
+	Scopes       string    `gorm:"type:varchar(512)" json:"scopes"`
+	TokenType    string    `gorm:"type:varchar(20);default:'access'" json:"token_type"`
+	RefreshToken string    `gorm:"type:varchar(512);index" json:"-"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	Revoked      bool      `gorm:"default:false" json:"revoked"`
 }

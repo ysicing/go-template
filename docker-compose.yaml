@@ -1,12 +1,14 @@
 services:
   postgres:
     image: postgres:18-alpine
+    container_name: postgres
+    restart: always
     environment:
-      POSTGRES_DB: go_template
-      POSTGRES_USER: go_template
-      POSTGRES_PASSWORD: go_template
+      POSTGRES_DB: ${POSTGRES_DB:-go_template}
+      POSTGRES_USER: ${POSTGRES_USER:-go_template}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-go_template}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U go_template -d go_template"]
       interval: 5s
@@ -14,24 +16,33 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: bitnami/valkey
+    container_name: redis
     environment:
-      REDIS_PASSWORD: local-compose-redis-password
-    command:
-      [
-        "sh",
-        "-c",
-        "redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\"",
-      ]
+      - VALKEY_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-go_template}
+    restart: always
     volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - redis-data:/bitnami/valkey/data
+
+  minio:
+    container_name: minio
+    image: minio/minio
+    restart: always
+    command: server /export --console-address ":9090"
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - minio-data:/export
+    environment:
+      # 默认值必须与 plane-aio 的 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY 一致，
+      # 否则 Django 用 minio/OoMoovoug5inge9K 签名、MinIO 识别不到 AccessKey → 403 InvalidAccessKeyId
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minio}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-pass4You}
 
   app:
+    container_name: app
     build:
       context: .
       dockerfile: Dockerfile
@@ -43,21 +54,23 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
+        condition: service_started
+      minio:
+        condition: service_started
     environment:
       CONFIG_PATH: /data/config.yaml
       LISTEN_ADDR: :3206
       DB_DRIVER: postgres
-      DB_DSN: host=postgres user=go_template password=go_template dbname=go_template port=5432 sslmode=disable TimeZone=Asia/Shanghai
+      DB_DSN: host=postgres user=${POSTGRES_USER:-go_template} password=${POSTGRES_PASSWORD:-go_template} dbname=${POSTGRES_DB:-go_template} port=5432 sslmode=disable TimeZone=Asia/Shanghai
       REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: local-compose-redis-password
-      REDIS_DB: 0
+      REDIS_PASSWORD: ${VALKEY_PASSWORD:-go_template}
+      REDIS_DB: ${REDIS_DB:-0}
       SECURITY_MODE: demo
-      JWT_SECRET: local-compose-jwt-secret
-      ENCRYPTION_KEY: local-compose-encryption-key
-      ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: admin123456
-      ADMIN_EMAIL: admin@example.com
+      JWT_SECRET: ${JWT_SECRET:-local-compose-jwt-secret}
+      ENCRYPTION_KEY:  ${ENCRYPTION_KEY:-local-compose-encryption-key}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123456}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
     ports:
       - "3206:3206"
     volumes:
@@ -68,3 +81,4 @@ volumes:
   app-data:
   postgres-data:
   redis-data:
+  minio-data:
