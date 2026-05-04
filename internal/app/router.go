@@ -12,6 +12,7 @@ import (
 	socialaccounthandler "github.com/ysicing/go-template/handler/socialaccount"
 	userhandler "github.com/ysicing/go-template/handler/user"
 	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
+	"github.com/ysicing/go-template/internal/queue"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
@@ -47,6 +48,8 @@ type Deps struct {
 	PointStore         *pointstore.PointStore
 	CheckInStore       *pointstore.CheckInStore
 	Cache              store.Cache
+	TaskQueue          queue.Enqueuer
+	TaskServer         *queue.Server
 	Services           Services
 }
 
@@ -78,6 +81,9 @@ func buildAllHandlers(d *Deps, tokenCfg sessionservice.TokenConfig) *builtHandle
 
 func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg sessionservice.TokenConfig) {
 	h.email = emailhandler.NewEmailHandler(d.UserStore, d.SettingStore, d.AuditLogStore, d.PointStore, d.Cache)
+	if d.TaskQueue != nil {
+		h.email.SetQueue(d.TaskQueue)
+	}
 	h.auth = authhandler.NewAuthHandler(authhandler.AuthDeps{
 		Users:         d.UserStore,
 		WebAuthnCreds: d.WebAuthnStore,
@@ -175,6 +181,14 @@ func SetupRoutes(app *fiber.App, d *Deps) {
 	}
 
 	h := buildAllHandlers(d, tokenCfg)
+	registerTaskHandlers(d, h)
 
 	registerManagedRoutes(app, buildManagedRouteRuntime(d, h))
+}
+
+func registerTaskHandlers(d *Deps, h *builtHandlers) {
+	if d.TaskServer == nil || h.email == nil {
+		return
+	}
+	d.TaskServer.HandleFunc(emailhandler.TypeVerificationEmailTask, h.email.HandleVerificationEmailTask)
 }

@@ -17,8 +17,11 @@ import (
 func Run(ctx context.Context, cfg *Config, webDistFS fs.FS, buildInfo BuildInfo, log *zerolog.Logger) {
 	validateSecurityConfig(cfg, log)
 	db, cache := initDBAndCache(ctx, cfg, log)
+	taskClient, taskServer := initTaskQueue(cfg, log)
 	sessionStorage := store.NewSessionStorageResource(cache)
 	deps := initDeps(ctx, db, cache, cfg, log)
+	deps.TaskQueue = taskClient
+	deps.TaskServer = taskServer
 
 	seedAdmin(log, deps.UserStore, cfg.Admin)
 	go cleanupAPIRefreshTokens(ctx, log, deps.RefreshTokenStore)
@@ -32,12 +35,15 @@ func Run(ctx context.Context, cfg *Config, webDistFS fs.FS, buildInfo BuildInfo,
 	registerSystemRoutes(fiberApp, buildInfo)
 	registerDocsRoutes(fiberApp, deps, buildInfo)
 	SetupRoutes(fiberApp, deps)
+	startTaskQueue(taskServer, log)
 	mountSPA(fiberApp, webDistFS)
 
 	runServer(fiberApp, runtimeResources{
 		db:             db,
 		cache:          cache,
 		sessionStorage: sessionStorage,
+		taskClient:     taskClient,
+		taskServer:     taskServer,
 	}, cfg.Server.Addr, buildInfo, log)
 }
 
@@ -45,4 +51,6 @@ type runtimeResources struct {
 	db             *gorm.DB
 	cache          store.Cache
 	sessionStorage store.SessionStorageResource
+	taskClient     interface{ Close() error }
+	taskServer     interface{ Shutdown() }
 }

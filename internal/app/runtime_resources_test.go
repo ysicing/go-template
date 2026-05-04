@@ -15,6 +15,29 @@ type stubCache struct {
 	closed bool
 }
 
+type stubTaskClient struct {
+	closed bool
+}
+
+func (s *stubTaskClient) Close() error {
+	s.closed = true
+	return nil
+}
+
+type stubTaskServer struct {
+	started  bool
+	shutdown bool
+}
+
+func (s *stubTaskServer) Start() error {
+	s.started = true
+	return nil
+}
+
+func (s *stubTaskServer) Shutdown() {
+	s.shutdown = true
+}
+
 func (s *stubCache) Ping(_ context.Context) error { return nil }
 func (s *stubCache) Close() error                 { s.closed = true; return nil }
 func (s *stubCache) Get(_ context.Context, _ string) (string, error) {
@@ -42,9 +65,13 @@ func (s *stubCache) GetInt(_ context.Context, _ string) (int64, error) {
 
 func TestRuntimeResourcesClose_ClosesSessionStorageAndCache(t *testing.T) {
 	cache := &stubCache{}
+	taskClient := &stubTaskClient{}
+	taskServer := &stubTaskServer{}
 	sessionClosed := false
 	resources := runtimeResources{
-		cache: cache,
+		cache:      cache,
+		taskClient: taskClient,
+		taskServer: taskServer,
 		sessionStorage: store.SessionStorageResource{
 			CloseFunc: func() error {
 				sessionClosed = true
@@ -61,6 +88,12 @@ func TestRuntimeResourcesClose_ClosesSessionStorageAndCache(t *testing.T) {
 	}
 	if !cache.closed {
 		t.Fatal("expected cache to be closed")
+	}
+	if !taskClient.closed {
+		t.Fatal("expected task queue client to be closed")
+	}
+	if !taskServer.shutdown {
+		t.Fatal("expected task queue server to be shutdown")
 	}
 }
 

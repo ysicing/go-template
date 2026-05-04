@@ -2,12 +2,14 @@ package emailhandler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html"
 	"time"
 
 	"github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
+	"github.com/ysicing/go-template/internal/queue"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -22,11 +24,17 @@ type EmailHandler struct {
 	audit    *store.AuditLogStore
 	points   *pointstore.PointStore
 	cache    store.Cache
+	queue    queue.Enqueuer
 }
 
 // NewEmailHandler creates an EmailHandler.
 func NewEmailHandler(users *store.UserStore, settings *store.SettingStore, audit *store.AuditLogStore, points *pointstore.PointStore, cache store.Cache) *EmailHandler {
 	return &EmailHandler{users: users, settings: settings, audit: audit, points: points, cache: cache}
+}
+
+// SetQueue 注入异步任务队列；未注入时保持本地 goroutine 降级发送。
+func (h *EmailHandler) SetQueue(q queue.Enqueuer) {
+	h.queue = q
 }
 
 const (
@@ -37,6 +45,7 @@ const (
 	emailMaxRetries  = 3               // Maximum retry attempts
 	emailRetryDelay  = 5 * time.Second // Delay between retries
 	emailSendTimeout = 30 * time.Second
+	emailQueueName   = "emails"
 )
 
 // SendVerificationEmail generates a token and sends a verification email asynchronously.
@@ -55,10 +64,28 @@ func (h *EmailHandler) SendVerificationEmail(c fiber.Ctx, user *model.User, base
 <p>This link expires in 24 hours.</p>
 </body></html>`, htmlEscape(user.Username), link, link)
 
-	// Capture values before launching goroutine to avoid data races on the user pointer.
-	userID, userEmail := user.ID, user.Email
+	payload := verificationEmailPayload{
+		UserID: user.ID,
+		Email:  user.Email,
+		Body:   body,
+	}
+	if h.queue != nil {
+		err := h.queue.Enqueue(c.Context(), queue.Job{
+			Type:     TypeVerificationEmailTask,
+			Payload:  payload,
+			Queue:    emailQueueName,
+			MaxRetry: emailMaxRetries,
+			Timeout:  emailSendTimeout,
+		})
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, queue.ErrDisabled) {
+			return fmt.Errorf("failed to queue verification email: %w", err)
+		}
+	}
 
-	go h.sendVerificationEmailAsync(userID, userEmail, body)
+	go h.sendVerificationEmailAsync(payload.UserID, payload.Email, payload.Body)
 	return nil
 }
 

@@ -124,7 +124,24 @@ func runServer(app *fiber.App, resources runtimeResources, addr string, buildInf
 	resources.close(log)
 }
 
+func startTaskQueue(taskServer interface{ Start() error }, log *zerolog.Logger) {
+	if taskServer == nil {
+		return
+	}
+	if err := taskServer.Start(); err != nil {
+		log.Fatal().Err(err).Msg("start async task queue")
+	}
+}
+
 func (r runtimeResources) close(log *zerolog.Logger) {
+	if r.taskServer != nil {
+		r.taskServer.Shutdown()
+	}
+	if r.taskClient != nil {
+		if err := r.taskClient.Close(); err != nil && log != nil {
+			log.Error().Err(err).Msg("close async task queue client")
+		}
+	}
 	if err := r.sessionStorage.Close(); err != nil && log != nil {
 		log.Error().Err(err).Msg("close session storage")
 	}

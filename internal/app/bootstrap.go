@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 
+	"github.com/ysicing/go-template/internal/queue"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
@@ -62,6 +63,34 @@ func initCache(ctx context.Context, cfg *Config, log *zerolog.Logger) store.Cach
 
 	log.Info().Str("addr", cfg.Redis.Addr).Int("db", cfg.Redis.DB).Msg("cache backend: redis (multi-replica ready)")
 	return redisCache
+}
+
+func initTaskQueue(cfg *Config, log *zerolog.Logger) (*queue.Client, *queue.Server) {
+	if cfg.Redis.Addr == "" {
+		log.Info().Msg("async task queue disabled because redis.addr is empty")
+		return nil, nil
+	}
+	redisCfg := queue.RedisConfig{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	}
+	client := queue.NewClient(redisCfg)
+	if err := client.Ping(); err != nil {
+		log.Error().Err(err).Str("addr", cfg.Redis.Addr).Int("db", cfg.Redis.DB).Msg("async task queue ping failed, disabling queue")
+		_ = client.Close()
+		return nil, nil
+	}
+	server := queue.NewServer(queue.ServerConfig{
+		Redis:       redisCfg,
+		Concurrency: 5,
+		Queues: map[string]int{
+			"emails":  2,
+			"default": 1,
+		},
+	})
+	log.Info().Str("addr", cfg.Redis.Addr).Int("db", cfg.Redis.DB).Msg("async task queue enabled")
+	return client, server
 }
 
 func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, log *zerolog.Logger) *Deps {
