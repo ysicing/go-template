@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+
+set -eu
+
+if ! command -v task >/dev/null 2>&1; then
+  echo "pre-commit: 未找到 task，请先安装 go-task" >&2
+  exit 1
+fi
+
+staged_file="$(mktemp "${TMPDIR:-/tmp}/go-template-pre-commit-staged.XXXXXX")"
+unstaged_file="$(mktemp "${TMPDIR:-/tmp}/go-template-pre-commit-unstaged.XXXXXX")"
+
+cleanup() {
+  rm -f "$staged_file" "$unstaged_file"
+}
+
+trap cleanup EXIT INT TERM
+
+git diff --cached --name-only --diff-filter=ACMR >"$staged_file"
+
+if [ ! -s "$staged_file" ]; then
+  exit 0
+fi
+
+git diff --name-only --diff-filter=ACMR >"$unstaged_file"
+partially_staged_files="$(awk 'NR==FNR { files[$0] = 1; next } files[$0] { print $0 }' "$staged_file" "$unstaged_file")"
+
+if [ -n "$partially_staged_files" ]; then
+  echo "pre-commit: 以下文件同时存在已暂存和未暂存改动，请先执行 task fmt 并重新暂存：" >&2
+  printf '%s\n' "$partially_staged_files" >&2
+  exit 1
+fi
+
+echo "pre-commit: 执行 task fmt"
+task fmt
+
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  if [ -e "$path" ]; then
+    git add -- "$path"
+  fi
+done <"$staged_file"

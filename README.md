@@ -25,6 +25,7 @@
 cp config.example.yaml config.yaml
 $EDITOR config.yaml
 task web:install
+git config core.hooksPath .githooks
 task build
 ./id
 ```
@@ -38,6 +39,13 @@ task run
 ```
 
 `task run` 默认会注入 `SECURITY_ALLOW_INSECURE=true`，便于在本地快速启动；生产环境请显式配置 `jwt.secret`，并保持 `security.allow_insecure: false`。
+
+如需启用仓库内置的提交前格式化 hook，可执行：
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
 
 ## Docker 运行
 
