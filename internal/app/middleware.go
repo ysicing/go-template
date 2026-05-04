@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ysicing/go-template/handler"
+	audit "github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/pkg/metrics"
@@ -52,7 +52,7 @@ func setupMiddlewareChain(app *fiber.App, settingStore *store.SettingStore, sess
 	app.Use(buildCORSMiddleware(settingStore, log))
 	app.Use(compress.New())
 	app.Use(securityHeadersMiddleware(settingStore))
-	app.Use(handler.AuditContextMiddleware())
+	app.Use(audit.AuditContextMiddleware())
 }
 
 func shouldSkipSession(c fiber.Ctx) bool {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -179,7 +179,7 @@ func (h *OAuthHandler) handleSocialLink(c fiber.Ctx, userID, provider, providerI
 		_ = h.users.Update(c.Context(), user)
 	}
 
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditSocialAccountLink,
 		Resource: "social_account",

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
@@ -63,7 +64,7 @@ func (h *MFAHandler) persistTOTPEnable(c fiber.Ctx, userID, secret string) ([]st
 
 	_ = h.cache.Del(c.Context(), "totp_setup:"+userID)
 	ip, ua := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFAEnable, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "success",
 	})
@@ -81,7 +82,7 @@ func (h *MFAHandler) TOTPDisable(c fiber.Ctx) error {
 	}
 
 	ip, ua := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFADisable, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "success",
 	})
@@ -150,7 +151,7 @@ func (h *MFAHandler) RegenerateBackupCodes(c fiber.Ctx) error {
 	}
 
 	ip, ua := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFABackupRegenerate, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "success",
 	})

@@ -1,4 +1,4 @@
-package handler
+package audit
 
 import (
 	"context"
@@ -21,10 +21,12 @@ type auditCreator interface {
 	Create(ctx context.Context, log *model.AuditLog) error
 }
 
+// AuditCreator 表示能够写入审计日志的依赖。
 type AuditCreator interface {
 	Create(ctx context.Context, log *model.AuditLog) error
 }
 
+// AuditEvent 封装一次审计记录所需的业务字段。
 type AuditEvent struct {
 	UserID     string
 	Action     string
@@ -113,10 +115,12 @@ func recordAuditFromFiber(c fiber.Ctx, audit auditCreator, event AuditEvent) err
 	return recordAuditEvent(c.Context(), audit, event)
 }
 
+// WriteAudit 写入一条审计日志。
 func WriteAudit(ctx context.Context, audit AuditCreator, entry *model.AuditLog) error {
 	return writeAudit(ctx, audit, entry)
 }
 
+// RecordAuditFromFiber 从请求上下文补全审计字段并写入审计日志。
 func RecordAuditFromFiber(c fiber.Ctx, audit AuditCreator, event AuditEvent) error {
 	return recordAuditFromFiber(c, audit, event)
 }

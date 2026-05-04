@@ -8,6 +8,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
@@ -90,14 +91,14 @@ func (h *WebAuthnHandler) issueBrowserSession(c fiber.Ctx, user *model.User, ref
 
 func (h *WebAuthnHandler) writeSuccessfulLoginAudit(c fiber.Ctx, userID string) {
 	loginIP, loginUA := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditLogin, Resource: "user", ResourceID: userID,
 		IP: loginIP, UserAgent: loginUA, Status: "success", Detail: "webauthn",
 	})
 }
 
 func (h *WebAuthnHandler) writeFailedLoginAudit(c fiber.Ctx, userID, action, resource, detail string) {
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: action, Resource: resource, ResourceID: userID,
 		IP: httprequest.GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: detail,
 	})

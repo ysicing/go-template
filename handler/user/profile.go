@@ -6,6 +6,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
@@ -163,7 +164,7 @@ func applyAvatarUpdate(user *model.User, avatarURL *string) error {
 }
 
 func (h *UserHandler) auditProfileUpdate(c fiber.Ctx, userID string) {
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:     userID,
 		Action:     model.AuditUserUpdate,
 		Resource:   "user",
@@ -180,7 +181,7 @@ func (h *UserHandler) handleEmailChanged(c fiber.Ctx, userID string, user *model
 
 	baseURL := c.Protocol() + "://" + c.Hostname()
 	_ = h.emailHandler.SendVerificationEmail(c, user, baseURL)
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:     userID,
 		Action:     model.AuditEmailChange,
 		Resource:   "user",

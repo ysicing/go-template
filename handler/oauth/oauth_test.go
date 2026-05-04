@@ -12,6 +12,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	auditcore "github.com/ysicing/go-template/internal/audit"
 	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -270,7 +271,7 @@ func TestConfirmSocialLink_WritesAuditLog(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Post("/api/auth/social/confirm-link", h.ConfirmSocialLink)
 
 	payload, _ := json.Marshal(map[string]string{
@@ -542,7 +543,7 @@ func TestSocialLinkWebAuthnFinish_LinksAccountAndWritesAuditLog(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Post("/api/auth/social/confirm-link/webauthn/finish", h.SocialLinkWebAuthnFinish)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/social/confirm-link/webauthn/finish?link_token=link-token", strings.NewReader(`{"id":"ignored"}`))

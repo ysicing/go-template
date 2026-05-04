@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	auditcore "github.com/ysicing/go-template/internal/audit"
 	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -88,7 +88,7 @@ func TestAdminSettingUpdate_UpdatesSiteTitle(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -121,7 +121,7 @@ func TestAdminSettingUpdate_UpdatesPasswordPolicyEnabled(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -157,7 +157,7 @@ func TestAdminSettingUpdate_ReturnsErrorWhenSecretSettingEncryptionFails(t *test
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -193,7 +193,7 @@ func TestAdminSettingUpdate_IsAtomicWhenSecretSettingEncryptionFails(t *testing.
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Put("/api/admin/settings", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.Update(c)
@@ -231,7 +231,7 @@ func TestAdminSettingTestEmail_SendsToProvidedRecipient(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(httpmiddleware.RequestIDMiddleware())
-	app.Use(handlercommon.AuditContextMiddleware())
+	app.Use(auditcore.AuditContextMiddleware())
 	app.Post("/api/admin/settings/test-email", func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-user")
 		return h.TestEmail(c)

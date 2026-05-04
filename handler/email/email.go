@@ -6,7 +6,7 @@ import (
 	"html"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -101,7 +101,7 @@ func (h *EmailHandler) VerifyEmail(c fiber.Ctx) error {
 	}
 
 	ip, ua := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: user.ID, Action: model.AuditEmailVerify, Resource: "user",
 		ResourceID: user.ID, IP: ip, UserAgent: ua, Status: "success",
 	})
@@ -144,7 +144,7 @@ func (h *EmailHandler) ResendVerification(c fiber.Ctx) error {
 	}
 
 	ip, ua := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: user.ID, Action: model.AuditEmailResend, Resource: "user",
 		ResourceID: user.ID, IP: ip, UserAgent: ua, Status: "success",
 	})

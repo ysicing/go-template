@@ -5,6 +5,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
@@ -114,7 +115,7 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		}
 	}
 
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:     user.ID,
 		Action:     model.AuditLogin,
 		Resource:   "user",

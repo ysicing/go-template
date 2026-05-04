@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 
@@ -76,7 +76,7 @@ func (h *OAuthHandler) completeSocialLink(c fiber.Ctx, user *model.User, pending
 
 	authservice.ClearFailedAuthAttempts(c.Context(), h.cache, user.ID)
 
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:     user.ID,
 		Action:     model.AuditSocialAccountLink,
 		Resource:   "social_account",
@@ -176,7 +176,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 			verified = true
 			verificationMethod = "password"
 		} else {
-			_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+			_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 				UserID:   user.ID,
 				Action:   model.AuditSocialAccountLink,
 				Resource: "social_account",
@@ -206,7 +206,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 			verified = true
 			verificationMethod = "totp"
 		} else {
-			_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+			_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 				UserID:   user.ID,
 				Action:   model.AuditSocialAccountLink,
 				Resource: "social_account",

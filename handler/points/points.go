@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
@@ -72,7 +72,7 @@ func (h *PointsHandler) CheckIn(c fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "already checked in today", "record": record})
 	}
 
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditPointsCheckIn,
 		Resource: "points",
@@ -157,7 +157,7 @@ func (h *PointsHandler) SpendPoints(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msg})
 	}
 
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditPointsSpend,
 		Resource: "points",

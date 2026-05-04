@@ -1,4 +1,4 @@
-package handler
+package audit
 
 import (
 	"strings"
@@ -10,7 +10,7 @@ import (
 
 const auditSourceLocalKey = "audit_source"
 
-// AuditContextMiddleware assigns a normalized audit source to each request.
+// AuditContextMiddleware 为每个请求写入标准化的审计来源。
 func AuditContextMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		c.Locals(auditSourceLocalKey, ResolveAuditSource(c))
@@ -18,7 +18,7 @@ func AuditContextMiddleware() fiber.Handler {
 	}
 }
 
-// ResolveAuditSource determines the canonical source for a request based on path.
+// ResolveAuditSource 根据请求路径确定审计来源。
 func ResolveAuditSource(c fiber.Ctx) string {
 	if c == nil {
 		return model.AuditSourceSystem

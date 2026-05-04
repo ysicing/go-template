@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
@@ -115,7 +116,7 @@ func rtRememberKey(tokenHash string) string { return "rt_remember:" + tokenHash 
 
 func (h *AuthHandler) recordAudit(c fiber.Ctx, userID, action, resource, resourceID, status, detail string) {
 	ip, ua := httprequest.GetRealIPAndUA(c)
-	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
+	_ = audit.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID:     userID,
 		Action:     action,
 		Resource:   resource,

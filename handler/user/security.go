@@ -2,6 +2,7 @@ package user
 
 import (
 	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -94,7 +95,7 @@ func (h *UserHandler) persistPasswordChange(c fiber.Ctx, userID string, user *mo
 }
 
 func (h *UserHandler) auditPasswordChange(c fiber.Ctx, userID string) {
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:     userID,
 		Action:     model.AuditPasswordChange,
 		Resource:   "user",
@@ -124,7 +125,7 @@ func (h *UserHandler) RevokeAllSessions(c fiber.Ctx) error {
 		_ = h.cache.Del(c.Context(), "token_ver:"+userID)
 	}
 
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditSessionRevoke,
 		Resource: "session",
@@ -148,7 +149,7 @@ func (h *UserHandler) bumpUserTokenVersion(c fiber.Ctx, userID string, user *mod
 }
 
 func (h *UserHandler) auditRevokeAllFailure(c fiber.Ctx, userID, reason string) {
-	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+	_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 		UserID:   userID,
 		Action:   model.AuditSessionRevoke,
 		Resource: "session",

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/audit"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -178,7 +178,7 @@ func (h *OAuthHandler) SocialLinkWebAuthnFinish(c fiber.Ctx) error {
 	credential, err := h.webAuthn.FinishLogin(waUser, session, c.Body())
 	if err != nil {
 		authservice.RecordFailedAuthAttempt(c.Context(), h.cache, pending.UserID)
-		_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
+		_ = audit.RecordAuditFromFiber(c, h.audit, audit.AuditEvent{
 			UserID:   pending.UserID,
 			Action:   model.AuditSocialAccountLink,
 			Resource: "social_account",
