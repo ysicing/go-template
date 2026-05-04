@@ -68,7 +68,6 @@ describe("DashboardPage", () => {
     adminMock.mockResolvedValue({
       data: {
         total_users: 12,
-        total_clients: 3,
         total_logins: 88,
         today_logins: 7,
       },
@@ -83,7 +82,6 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("Platform snapshot")).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Admin/ })).not.toBeInTheDocument()
     expect(screen.getByText("Total users")).toBeInTheDocument()
-    expect(screen.queryByText("Monitoring")).not.toBeInTheDocument()
     expect(adminMock).toHaveBeenCalledTimes(1)
   })
 })

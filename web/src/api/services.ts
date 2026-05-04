@@ -98,15 +98,6 @@ export const auditLogApi = {
   }) => api.get("/admin/audit-logs", { params }),
 }
 
-export const adminClientApi = {
-  list: (page = 1, pageSize = 20) =>
-    api.get("/admin/clients", { params: { page, page_size: pageSize } }),
-  get: (id: string) => api.get(`/admin/clients/${id}`),
-  create: (data: Record<string, unknown>) => api.post("/admin/clients", data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/admin/clients/${id}`, data),
-  delete: (id: string) => api.delete(`/admin/clients/${id}`),
-}
-
 export const adminProviderApi = {
   list: () => api.get("/admin/providers"),
   get: (id: string) => api.get(`/admin/providers/${id}`),

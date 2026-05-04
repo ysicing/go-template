@@ -58,17 +58,11 @@ func TestInitDepsInitializesTemplateModules(t *testing.T) {
 	if deps.UserStore == nil {
 		t.Fatal("expected user store to be initialized")
 	}
-	if deps.ClientStore == nil {
-		t.Fatal("expected oauth client store to be initialized")
-	}
 	if deps.SettingStore == nil {
 		t.Fatal("expected setting store to be initialized")
 	}
 	if deps.PointStore == nil {
 		t.Fatal("expected point store to be initialized")
-	}
-	if deps.Services.ClientCredentials == nil {
-		t.Fatal("expected client credentials service to be initialized")
 	}
 	if deps.Services.Sessions == nil {
 		t.Fatal("expected session service to be initialized")

@@ -2,25 +2,10 @@ package model
 
 import (
 	"testing"
-	"time"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
-
-type legacyTokenWithoutSubjectFields struct {
-	Base
-	TokenID      string `gorm:"uniqueIndex;type:varchar(36)"`
-	UserID       string `gorm:"type:varchar(36);index"`
-	ClientID     string `gorm:"type:varchar(255);index"`
-	Scopes       string `gorm:"type:varchar(512)"`
-	TokenType    string `gorm:"type:varchar(20);default:'access'"`
-	RefreshToken string `gorm:"type:varchar(512);index"`
-	ExpiresAt    time.Time
-	Revoked      bool `gorm:"default:false"`
-}
-
-func (legacyTokenWithoutSubjectFields) TableName() string { return "tokens" }
 
 func TestMigrate_LegacyUsersTableWithoutTokenVersionColumn(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -106,7 +91,7 @@ func TestMigrate_LegacyRefreshTokenTableWithoutFamilyColumn(t *testing.T) {
 	}
 }
 
-func TestMigrate_AddsExpiryIndexesForTokenCleanup(t *testing.T) {
+func TestMigrate_AddsExpiryIndexesForRefreshTokenCleanup(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
@@ -120,21 +105,6 @@ func TestMigrate_AddsExpiryIndexesForTokenCleanup(t *testing.T) {
 		Name string
 	}
 	var indexes []idx
-	if err := db.Raw("PRAGMA index_list('tokens')").Scan(&indexes).Error; err != nil {
-		t.Fatalf("list token indexes: %v", err)
-	}
-	foundTokenExpiresIdx := false
-	for _, it := range indexes {
-		if it.Name == "idx_tokens_expires_at" {
-			foundTokenExpiresIdx = true
-			break
-		}
-	}
-	if !foundTokenExpiresIdx {
-		t.Fatal("expected idx_tokens_expires_at to exist")
-	}
-
-	indexes = nil
 	if err := db.Raw("PRAGMA index_list('api_refresh_tokens')").Scan(&indexes).Error; err != nil {
 		t.Fatalf("list api_refresh_tokens indexes: %v", err)
 	}
@@ -162,8 +132,6 @@ func TestMigrate_TemplateSchemaOnlyIncludesRetainedTables(t *testing.T) {
 
 	for _, table := range []string{
 		"users",
-		"oauth_clients",
-		"tokens",
 		"social_providers",
 		"social_accounts",
 		"settings",
@@ -198,54 +166,5 @@ func TestMigrate_TemplateSchemaOnlyIncludesRetainedTables(t *testing.T) {
 		if db.Migrator().HasTable(table) {
 			t.Fatalf("expected removed table %s to be absent", table)
 		}
-	}
-}
-
-func TestMigrate_AddsTokenSubjectFields(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-
-	if err := db.AutoMigrate(&legacyTokenWithoutSubjectFields{}); err != nil {
-		t.Fatalf("create legacy tokens table: %v", err)
-	}
-
-	if err := db.Create(&legacyTokenWithoutSubjectFields{
-		Base:      Base{ID: "tok-1"},
-		TokenID:   "token-1",
-		UserID:    "user-1",
-		ClientID:  "client-1",
-		Scopes:    "openid,profile",
-		TokenType: "access",
-		ExpiresAt: time.Now().Add(time.Hour),
-		Revoked:   false,
-	}).Error; err != nil {
-		t.Fatalf("seed legacy token: %v", err)
-	}
-
-	if err := Migrate(db); err != nil {
-		t.Fatalf("migrate failed: %v", err)
-	}
-
-	if !db.Migrator().HasColumn(&Token{}, "subject_type") {
-		t.Fatal("expected subject_type column to exist after migrate")
-	}
-	if !db.Migrator().HasColumn(&Token{}, "subject_id") {
-		t.Fatal("expected subject_id column to exist after migrate")
-	}
-
-	var got struct {
-		SubjectType string
-		SubjectID   string
-	}
-	if err := db.Raw("SELECT subject_type, subject_id FROM tokens WHERE id = ?", "tok-1").Scan(&got).Error; err != nil {
-		t.Fatalf("query token subject fields: %v", err)
-	}
-	if got.SubjectType != "user" {
-		t.Fatalf("expected subject_type=user after backfill, got %q", got.SubjectType)
-	}
-	if got.SubjectID != "user-1" {
-		t.Fatalf("expected subject_id=user-1 after backfill, got %q", got.SubjectID)
 	}
 }

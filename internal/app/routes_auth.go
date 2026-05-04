@@ -93,17 +93,3 @@ func authAccountRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		}},
 	}
 }
-
-func oauthRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
-	return []managedRouteSpec{
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/token", Summary: "OAuth token endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.handlers.clientCredentials.Token}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/introspect", Summary: "OAuth introspection endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.handlers.clientCredentials.Introspect}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/revoke", Summary: "OAuth revoke endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.handlers.clientCredentials.Revoke}
-		}},
-	}
-}

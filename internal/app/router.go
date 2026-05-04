@@ -3,18 +3,15 @@ package app
 import (
 	adminhandler "github.com/ysicing/go-template/handler/admin"
 	authhandler "github.com/ysicing/go-template/handler/auth"
-	clientcredentialshandler "github.com/ysicing/go-template/handler/clientcredentials"
 	emailhandler "github.com/ysicing/go-template/handler/email"
 	mfahandler "github.com/ysicing/go-template/handler/mfa"
 	oauthhandler "github.com/ysicing/go-template/handler/oauth"
-	oauthclienthandler "github.com/ysicing/go-template/handler/oauthclient"
 	pointshandler "github.com/ysicing/go-template/handler/points"
 	socialaccounthandler "github.com/ysicing/go-template/handler/socialaccount"
 	userhandler "github.com/ysicing/go-template/handler/user"
 	webauthnhandler "github.com/ysicing/go-template/handler/webauthn"
 	"github.com/ysicing/go-template/internal/queue"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
-	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -26,9 +23,8 @@ import (
 
 // Services groups application-level services shared across handlers.
 type Services struct {
-	ClientCredentials *clientcredentialsservice.ClientCredentialsService
-	Sessions          *sessionservice.SessionService
-	Auth              *authservice.AuthService
+	Sessions *sessionservice.SessionService
+	Auth     *authservice.AuthService
 }
 
 // Deps aggregates all dependencies needed by the route setup.
@@ -37,7 +33,6 @@ type Deps struct {
 	DB                 *gorm.DB
 	UserStore          *store.UserStore
 	PasswordHistory    *store.PasswordHistoryStore
-	ClientStore        *store.OAuthClientStore
 	SocialStore        *store.SocialProviderStore
 	SocialAccountStore *store.SocialAccountStore
 	SettingStore       *store.SettingStore
@@ -55,20 +50,18 @@ type Deps struct {
 
 // builtHandlers holds all handler instances created during route setup.
 type builtHandlers struct {
-	auth              *authhandler.AuthHandler
-	email             *emailhandler.EmailHandler
-	user              *userhandler.UserHandler
-	mfa               *mfahandler.MFAHandler
-	webauthn          *webauthnhandler.WebAuthnHandler
-	oauth             *oauthhandler.OAuthHandler
-	socialAcct        *socialaccounthandler.SocialAccountHandler
-	oauthClient       *oauthclienthandler.OAuthClientHandler
-	admin             *adminhandler.AdminHandler
-	adminProv         *adminhandler.AdminProviderHandler
-	adminSett         *adminhandler.AdminSettingHandler
-	adminPoints       *adminhandler.AdminPointsHandler
-	points            *pointshandler.PointsHandler
-	clientCredentials *clientcredentialshandler.ClientCredentialsHandler
+	auth        *authhandler.AuthHandler
+	email       *emailhandler.EmailHandler
+	user        *userhandler.UserHandler
+	mfa         *mfahandler.MFAHandler
+	webauthn    *webauthnhandler.WebAuthnHandler
+	oauth       *oauthhandler.OAuthHandler
+	socialAcct  *socialaccounthandler.SocialAccountHandler
+	admin       *adminhandler.AdminHandler
+	adminProv   *adminhandler.AdminProviderHandler
+	adminSett   *adminhandler.AdminSettingHandler
+	adminPoints *adminhandler.AdminPointsHandler
+	points      *pointshandler.PointsHandler
 }
 
 func buildAllHandlers(d *Deps, tokenCfg sessionservice.TokenConfig) *builtHandlers {
@@ -147,15 +140,12 @@ func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg sessionservice.Token
 	})
 
 	h.socialAcct = socialaccounthandler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
-	h.oauthClient = oauthclienthandler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
 	h.points = pointshandler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
-	h.clientCredentials = clientcredentialshandler.NewClientCredentialsHandler(d.Services.ClientCredentials)
 }
 
 func buildAdminHandlers(h *builtHandlers, d *Deps) {
 	h.admin = adminhandler.NewAdminHandler(adminhandler.AdminDeps{
 		Users:          d.UserStore,
-		Clients:        d.ClientStore,
 		Audit:          d.AuditLogStore,
 		RefreshTokens:  d.RefreshTokenStore,
 		MFA:            d.MFAStore,

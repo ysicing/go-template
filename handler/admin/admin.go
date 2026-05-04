@@ -26,10 +26,6 @@ type adminUserStore interface {
 	Count(ctx context.Context) (int64, error)
 }
 
-type adminClientStore interface {
-	Count(ctx context.Context) (int64, error)
-}
-
 type adminAuditLogStore interface {
 	Create(ctx context.Context, log *model.AuditLog) error
 	CountLogin(ctx context.Context) (int64, error)
@@ -48,7 +44,6 @@ type adminCache interface {
 // AdminDeps aggregates dependencies required by AdminHandler.
 type AdminDeps struct {
 	Users          adminUserStore
-	Clients        adminClientStore
 	Audit          adminAuditLogStore
 	RefreshTokens  *store.APIRefreshTokenStore
 	MFA            *store.MFAStore
@@ -61,7 +56,6 @@ type AdminDeps struct {
 // AdminHandler handles admin user management endpoints.
 type AdminHandler struct {
 	users          adminUserStore
-	clients        adminClientStore
 	audit          adminAuditLogStore
 	refreshTokens  *store.APIRefreshTokenStore
 	mfa            *store.MFAStore
@@ -75,7 +69,6 @@ type AdminHandler struct {
 func NewAdminHandler(deps AdminDeps) *AdminHandler {
 	return &AdminHandler{
 		users:          deps.Users,
-		clients:        deps.Clients,
 		audit:          deps.Audit,
 		refreshTokens:  deps.RefreshTokens,
 		mfa:            deps.MFA,
@@ -98,17 +91,12 @@ func (h *AdminHandler) GetUser(c fiber.Ctx) error {
 
 // GetStats handles GET /api/admin/stats.
 func (h *AdminHandler) GetStats(c fiber.Ctx) error {
-	var totalUsers, totalClients, totalLogins, todayLogins int64
+	var totalUsers, totalLogins, todayLogins int64
 
 	g, ctx := errgroup.WithContext(c.Context())
 	g.Go(func() error {
 		var err error
 		totalUsers, err = h.users.Count(ctx)
-		return err
-	})
-	g.Go(func() error {
-		var err error
-		totalClients, err = h.clients.Count(ctx)
 		return err
 	})
 	g.Go(func() error {
@@ -126,10 +114,9 @@ func (h *AdminHandler) GetStats(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"total_users":   totalUsers,
-		"total_clients": totalClients,
-		"total_logins":  totalLogins,
-		"today_logins":  todayLogins,
+		"total_users":  totalUsers,
+		"total_logins": totalLogins,
+		"today_logins": todayLogins,
 	})
 }
 

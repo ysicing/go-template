@@ -15,8 +15,6 @@ const bcryptCost = 12
 const (
 	PermissionAdminUsersRead        = "admin.users.read"
 	PermissionAdminUsersWrite       = "admin.users.write"
-	PermissionAdminClientsRead      = "admin.clients.read"
-	PermissionAdminClientsWrite     = "admin.clients.write"
 	PermissionAdminProvidersRead    = "admin.providers.read"
 	PermissionAdminProvidersWrite   = "admin.providers.write"
 	PermissionAdminSettingsRead     = "admin.settings.read"
@@ -30,8 +28,6 @@ const (
 var allAdminPermissions = []string{
 	PermissionAdminUsersRead,
 	PermissionAdminUsersWrite,
-	PermissionAdminClientsRead,
-	PermissionAdminClientsWrite,
 	PermissionAdminProvidersRead,
 	PermissionAdminProvidersWrite,
 	PermissionAdminSettingsRead,

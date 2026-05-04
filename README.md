@@ -10,7 +10,6 @@
 - Social Login Provider 管理
 - MFA / WebAuthn
 - 用户、权限、系统设置、审计日志
-- OAuth2 机器客户端与令牌接口
 - 积分示例模块
 
 ## 技术栈
@@ -111,9 +110,6 @@ docker compose down -v
 - Swagger UI：`http://localhost:3206/swagger/index.html`
 - OpenAPI JSON：`http://localhost:3206/openapi.json`
 - API Base：`http://localhost:3206/api`
-- Token：`http://localhost:3206/oauth/token`
-- Introspect：`http://localhost:3206/oauth/introspect`
-- Revoke：`http://localhost:3206/oauth/revoke`
 
 Swagger 文档会按当前登录用户权限动态裁剪：
 

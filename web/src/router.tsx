@@ -11,8 +11,6 @@ const MfaVerifyPage = lazy(() => import("@/pages/mfa-verify"))
 const LoginCallbackPage = lazy(() => import("@/pages/login/callback"))
 const DashboardPage = lazy(() => import("@/pages/dashboard"))
 const UsersPage = lazy(() => import("@/pages/users"))
-const ClientsPage = lazy(() => import("@/pages/clients"))
-const ClientEditPage = lazy(() => import("@/pages/clients/edit"))
 const ProvidersPage = lazy(() => import("@/pages/providers"))
 const ProviderEditPage = lazy(() => import("@/pages/providers/edit"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
@@ -98,9 +96,6 @@ export default function AppRouter() {
         <Route path="admin" element={<AdminSection />}>
           <Route index element={<Navigate to="users" replace />} />
           <Route path="users" element={<RequireAdminPermission permission={adminPermissions.usersRead}><UsersPage currentUser={userForRoutes ? { id: userForRoutes.id } : undefined} /></RequireAdminPermission>} />
-          <Route path="clients" element={<RequireAdminPermission permission={adminPermissions.clientsRead}><ClientsPage /></RequireAdminPermission>} />
-          <Route path="clients/new" element={<RequireAdminPermission permission={adminPermissions.clientsWrite}><ClientEditPage /></RequireAdminPermission>} />
-          <Route path="clients/:id" element={<RequireAdminPermission permission={adminPermissions.clientsWrite}><ClientEditPage /></RequireAdminPermission>} />
           <Route path="providers" element={<RequireAdminPermission permission={adminPermissions.providersRead}><ProvidersPage /></RequireAdminPermission>} />
           <Route path="providers/new" element={<RequireAdminPermission permission={adminPermissions.providersWrite}><ProviderEditPage /></RequireAdminPermission>} />
           <Route path="providers/:id" element={<RequireAdminPermission permission={adminPermissions.providersWrite}><ProviderEditPage /></RequireAdminPermission>} />

@@ -122,8 +122,6 @@ func shouldDocumentFiberRoute(route fiber.Route) bool {
 		return false
 	case strings.HasPrefix(path, "/api/"):
 		return true
-	case strings.HasPrefix(path, "/oauth/"):
-		return true
 	default:
 		return false
 	}

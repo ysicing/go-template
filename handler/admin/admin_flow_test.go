@@ -20,7 +20,6 @@ func TestAdminUpdateUser_UsesJSONPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 
 	admin := createLocalUser(t, db, "admin-update", "admin-update@example.com", "Password123!abcd")
@@ -36,10 +35,9 @@ func TestAdminUpdateUser_UsesJSONPermissions(t *testing.T) {
 	defer cache.Close()
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
-		Cache:   cache,
+		Users: userStore,
+		Audit: auditStore,
+		Cache: cache,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {
@@ -81,7 +79,6 @@ func TestAdminUpdateUser_InvalidatesPermissionCache(t *testing.T) {
 	ctx := context.Background()
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
@@ -101,10 +98,9 @@ func TestAdminUpdateUser_InvalidatesPermissionCache(t *testing.T) {
 	}
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
-		Cache:   cache,
+		Users: userStore,
+		Audit: auditStore,
+		Cache: cache,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {
@@ -136,7 +132,6 @@ func TestAdminUpdateUser_BumpsTokenVersionAndInvalidatesTokenVersionCache(t *tes
 	ctx := context.Background()
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
@@ -160,10 +155,9 @@ func TestAdminUpdateUser_BumpsTokenVersionAndInvalidatesTokenVersionCache(t *tes
 	}
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
-		Cache:   cache,
+		Users: userStore,
+		Audit: auditStore,
+		Cache: cache,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {
@@ -203,7 +197,6 @@ func TestAdminDeleteUser_RevokesRefreshTokens(t *testing.T) {
 	ctx := context.Background()
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 	refreshStore := store.NewAPIRefreshTokenStore(db)
 
@@ -225,7 +218,6 @@ func TestAdminDeleteUser_RevokesRefreshTokens(t *testing.T) {
 
 	h := NewAdminHandler(AdminDeps{
 		Users:         userStore,
-		Clients:       clientStore,
 		Audit:         auditStore,
 		RefreshTokens: refreshStore,
 		Cache:         cache,
@@ -253,7 +245,6 @@ func TestAdminDeleteUser_RevokesRefreshTokens(t *testing.T) {
 func TestAdminUpdateUser_ClearsPermissionsWithEmptyArray(t *testing.T) {
 	db := setupTestDB(t)
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 	cache := store.NewMemoryCache()
 	defer cache.Close()
@@ -272,10 +263,9 @@ func TestAdminUpdateUser_ClearsPermissionsWithEmptyArray(t *testing.T) {
 	}
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
-		Cache:   cache,
+		Users: userStore,
+		Audit: auditStore,
+		Cache: cache,
 	})
 	app := fiber.New()
 	app.Put("/api/admin/users/:id", func(c fiber.Ctx) error {

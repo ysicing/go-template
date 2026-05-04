@@ -28,11 +28,6 @@ func TestStoresNormalizeNotFound(t *testing.T) {
 		t.Fatalf("expected user store ErrNotFound, got %v", err)
 	}
 
-	clientStore := NewOAuthClientStore(db)
-	if _, err := clientStore.GetByClientID(ctx, "missing-client"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected oauth client store ErrNotFound, got %v", err)
-	}
-
 	socialStore := NewSocialAccountStore(db)
 	if _, err := socialStore.GetByProviderAndID(ctx, model.SocialProviderGitHub, "missing-provider-id"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected social account store ErrNotFound, got %v", err)

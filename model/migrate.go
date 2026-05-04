@@ -16,22 +16,10 @@ func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(allModels()...); err != nil {
 		return err
 	}
-	return ensureTokenExpiryIndexes(db)
+	return ensureRefreshTokenExpiryIndexes(db)
 }
 
-func ensureTokenExpiryIndexes(db *gorm.DB) error {
-	if db.Migrator().HasTable("tokens") {
-		var sql string
-		if db.Dialector.Name() == "postgres" {
-			sql = "CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at) WHERE deleted_at IS NULL"
-		} else {
-			sql = "CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at)"
-		}
-		if err := db.Exec(sql).Error; err != nil {
-			return err
-		}
-	}
-
+func ensureRefreshTokenExpiryIndexes(db *gorm.DB) error {
 	if db.Migrator().HasTable("api_refresh_tokens") {
 		var sql string
 		if db.Dialector.Name() == "postgres" {
@@ -50,8 +38,6 @@ func ensureTokenExpiryIndexes(db *gorm.DB) error {
 func allModels() []any {
 	return []any{
 		&User{},
-		&OAuthClient{},
-		&Token{},
 		&SocialProvider{},
 		&SocialAccount{},
 		&Setting{},

@@ -3,8 +3,6 @@ import { useAuthStore } from "@/stores/auth"
 export const adminPermissions = {
   usersRead: "admin.users.read",
   usersWrite: "admin.users.write",
-  clientsRead: "admin.clients.read",
-  clientsWrite: "admin.clients.write",
   providersRead: "admin.providers.read",
   providersWrite: "admin.providers.write",
   settingsRead: "admin.settings.read",

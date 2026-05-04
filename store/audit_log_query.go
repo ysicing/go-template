@@ -148,10 +148,9 @@ func (s *AuditLogStore) ListLoginByUserIDPaged(ctx context.Context, userID strin
 	var rows []LoginRow
 	err := s.db.WithContext(ctx).Raw(`
 			SELECT al.id, al.user_id, al.client_id,
-			       COALESCE(oc.name, '') AS app_name,
+			       '' AS app_name,
 			       al.detail AS provider, al.ip, al.user_agent, al.created_at
 			FROM audit_logs al
-			LEFT JOIN oauth_clients oc ON oc.client_id = al.client_id AND oc.deleted_at IS NULL
 			WHERE al.user_id = ? AND al.action = ? AND al.deleted_at IS NULL
 			ORDER BY al.created_at DESC
 			LIMIT ? OFFSET ?
@@ -172,11 +171,10 @@ func (s *AuditLogStore) ListLoginAllPaged(ctx context.Context, page, pageSize in
 			SELECT al.id, al.user_id,
 			       COALESCE(u.username, al.user_id) AS username,
 			       al.client_id,
-			       COALESCE(oc.name, '') AS app_name,
+			       '' AS app_name,
 			       al.detail AS provider, al.ip, al.user_agent, al.created_at
 			FROM audit_logs al
 			LEFT JOIN users u ON u.id = al.user_id AND u.deleted_at IS NULL
-			LEFT JOIN oauth_clients oc ON oc.client_id = al.client_id AND oc.deleted_at IS NULL
 			WHERE al.action = ? AND al.deleted_at IS NULL
 			ORDER BY al.created_at DESC
 			LIMIT ? OFFSET ?

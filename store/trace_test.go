@@ -28,7 +28,7 @@ func TestTraceLogger_SuppressesZeroRowCleanupStatements(t *testing.T) {
 
 	l := NewTraceLogger("info").(*traceLogger)
 	l.Trace(context.Background(), time.Now().Add(-10*time.Millisecond), func() (string, int64) {
-		return `UPDATE "tokens" SET "deleted_at"='2026-04-02 05:14:24.088' WHERE expires_at < '2026-04-02 05:14:24.064' AND "tokens"."deleted_at" IS NULL`, 0
+		return `UPDATE "api_refresh_tokens" SET "deleted_at"='2026-04-02 05:14:24.088' WHERE expires_at < '2026-04-02 05:14:24.064' AND "api_refresh_tokens"."deleted_at" IS NULL`, 0
 	}, nil)
 
 	if got := buf.String(); got != "" {

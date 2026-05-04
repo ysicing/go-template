@@ -19,7 +19,6 @@ func TestAdminHandler_ListUsers_IncludesSocialProviders(t *testing.T) {
 	db := setupTestDB(t)
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 	socialAccounts := store.NewSocialAccountStore(db)
 
@@ -42,7 +41,6 @@ func TestAdminHandler_ListUsers_IncludesSocialProviders(t *testing.T) {
 
 	h := NewAdminHandler(AdminDeps{
 		Users:          userStore,
-		Clients:        clientStore,
 		Audit:          auditStore,
 		SocialAccounts: socialAccounts,
 	})
@@ -87,16 +85,14 @@ func TestAdminHandler_ListUsers_IncludesSocialProviders(t *testing.T) {
 func TestAdminHandler_CreateUser_ReturnsSetupTokenInsteadOfPassword(t *testing.T) {
 	db := setupTestDB(t)
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 	cache := store.NewMemoryCache()
 	t.Cleanup(func() { _ = cache.Close() })
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
-		Cache:   cache,
+		Users: userStore,
+		Audit: auditStore,
+		Cache: cache,
 	})
 
 	app := fiber.New()

@@ -106,7 +106,6 @@ func registerEnabledMiddleware(settings *store.SettingStore) fiber.Handler {
 func managedRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 	routes := make([]managedRouteSpec, 0)
 	routes = append(routes, authRouteSpecs(rt)...)
-	routes = append(routes, oauthRouteSpecs(rt)...)
 	routes = append(routes, userRouteSpecs(rt)...)
 	routes = append(routes, pointsRouteSpecs(rt)...)
 	routes = append(routes, adminRouteSpecs(rt)...)

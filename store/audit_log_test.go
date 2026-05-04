@@ -10,19 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAuditLogStoreAppLoginStatsIncludesMachineActivity(t *testing.T) {
+func TestAuditLogStoreListLoginAllPagedDoesNotRequireOAuthClients(t *testing.T) {
 	db := setupUserStoreTestDB(t)
 	ctx := context.Background()
 	logs := NewAuditLogStore(db)
-
-	client := &model.OAuthClient{
-		Name:         "Machine Portal",
-		ClientID:     "machine-portal",
-		ClientSecret: "hash",
-		RedirectURIs: "https://example.com/callback",
-		UserID:       "user-1",
-	}
-	require.NoError(t, db.WithContext(ctx).Create(client).Error)
 
 	user := &model.User{
 		Username:   "alice",
@@ -33,52 +24,22 @@ func TestAuditLogStoreAppLoginStatsIncludesMachineActivity(t *testing.T) {
 	}
 	require.NoError(t, db.WithContext(ctx).Create(user).Error)
 
-	loginAt := time.Date(2026, 4, 6, 8, 0, 0, 0, time.UTC)
-	issueAt := time.Date(2026, 4, 6, 9, 0, 0, 0, time.UTC)
-	revokeAt := time.Date(2026, 4, 6, 10, 0, 0, 0, time.UTC)
-
+	at := time.Date(2026, 4, 6, 8, 0, 0, 0, time.UTC)
 	require.NoError(t, db.WithContext(ctx).Create(&model.AuditLog{
 		UserID:   user.ID,
 		Action:   model.AuditLogin,
-		ClientID: client.ClientID,
+		ClientID: "legacy-client",
+		Detail:   "local",
 		Status:   "success",
-		Base:     model.Base{CreatedAt: loginAt},
-	}).Error)
-	require.NoError(t, db.WithContext(ctx).Create(&model.AuditLog{
-		Action:     model.AuditOAuthClientTokenIssue,
-		Resource:   "oauth_client",
-		ResourceID: "token-1",
-		ClientID:   client.ClientID,
-		Status:     "success",
-		Base:       model.Base{CreatedAt: issueAt},
-	}).Error)
-	require.NoError(t, db.WithContext(ctx).Create(&model.AuditLog{
-		Action:     model.AuditOAuthTokenRevoke,
-		Resource:   "oauth_token",
-		ResourceID: "token-1",
-		ClientID:   client.ClientID,
-		Status:     "success",
-		Base:       model.Base{CreatedAt: revokeAt},
+		Base:     model.Base{CreatedAt: at},
 	}).Error)
 
-	stats, err := logs.AppLoginStats(ctx, "user-1")
+	rows, total, err := logs.ListLoginAllPaged(ctx, 1, 20)
 	require.NoError(t, err)
-	require.Len(t, stats, 1)
-	require.Equal(t, int64(1), stats[0].LoginCount)
-	require.Equal(t, int64(1), stats[0].UserCount)
-	require.Equal(t, int64(1), stats[0].MachineTokenIssueCount)
-	require.Equal(t, int64(1), stats[0].MachineTokenRevokeCount)
-	require.NotNil(t, stats[0].LastMachineTokenIssuedAt)
-	require.NotNil(t, stats[0].LastMachineTokenRevokedAt)
-	require.Equal(t, "2026-04-06T09:00:00Z", *stats[0].LastMachineTokenIssuedAt)
-	require.Equal(t, "2026-04-06T10:00:00Z", *stats[0].LastMachineTokenRevokedAt)
-}
-
-func TestFormatAppStatTimestampUsesRFC3339UTC(t *testing.T) {
-	at := time.Date(2026, 4, 6, 9, 30, 0, 0, time.FixedZone("UTC+8", 8*60*60))
-
-	formatted := formatAppStatTimestamp(&at)
-	require.NotNil(t, formatted)
-	require.Equal(t, "2026-04-06T01:30:00Z", *formatted)
-	require.Nil(t, formatAppStatTimestamp(nil))
+	require.Equal(t, int64(1), total)
+	require.Len(t, rows, 1)
+	require.Equal(t, user.ID, rows[0].UserID)
+	require.Equal(t, user.Username, rows[0].Username)
+	require.Equal(t, "legacy-client", rows[0].ClientID)
+	require.Empty(t, rows[0].AppName)
 }

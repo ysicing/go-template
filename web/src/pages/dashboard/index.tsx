@@ -36,7 +36,6 @@ export default function DashboardPage() {
   const [errorKind, setErrorKind] = useState<ApiErrorKind | null>(null)
   const [adminStats, setAdminStats] = useState({
     total_users: 0,
-    total_clients: 0,
     total_logins: 0,
     today_logins: 0,
   })
@@ -52,7 +51,6 @@ export default function DashboardPage() {
         if (adminRes) {
           setAdminStats({
             total_users: adminRes.data.total_users ?? 0,
-            total_clients: adminRes.data.total_clients ?? 0,
             total_logins: adminRes.data.total_logins ?? 0,
             today_logins: adminRes.data.today_logins ?? 0,
           })
@@ -81,7 +79,6 @@ export default function DashboardPage() {
 
   const platformCards = [
     { title: t("dashboard.platformUsers"), value: adminStats.total_users, icon: Users },
-    { title: t("dashboard.platformApplications"), value: adminStats.total_clients, icon: KeyRound },
     { title: t("dashboard.platformLogins"), value: adminStats.total_logins, icon: ShieldCheck },
     { title: t("dashboard.platformToday"), value: adminStats.today_logins, icon: ArrowRight },
   ]

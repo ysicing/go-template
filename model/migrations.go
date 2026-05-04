@@ -96,18 +96,6 @@ func migrations() []*gormigrate.Migration {
 			// Add expires_at indexes to speed up expired token cleanup jobs.
 			ID: "202603031200_add_token_expiry_indexes",
 			Migrate: func(tx *gorm.DB) error {
-				if tx.Migrator().HasTable("tokens") {
-					if tx.Dialector.Name() == "postgres" {
-						if err := tx.Exec("CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at) WHERE deleted_at IS NULL").Error; err != nil {
-							return err
-						}
-					} else {
-						if err := tx.Exec("CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at)").Error; err != nil {
-							return err
-						}
-					}
-				}
-
 				if tx.Migrator().HasTable("api_refresh_tokens") {
 					if tx.Dialector.Name() == "postgres" {
 						if err := tx.Exec("CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON api_refresh_tokens(expires_at) WHERE deleted_at IS NULL").Error; err != nil {
@@ -122,9 +110,6 @@ func migrations() []*gormigrate.Migration {
 				return nil
 			},
 			Rollback: func(tx *gorm.DB) error {
-				if tx.Migrator().HasTable("tokens") {
-					_ = tx.Exec("DROP INDEX IF EXISTS idx_tokens_expires_at").Error
-				}
 				if tx.Migrator().HasTable("api_refresh_tokens") {
 					_ = tx.Exec("DROP INDEX IF EXISTS idx_refresh_tokens_expires_at").Error
 				}
@@ -225,47 +210,6 @@ func migrations() []*gormigrate.Migration {
 				}
 				if tx.Migrator().HasTable("social_accounts") && tx.Migrator().HasColumn(&SocialAccount{}, "Username") {
 					return tx.Migrator().DropColumn(&SocialAccount{}, "Username")
-				}
-				return nil
-			},
-		},
-		{
-			ID: "202604061200_add_token_subject_fields",
-			Migrate: func(tx *gorm.DB) error {
-				if !tx.Migrator().HasTable("tokens") {
-					return nil
-				}
-				if !tx.Migrator().HasColumn(&Token{}, "SubjectType") {
-					if err := tx.Migrator().AddColumn(&Token{}, "SubjectType"); err != nil {
-						return err
-					}
-				}
-				if !tx.Migrator().HasColumn(&Token{}, "SubjectID") {
-					if err := tx.Migrator().AddColumn(&Token{}, "SubjectID"); err != nil {
-						return err
-					}
-				}
-				return tx.Exec(`
-					UPDATE tokens
-					SET subject_type = 'user',
-					    subject_id = user_id
-					WHERE ((subject_type IS NULL OR subject_type = '')
-					    OR (subject_id IS NULL OR subject_id = ''))
-					  AND user_id IS NOT NULL
-					  AND user_id != ''
-				`).Error
-			},
-			Rollback: func(tx *gorm.DB) error {
-				if !tx.Migrator().HasTable("tokens") {
-					return nil
-				}
-				if tx.Migrator().HasColumn(&Token{}, "SubjectID") {
-					if err := tx.Migrator().DropColumn(&Token{}, "SubjectID"); err != nil {
-						return err
-					}
-				}
-				if tx.Migrator().HasColumn(&Token{}, "SubjectType") {
-					return tx.Migrator().DropColumn(&Token{}, "SubjectType")
 				}
 				return nil
 			},

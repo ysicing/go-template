@@ -5,7 +5,6 @@ import (
 
 	"github.com/ysicing/go-template/internal/queue"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
-	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -99,7 +98,6 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 		Cache:              cache,
 		UserStore:          store.NewUserStore(db),
 		PasswordHistory:    store.NewPasswordHistoryStore(db),
-		ClientStore:        store.NewOAuthClientStore(db),
 		SocialStore:        store.NewSocialProviderStore(db, cfg.Security.EncryptionKey),
 		SocialAccountStore: store.NewSocialAccountStore(db),
 		SettingStore:       store.NewSettingStore(db, cache, cfg.Security.EncryptionKey),
@@ -111,10 +109,6 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 	}
 	deps.CheckInStore = pointstore.NewCheckInStore(db, deps.PointStore)
 	deps.Services = Services{
-		ClientCredentials: clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
-			Clients: deps.ClientStore,
-			Audit:   deps.AuditLogStore,
-		}),
 		Sessions: sessionservice.NewSessionService(deps.RefreshTokenStore, sessionservice.TokenConfig{
 			Secret:        cfg.JWT.Secret,
 			Issuer:        cfg.JWT.Issuer,

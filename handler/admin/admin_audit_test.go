@@ -17,7 +17,6 @@ func TestAdminHandler_GetAuditLogs_FiltersAndReturnsSource(t *testing.T) {
 	db := setupTestDB(t)
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 
 	adminUser := createLocalUser(t, db, "audit-admin", "audit-admin@example.com", "Password123!abcd")
@@ -37,27 +36,26 @@ func TestAdminHandler_GetAuditLogs_FiltersAndReturnsSource(t *testing.T) {
 	}
 	if err := auditStore.Create(context.Background(), &model.AuditLog{
 		UserID:     normalUser.ID,
-		Action:     model.AuditAppCreate,
-		Resource:   "app",
-		ResourceID: "app-1",
+		Action:     model.AuditProviderCreate,
+		Resource:   "provider",
+		ResourceID: "provider-1",
 		IP:         "10.0.0.2",
 		UserAgent:  "api-client",
-		Detail:     "source=api channel=api entrypoint=api app_id=app-1",
+		Detail:     "source=api channel=api entrypoint=api provider_id=provider-1",
 		Status:     "success",
 	}); err != nil {
-		t.Fatalf("seed app audit log: %v", err)
+		t.Fatalf("seed provider audit log: %v", err)
 	}
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
+		Users: userStore,
+		Audit: auditStore,
 	})
 
 	app := fiber.New()
 	app.Get("/api/admin/audit-logs", h.GetAuditLogs)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/admin/audit-logs?action=app_create&source=api&keyword=app-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/audit-logs?action=provider_create&source=api&keyword=provider-1", nil)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -89,8 +87,8 @@ func TestAdminHandler_GetAuditLogs_FiltersAndReturnsSource(t *testing.T) {
 		t.Fatalf("expected 1 audit log, total=%d len=%d", body.Total, len(body.Logs))
 	}
 	log := body.Logs[0]
-	if log.Action != model.AuditAppCreate {
-		t.Fatalf("expected action %q, got %q", model.AuditAppCreate, log.Action)
+	if log.Action != model.AuditProviderCreate {
+		t.Fatalf("expected action %q, got %q", model.AuditProviderCreate, log.Action)
 	}
 	if log.Source != model.AuditSourceAPI {
 		t.Fatalf("expected source %q, got %q", model.AuditSourceAPI, log.Source)
@@ -110,7 +108,6 @@ func TestAdminHandler_GetAuditLogs_FiltersByStatusAndUserID(t *testing.T) {
 	db := setupTestDB(t)
 
 	userStore := store.NewUserStore(db)
-	clientStore := store.NewOAuthClientStore(db)
 	auditStore := store.NewAuditLogStore(db)
 
 	firstUser := createLocalUser(t, db, "audit-first", "audit-first@example.com", "Password123!abcd")
@@ -142,9 +139,8 @@ func TestAdminHandler_GetAuditLogs_FiltersByStatusAndUserID(t *testing.T) {
 	}
 
 	h := NewAdminHandler(AdminDeps{
-		Users:   userStore,
-		Clients: clientStore,
-		Audit:   auditStore,
+		Users: userStore,
+		Audit: auditStore,
 	})
 
 	app := fiber.New()

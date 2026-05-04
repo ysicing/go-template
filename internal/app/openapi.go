@@ -256,6 +256,5 @@ func openAPITags() []fiber.Map {
 		{"name": "app"},
 		{"name": "points"},
 		{"name": "admin"},
-		{"name": "oauth"},
 	}
 }

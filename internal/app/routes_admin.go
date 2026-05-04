@@ -11,7 +11,6 @@ func adminRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 	routes := make([]managedRouteSpec, 0)
 	routes = append(routes, adminCoreRouteSpecs(rt)...)
 	routes = append(routes, adminUserRouteSpecs(rt)...)
-	routes = append(routes, adminClientRouteSpecs(rt)...)
 	routes = append(routes, adminProviderRouteSpecs(rt)...)
 	routes = append(routes, adminSettingRouteSpecs(rt)...)
 	routes = append(routes, adminPointRouteSpecs(rt)...)
@@ -33,16 +32,6 @@ func adminUserRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		adminRoute(fiber.MethodGet, "/api/admin/users/:id", "Get user", model.PermissionAdminUsersRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.GetUser }),
 		adminRoute(fiber.MethodPut, "/api/admin/users/:id", "Update user", model.PermissionAdminUsersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.UpdateUser }),
 		adminRoute(fiber.MethodDelete, "/api/admin/users/:id", "Delete user", model.PermissionAdminUsersWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.admin.DeleteUser }),
-	}
-}
-
-func adminClientRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
-	return []managedRouteSpec{
-		adminRoute(fiber.MethodPost, "/api/admin/clients", "Create OAuth client", model.PermissionAdminClientsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Create }),
-		adminRoute(fiber.MethodGet, "/api/admin/clients", "List OAuth clients", model.PermissionAdminClientsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.List }),
-		adminRoute(fiber.MethodGet, "/api/admin/clients/:id", "Get OAuth client", model.PermissionAdminClientsRead, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Get }),
-		adminRoute(fiber.MethodPut, "/api/admin/clients/:id", "Update OAuth client", model.PermissionAdminClientsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Update }),
-		adminRoute(fiber.MethodDelete, "/api/admin/clients/:id", "Delete OAuth client", model.PermissionAdminClientsWrite, func(rt managedRouteRuntime) fiber.Handler { return rt.handlers.oauthClient.Delete }),
 	}
 }
 

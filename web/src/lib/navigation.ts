@@ -3,7 +3,6 @@ import {
   Coins,
   History,
   Home,
-  KeyRound,
   Settings,
   Share2,
   UserCircle,
@@ -42,7 +41,6 @@ export type ConsoleModule = {
 const alwaysVisible = () => true
 
 const canAccessUsers = (user: User | null) => hasPermission(user, adminPermissions.usersRead)
-const canAccessClients = (user: User | null) => hasPermission(user, adminPermissions.clientsRead)
 const canAccessProviders = (user: User | null) => hasPermission(user, adminPermissions.providersRead)
 const canAccessAuditLogs = (user: User | null) => hasPermission(user, adminPermissions.loginHistoryRead)
 const canAccessPoints = (user: User | null) => hasPermission(user, adminPermissions.pointsRead)
@@ -95,7 +93,6 @@ export const consoleModules: ConsoleModule[] = [
         titleKey: "nav.sections.adminCore",
         items: [
           { key: "admin-users", labelKey: "app.users", icon: Users, to: "/admin/users", isVisible: canAccessUsers, matches: ["/admin/users"] },
-          { key: "admin-clients", labelKey: "app.clients", icon: KeyRound, to: "/admin/clients", isVisible: canAccessClients, matches: ["/admin/clients"] },
           { key: "admin-providers", labelKey: "app.providers", icon: Share2, to: "/admin/providers", isVisible: canAccessProviders, matches: ["/admin/providers"] },
           { key: "admin-audit-logs", labelKey: "app.adminAuditLogs", icon: History, to: "/admin/audit-logs", isVisible: canAccessAuditLogs, matches: ["/admin/audit-logs"] },
           { key: "admin-settings", labelKey: "app.settings", icon: Settings, to: "/admin/settings", isVisible: canAccessSettings, matches: ["/admin/settings"] },
