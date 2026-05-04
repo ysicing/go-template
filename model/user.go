@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -57,6 +58,15 @@ type User struct {
 }
 
 func (User) TableName() string { return "users" }
+
+// GenerateInviteCode 生成可直接落库的用户邀请码，长度受 users.invite_code 字段限制。
+func GenerateInviteCode() string {
+	inviteCode := uuid.NewString()
+	if len(inviteCode) <= 32 {
+		return inviteCode
+	}
+	return inviteCode[:32]
+}
 
 func (u *User) SetPassword(password string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)

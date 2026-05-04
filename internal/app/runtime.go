@@ -37,7 +37,7 @@ func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedCon
 	}
 	password := cfg.Password
 	user := &model.User{
-		Username: cfg.Username, Email: cfg.Email, IsAdmin: true, Provider: "local", ProviderID: cfg.Username,
+		Username: cfg.Username, Email: cfg.Email, IsAdmin: true, Provider: "local", ProviderID: cfg.Username, InviteCode: model.GenerateInviteCode(),
 	}
 	if err := user.SetPassword(password); err != nil {
 		log.Error().Err(err).Msg("hash admin password")

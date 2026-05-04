@@ -12,7 +12,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
 )
 
 type registerRequest struct {
@@ -114,17 +113,12 @@ func (h *AuthHandler) resolveRegisterInvite(c fiber.Ctx, inviteCode string) (str
 }
 
 func (h *AuthHandler) buildRegisteredUser(c fiber.Ctx, req *registerRequest, invitedByUserID string) (*model.User, error) {
-	inviteCode := uuid.NewString()
-	if len(inviteCode) > 32 {
-		inviteCode = inviteCode[:32]
-	}
-
 	user := &model.User{
 		Username:        req.Username,
 		Email:           req.Email,
 		Provider:        "local",
 		ProviderID:      req.Username,
-		InviteCode:      inviteCode,
+		InviteCode:      model.GenerateInviteCode(),
 		InvitedByUserID: invitedByUserID,
 	}
 	if invitedByUserID != "" {

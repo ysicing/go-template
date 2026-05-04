@@ -78,3 +78,13 @@ func TestPasswordHashNotExposed(t *testing.T) {
 		t.Error("expected password hash value to be excluded from JSON output")
 	}
 }
+
+func TestGenerateInviteCode(t *testing.T) {
+	code := GenerateInviteCode()
+	if code == "" {
+		t.Fatal("expected invite code to be generated")
+	}
+	if len(code) > 32 {
+		t.Fatalf("expected invite code length <= 32, got %d", len(code))
+	}
+}

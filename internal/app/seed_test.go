@@ -43,6 +43,9 @@ func TestSeedAdmin_AllowsWeakPasswordByDefault(t *testing.T) {
 	if !user.CheckPassword("weak") {
 		t.Fatal("expected seeded admin password to match configured password")
 	}
+	if user.InviteCode == "" {
+		t.Fatal("expected seeded admin invite code to be generated")
+	}
 }
 
 func TestSeedAdmin_SkipsEmptyPassword(t *testing.T) {
@@ -78,5 +81,8 @@ func TestSeedAdmin_CreatesUserWithStrongPassword(t *testing.T) {
 	}
 	if !user.CheckPassword("StrongPass123!@#") {
 		t.Fatal("expected seeded admin password to match configured password")
+	}
+	if user.InviteCode == "" {
+		t.Fatal("expected seeded admin invite code to be generated")
 	}
 }

@@ -133,4 +133,59 @@ func TestAdminHandler_CreateUser_ReturnsSetupTokenInsteadOfPassword(t *testing.T
 	if !created.IsAdmin {
 		t.Fatal("expected created user to be admin")
 	}
+	if created.InviteCode == "" {
+		t.Fatal("expected created user invite code to be generated")
+	}
+}
+
+func TestAdminHandler_CreateUser_AllowsSeedAdminWithEmptyInviteCode(t *testing.T) {
+	db := setupTestDB(t)
+	userStore := store.NewUserStore(db)
+	auditStore := store.NewAuditLogStore(db)
+	cache := store.NewMemoryCache()
+	t.Cleanup(func() { _ = cache.Close() })
+
+	seededAdmin := &model.User{
+		Username:   "admin",
+		Email:      "admin@example.com",
+		Provider:   "local",
+		ProviderID: "admin",
+		IsAdmin:    true,
+	}
+	if err := seededAdmin.SetPassword("Password123!abcd"); err != nil {
+		t.Fatalf("set admin password: %v", err)
+	}
+	if err := db.Create(seededAdmin).Error; err != nil {
+		t.Fatalf("seed admin: %v", err)
+	}
+
+	h := NewAdminHandler(AdminDeps{
+		Users: userStore,
+		Audit: auditStore,
+		Cache: cache,
+	})
+
+	app := fiber.New()
+	app.Post("/api/admin/users", func(c fiber.Ctx) error {
+		c.Locals("user_id", seededAdmin.ID)
+		return h.CreateUser(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/users", strings.NewReader(`{"username":"ysicing","email":"ysicing@12306.work","is_admin":false}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusCreated {
+		t.Fatalf("expected 201, got %d", resp.StatusCode)
+	}
+
+	created, err := userStore.GetByEmail(context.Background(), "ysicing@12306.work")
+	if err != nil {
+		t.Fatalf("get created user: %v", err)
+	}
+	if created.InviteCode == "" {
+		t.Fatal("expected created user invite code to be generated")
+	}
 }

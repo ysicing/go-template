@@ -74,6 +74,7 @@ func newAdminCreatedUser(req *createAdminUserRequest) *model.User {
 		Email:      req.Email,
 		Provider:   "local",
 		ProviderID: req.Username,
+		InviteCode: model.GenerateInviteCode(),
 		IsAdmin:    req.IsAdmin,
 	}
 	if req.IsAdmin {
