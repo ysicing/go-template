@@ -10,6 +10,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -134,7 +135,7 @@ func (h *OAuthHandler) createSocialLoginUser(ctx context.Context, provider, prov
 
 // handleSocialCallback stores user info in a temporary code and redirects to the SPA.
 func (h *OAuthHandler) handleSocialCallback(c fiber.Ctx, user *model.User, provider string) error {
-	if handlercommon.IsAccountLocked(c.Context(), h.cache, user.ID) {
+	if authservice.IsAccountLocked(c.Context(), h.cache, user.ID) {
 		return c.Redirect().To("/login?error=account_locked")
 	}
 

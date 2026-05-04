@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -73,7 +74,7 @@ func (h *OAuthHandler) completeSocialLink(c fiber.Ctx, user *model.User, pending
 		_ = h.cache.Del(c.Context(), key)
 	}
 
-	handlercommon.ClearFailedAuthAttempts(c.Context(), h.cache, user.ID)
+	authservice.ClearFailedAuthAttempts(c.Context(), h.cache, user.ID)
 
 	_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 		UserID:     user.ID,
@@ -157,7 +158,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user not found"})
 	}
 
-	if handlercommon.IsAccountLocked(c.Context(), h.cache, user.ID) {
+	if authservice.IsAccountLocked(c.Context(), h.cache, user.ID) {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
 
@@ -185,7 +186,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 					"reason": "invalid_password",
 				},
 			})
-			handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, user.ID)
+			authservice.RecordFailedAuthAttempt(c.Context(), h.cache, user.ID)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid password"})
 		}
 	}
@@ -215,7 +216,7 @@ func (h *OAuthHandler) ConfirmSocialLink(c fiber.Ctx) error {
 					"reason": "invalid_totp",
 				},
 			})
-			handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, user.ID)
+			authservice.RecordFailedAuthAttempt(c.Context(), h.cache, user.ID)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid TOTP code"})
 		}
 	}

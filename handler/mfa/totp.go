@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -95,7 +96,7 @@ func (h *MFAHandler) verifyDisableTOTPRequest(c fiber.Ctx) (string, error) {
 	if err := c.Bind().JSON(&req); err != nil {
 		return "", handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
-	if handlercommon.IsAccountLocked(c.Context(), h.cache, userID) {
+	if authservice.IsAccountLocked(c.Context(), h.cache, userID) {
 		return "", handlercommon.JSONError(fiber.StatusTooManyRequests, "too many attempts, try again later")
 	}
 
@@ -118,7 +119,7 @@ func (h *MFAHandler) verifySocialUserTOTPDisable(c fiber.Ctx, userID, code strin
 		return handlercommon.JSONError(fiber.StatusBadRequest, "TOTP not enabled")
 	}
 	if !totp.Validate(code, cfg.TOTPSecret) {
-		handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, userID)
+		authservice.RecordFailedAuthAttempt(c.Context(), h.cache, userID)
 		return handlercommon.JSONError(fiber.StatusUnauthorized, "invalid TOTP code")
 	}
 	return nil
@@ -129,7 +130,7 @@ func (h *MFAHandler) verifyLocalUserTOTPDisable(c fiber.Ctx, userID string, user
 		return handlercommon.JSONError(fiber.StatusBadRequest, "password is required")
 	}
 	if !user.CheckPassword(password) {
-		handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, userID)
+		authservice.RecordFailedAuthAttempt(c.Context(), h.cache, userID)
 		return handlercommon.JSONError(fiber.StatusUnauthorized, "invalid password")
 	}
 	return nil
@@ -164,7 +165,7 @@ func (h *MFAHandler) verifyBackupCodeRegeneration(c fiber.Ctx) (string, *model.M
 	if err := c.Bind().JSON(&req); err != nil {
 		return "", nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
-	if handlercommon.IsAccountLocked(c.Context(), h.cache, userID) {
+	if authservice.IsAccountLocked(c.Context(), h.cache, userID) {
 		return "", nil, handlercommon.JSONError(fiber.StatusTooManyRequests, "too many attempts, try again later")
 	}
 

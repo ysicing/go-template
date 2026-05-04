@@ -8,6 +8,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -110,7 +111,7 @@ func (h *OAuthHandler) SocialLinkWebAuthnBegin(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired link token"})
 	}
-	if handlercommon.IsAccountLocked(c.Context(), h.cache, pending.UserID) {
+	if authservice.IsAccountLocked(c.Context(), h.cache, pending.UserID) {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
 
@@ -155,7 +156,7 @@ func (h *OAuthHandler) SocialLinkWebAuthnFinish(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired link token"})
 	}
-	if handlercommon.IsAccountLocked(c.Context(), h.cache, pending.UserID) {
+	if authservice.IsAccountLocked(c.Context(), h.cache, pending.UserID) {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "account temporarily locked, try again later"})
 	}
 
@@ -176,7 +177,7 @@ func (h *OAuthHandler) SocialLinkWebAuthnFinish(c fiber.Ctx) error {
 
 	credential, err := h.webAuthn.FinishLogin(waUser, session, c.Body())
 	if err != nil {
-		handlercommon.RecordFailedAuthAttempt(c.Context(), h.cache, pending.UserID)
+		authservice.RecordFailedAuthAttempt(c.Context(), h.cache, pending.UserID)
 		_ = handlercommon.RecordAuditFromFiber(c, h.audit, handlercommon.AuditEvent{
 			UserID:   pending.UserID,
 			Action:   model.AuditSocialAccountLink,
