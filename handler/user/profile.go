@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
 	"github.com/ysicing/go-template/internal/http/response"
 	"github.com/ysicing/go-template/model"
@@ -95,7 +94,7 @@ func (h *UserHandler) applyEmailUpdate(c fiber.Ctx, user *model.User, email *str
 	}
 
 	value := strings.TrimSpace(*email)
-	if !handlercommon.IsValidEmail(value) {
+	if !validator.IsValidEmail(value) {
 		return false, response.JSONError(fiber.StatusBadRequest, "invalid email format")
 	}
 	if value == user.Email {

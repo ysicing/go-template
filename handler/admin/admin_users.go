@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/internal/http/response"
 	"github.com/ysicing/go-template/model"
+	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
@@ -62,7 +62,7 @@ func parseCreateAdminUserRequest(c fiber.Ctx) (*createAdminUserRequest, error) {
 	if len(req.Username) < 3 || len(req.Username) > 32 {
 		return nil, response.JSONError(fiber.StatusBadRequest, "username must be 3-32 characters")
 	}
-	if !handlercommon.IsValidEmail(req.Email) {
+	if !validator.IsValidEmail(req.Email) {
 		return nil, response.JSONError(fiber.StatusBadRequest, "invalid email format")
 	}
 	return &req, nil

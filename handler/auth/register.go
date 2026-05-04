@@ -3,7 +3,6 @@ package auth
 import (
 	"strings"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/internal/http/response"
@@ -70,7 +69,7 @@ func (h *AuthHandler) validateRegisterRequest(req registerRequest) error {
 	if len(req.Username) < 3 || len(req.Username) > 32 {
 		return response.JSONError(fiber.StatusBadRequest, "username must be 3-32 characters")
 	}
-	if !handlercommon.IsValidEmail(req.Email) {
+	if !validator.IsValidEmail(req.Email) {
 		return response.JSONError(fiber.StatusBadRequest, "invalid email format")
 	}
 	if err := h.validateRegisterEmailDomain(req.Email); err != nil {

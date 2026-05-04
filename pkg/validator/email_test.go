@@ -41,3 +41,12 @@ func TestValidateEmailDomain_InvalidEmail(t *testing.T) {
 		t.Error("expected error for invalid email")
 	}
 }
+
+func TestIsValidEmail(t *testing.T) {
+	if !IsValidEmail("user@example.com") {
+		t.Fatal("expected valid email")
+	}
+	if IsValidEmail("invalid-email") {
+		t.Fatal("expected invalid email")
+	}
+}
