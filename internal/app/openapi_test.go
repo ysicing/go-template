@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ysicing/go-template/handler"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -44,7 +44,7 @@ func TestRegisterDocsRoutes_OpenAPIFiltersByPermissions(t *testing.T) {
 		t.Fatalf("create user: %v", err)
 	}
 
-	userToken, err := handler.GenerateAccessToken(user.ID, false, nil, user.TokenVersion, deps.Config.JWT.Secret, deps.Config.JWT.Issuer, time.Hour)
+	userToken, err := httpmiddleware.GenerateAccessToken(user.ID, false, nil, user.TokenVersion, deps.Config.JWT.Secret, deps.Config.JWT.Issuer, time.Hour)
 	if err != nil {
 		t.Fatalf("generate user token: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestRegisterDocsRoutes_OpenAPIFiltersByPermissions(t *testing.T) {
 	assertHasPath(t, userDoc, "/api/users/me")
 	assertMissingPath(t, userDoc, "/api/admin/users")
 
-	permToken, err := handler.GenerateAccessToken(user.ID, false, []string{model.PermissionAdminUsersRead}, user.TokenVersion, deps.Config.JWT.Secret, deps.Config.JWT.Issuer, time.Hour)
+	permToken, err := httpmiddleware.GenerateAccessToken(user.ID, false, []string{model.PermissionAdminUsersRead}, user.TokenVersion, deps.Config.JWT.Secret, deps.Config.JWT.Issuer, time.Hour)
 	if err != nil {
 		t.Fatalf("generate permission token: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestRegisterDocsRoutes_OpenAPIFiltersByPermissions(t *testing.T) {
 	assertHasPath(t, permDoc, "/api/admin/users")
 	assertMissingPath(t, permDoc, "/api/admin/settings")
 
-	adminToken, err := handler.GenerateAccessToken(user.ID, true, model.AllAdminPermissions(), user.TokenVersion, deps.Config.JWT.Secret, deps.Config.JWT.Issuer, time.Hour)
+	adminToken, err := httpmiddleware.GenerateAccessToken(user.ID, true, model.AllAdminPermissions(), user.TokenVersion, deps.Config.JWT.Secret, deps.Config.JWT.Issuer, time.Hour)
 	if err != nil {
 		t.Fatalf("generate admin token: %v", err)
 	}

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ysicing/go-template/handler"
 	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/store"
@@ -41,10 +40,10 @@ func buildManagedRouteRuntime(d *Deps, h *builtHandlers) managedRouteRuntime {
 	return managedRouteRuntime{
 		deps:              d,
 		handlers:          h,
-		jwtMW:             handler.JWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),
-		tokenVersionMW:    handler.TokenVersionMiddleware(d.UserStore, d.Cache),
-		emailVerified:     handler.EmailVerifiedMiddleware(d.UserStore, d.SettingStore, d.Cache),
-		optionalJWT:       handler.OptionalJWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),
+		jwtMW:             httpmiddleware.JWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),
+		tokenVersionMW:    httpmiddleware.TokenVersionMiddleware(d.UserStore, d.Cache),
+		emailVerified:     httpmiddleware.EmailVerifiedMiddleware(d.UserStore, d.SettingStore, d.Cache),
+		optionalJWT:       httpmiddleware.OptionalJWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),
 		authLimiter:       newAuthLimiter(d.Cache),
 		turnstile:         turnstileMiddleware(d.SettingStore),
 		pointsLimiter:     newPointsLimiter(d.Cache),

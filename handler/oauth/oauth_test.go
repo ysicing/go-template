@@ -12,6 +12,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -268,7 +269,7 @@ func TestConfirmSocialLink_WritesAuditLog(t *testing.T) {
 	})
 
 	app := fiber.New()
-	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(httpmiddleware.RequestIDMiddleware())
 	app.Use(handlercommon.AuditContextMiddleware())
 	app.Post("/api/auth/social/confirm-link", h.ConfirmSocialLink)
 
@@ -540,7 +541,7 @@ func TestSocialLinkWebAuthnFinish_LinksAccountAndWritesAuditLog(t *testing.T) {
 	}
 
 	app := fiber.New()
-	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(httpmiddleware.RequestIDMiddleware())
 	app.Use(handlercommon.AuditContextMiddleware())
 	app.Post("/api/auth/social/confirm-link/webauthn/finish", h.SocialLinkWebAuthnFinish)
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 	rootstore "github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -24,7 +25,7 @@ func TestPointsHandler_CheckIn_WritesAuditLog(t *testing.T) {
 
 	h := NewPointsHandler(points, checkins, audit)
 	app := fiber.New()
-	app.Use(handlercommon.RequestIDMiddleware())
+	app.Use(httpmiddleware.RequestIDMiddleware())
 	app.Use(handlercommon.AuditContextMiddleware())
 	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)

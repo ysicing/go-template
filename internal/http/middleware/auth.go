@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Claims defines the JWT token payload.
+// Claims 定义访问令牌中的 JWT 载荷。
 type Claims struct {
 	UserID       string   `json:"user_id"`
 	IsAdmin      bool     `json:"is_admin"`
@@ -25,10 +25,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// JWTMiddleware validates Bearer token from Authorization header or Cookie.
-// Supports both authentication methods:
-// 1. Authorization: Bearer <token>
-// 2. Cookie: access_token=<token>
+// JWTMiddleware 校验 Authorization Bearer 或 access_token Cookie 中的访问令牌。
 func JWTMiddleware(secret, issuer string) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		tokenStr := bearerToken(c)
@@ -76,8 +73,7 @@ func bearerToken(c fiber.Ctx) string {
 	return strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
 }
 
-// TokenVersionMiddleware validates token_version claim against current user version.
-// Must be used after JWTMiddleware.
+// TokenVersionMiddleware 校验令牌版本是否仍匹配当前用户版本，必须在 JWTMiddleware 之后使用。
 func TokenVersionMiddleware(users *store.UserStore, cache store.Cache) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if principalType, _ := c.Locals("principal_type").(string); principalType == "service_account" {
@@ -99,9 +95,7 @@ func TokenVersionMiddleware(users *store.UserStore, cache store.Cache) fiber.Han
 	}
 }
 
-// AdminMiddleware checks if user is admin from JWT claims.
-// Must be used after JWTMiddleware.
-// Uses 30-second cache to reduce database load.
+// AdminMiddleware 校验当前用户是否拥有管理员统计读取权限，必须在 JWTMiddleware 之后使用。
 func AdminMiddleware(users *store.UserStore, cache store.Cache) fiber.Handler {
 	return RequirePermission(users, cache, model.PermissionAdminStatsRead)
 }
@@ -140,7 +134,7 @@ func loadCurrentTokenVersion(ctx context.Context, users *store.UserStore, cache 
 	return ver, nil
 }
 
-// RequirePermission checks user has required permission from JWT claims or DB fallback.
+// RequirePermission 校验当前用户是否拥有指定权限，优先使用 JWT 声明并在必要时回查数据库。
 func RequirePermission(users *store.UserStore, cache store.Cache, permission string) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if permission == "" {
@@ -189,9 +183,7 @@ func RequirePermission(users *store.UserStore, cache store.Cache, permission str
 	}
 }
 
-// EmailVerifiedMiddleware blocks unverified users when email verification is enabled.
-// Must be used after JWTMiddleware.
-// Uses short-lived cache to reduce database load on protected routes.
+// EmailVerifiedMiddleware 在启用邮箱验证时阻止未验证用户访问受保护路由。
 func EmailVerifiedMiddleware(users *store.UserStore, settings *store.SettingStore, cache store.Cache) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if !settings.GetBool(store.SettingEmailVerificationEnabled, false) {
@@ -221,7 +213,7 @@ func EmailVerifiedMiddleware(users *store.UserStore, settings *store.SettingStor
 	}
 }
 
-// GenerateAccessToken creates a standalone access token for tests and narrow helper flows.
+// GenerateAccessToken 生成独立访问令牌，主要用于测试和少量辅助流程。
 func GenerateAccessToken(userID string, isAdmin bool, permissions []string, tokenVersion int64, secret, issuer string, accessTTL time.Duration) (string, error) {
 	now := time.Now()
 	if tokenVersion < 1 {
@@ -245,9 +237,7 @@ func GenerateAccessToken(userID string, isAdmin bool, permissions []string, toke
 	return t.SignedString([]byte(secret))
 }
 
-// RequestIDMiddleware ensures every request has a unique X-Request-ID header.
-// If the client provides one, it is reused; otherwise a new UUID is generated.
-// The ID is also stored in Locals("request_id") for structured logging.
+// RequestIDMiddleware 确保每个请求都有 X-Request-ID，并同步写入 Locals("request_id")。
 func RequestIDMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		reqID := c.Get("X-Request-ID")
@@ -260,24 +250,23 @@ func RequestIDMiddleware() fiber.Handler {
 	}
 }
 
-// OptionalJWTMiddleware validates JWT token if present, but allows requests without token.
-// Sets user_id in locals if token is valid, otherwise continues without authentication.
+// OptionalJWTMiddleware 在令牌存在时尝试校验，缺失或无效时仍允许匿名继续访问。
 func OptionalJWTMiddleware(secret, issuer string) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		var tokenStr string
 
-		// Try to get token from Authorization header first
+		// 优先从 Authorization 头读取 Bearer 令牌。
 		auth := c.Get("Authorization")
 		if strings.HasPrefix(auth, "Bearer ") {
 			tokenStr = strings.TrimPrefix(auth, "Bearer ")
 		}
 
-		// If not found in header, try to get from cookie
+		// 未提供头部令牌时再回退到 Cookie。
 		if tokenStr == "" {
 			tokenStr = c.Cookies("access_token")
 		}
 
-		// If no token found, continue without authentication
+		// 未提供令牌时按匿名请求继续。
 		if tokenStr == "" {
 			return c.Next()
 		}
@@ -290,7 +279,7 @@ func OptionalJWTMiddleware(secret, issuer string) fiber.Handler {
 			return []byte(secret), nil
 		})
 
-		// If token is valid, set user info in locals
+		// 令牌有效时才向 Locals 写入当前用户信息。
 		if err == nil && token.Valid && claims.TokenType == "access" && claims.Issuer == issuer {
 			c.Locals("user_id", claims.UserID)
 			c.Locals("is_admin", claims.IsAdmin)

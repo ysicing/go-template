@@ -12,6 +12,7 @@ import (
 
 	handlercommon "github.com/ysicing/go-template/handler"
 	authhandler "github.com/ysicing/go-template/handler/auth"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -866,7 +867,7 @@ func TestEmailVerifiedMiddleware_Enabled(t *testing.T) {
 	user := createTestUser(t, users, "unverified@example.com", false)
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
-	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
+	mw := httpmiddleware.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
@@ -894,7 +895,7 @@ func TestEmailVerifiedMiddleware_Disabled(t *testing.T) {
 	user := createTestUser(t, users, "unverified@example.com", false)
 	// email_verification_enabled defaults to false
 
-	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
+	mw := httpmiddleware.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
@@ -922,7 +923,7 @@ func TestEmailVerifiedMiddleware_CachesVerifiedUser(t *testing.T) {
 
 	user := createTestUser(t, users, "verified@example.com", true)
 
-	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
+	mw := httpmiddleware.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", user.ID)
@@ -962,7 +963,7 @@ func TestEmailVerifiedMiddleware_UserLookupError(t *testing.T) {
 	settings := store.NewSettingStore(db, cache)
 	_ = settings.Set(context.Background(), store.SettingEmailVerificationEnabled, "true")
 
-	mw := handlercommon.EmailVerifiedMiddleware(users, settings, cache)
+	mw := httpmiddleware.EmailVerifiedMiddleware(users, settings, cache)
 	app := fiber.New()
 	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("user_id", "missing-user-id")

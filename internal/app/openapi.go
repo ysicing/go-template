@@ -3,7 +3,7 @@ package app
 import (
 	"strings"
 
-	"github.com/ysicing/go-template/handler"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -32,7 +32,7 @@ type openAPIViewer struct {
 }
 
 func registerDocsRoutes(app *fiber.App, deps *Deps, buildInfo BuildInfo) {
-	optionalJWT := handler.OptionalJWTMiddleware(deps.Config.JWT.Secret, deps.Config.JWT.Issuer)
+	optionalJWT := httpmiddleware.OptionalJWTMiddleware(deps.Config.JWT.Secret, deps.Config.JWT.Issuer)
 
 	app.Get("/openapi.json", optionalJWT, func(c fiber.Ctx) error {
 		viewer := resolveOpenAPIViewer(c, deps.UserStore)

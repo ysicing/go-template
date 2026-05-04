@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/ysicing/go-template/handler"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -77,7 +77,7 @@ func adminRoute(method, path, summary, permission string, target func(managedRou
 	return managedRouteSpec{
 		Doc: openAPIRoute{Method: method, Path: path, Summary: summary, Tag: "admin", RequiresAuth: true, Permissions: []string{permission}},
 		Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, handler.RequirePermission(rt.deps.UserStore, rt.deps.Cache, permission), target(rt)}
+			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, httpmiddleware.RequirePermission(rt.deps.UserStore, rt.deps.Cache, permission), target(rt)}
 		},
 	}
 }
