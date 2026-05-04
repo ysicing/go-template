@@ -28,7 +28,7 @@
     "modules": {
       "home": "Home",
       "uauth": "UAuth",
-      "account": "Account",
+      "profile": "Profile",
       "tools": "Tools",
       "admin": "Admin"
     },

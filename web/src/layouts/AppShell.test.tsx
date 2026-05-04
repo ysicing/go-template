@@ -61,7 +61,7 @@ describe("AppShell", () => {
     expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument()
   })
 
-  it("shows account module for profile pages and hides removed modules", async () => {
+  it("shows profile module for profile pages and hides removed modules", async () => {
     useAuthStore.setState({
       user: {
         id: "user-2",
@@ -74,9 +74,9 @@ describe("AppShell", () => {
       initStatus: "ready",
     })
 
-    renderShell("/account/profile")
+    renderShell("/profile")
 
-    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("Account")
+    expect(await screen.findByRole("combobox", { name: "Subsystem" })).toHaveTextContent("Profile")
     expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute("aria-current", "page")
     expect(screen.getByRole("link", { name: "Points Center" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Tools" })).not.toBeInTheDocument()

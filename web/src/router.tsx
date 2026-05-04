@@ -88,11 +88,8 @@ export default function AppRouter() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="account">
-          <Route index element={<Navigate to="profile" replace />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="points" element={<PointsPage />} />
-        </Route>
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="points" element={<PointsPage />} />
         <Route path="admin" element={<AdminSection />}>
           <Route index element={<Navigate to="users" replace />} />
           <Route path="users" element={<RequireAdminPermission permission={adminPermissions.usersRead}><UsersPage currentUser={userForRoutes ? { id: userForRoutes.id } : undefined} /></RequireAdminPermission>} />

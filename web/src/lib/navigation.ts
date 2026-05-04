@@ -12,7 +12,7 @@ import {
 import { adminPermissions, hasAnyAdminPermission, hasPermission } from "@/lib/permissions"
 import type { User } from "@/stores/auth"
 
-export type ConsoleModuleID = "home" | "account" | "admin"
+export type ConsoleModuleID = "home" | "profile" | "admin"
 
 export type ConsoleNavItem = {
   key: string
@@ -68,16 +68,16 @@ export const consoleModules: ConsoleModule[] = [
     ],
   },
   {
-    id: "account",
-    labelKey: "nav.modules.account",
-    to: "/account/profile",
+    id: "profile",
+    labelKey: "app.profile",
+    to: "/profile",
     isVisible: alwaysVisible,
     sections: [
       {
-        key: "account",
+        key: "profile",
         items: [
-          { key: "account-profile", labelKey: "app.profile", icon: UserCircle, to: "/account/profile", matches: ["/account/profile"] },
-          { key: "account-points", labelKey: "points.title", icon: Coins, to: "/account/points", matches: ["/account/points"] },
+          { key: "profile-home", labelKey: "app.profile", icon: UserCircle, to: "/profile", matches: ["/profile"] },
+          { key: "profile-points", labelKey: "points.title", icon: Coins, to: "/points", matches: ["/points"] },
         ],
       },
     ],
@@ -123,7 +123,7 @@ export function getConsoleModules(user: User | null): ConsoleModule[] {
 
 export function getConsoleModuleByPathname(pathname: string): ConsoleModuleID {
   if (pathname === "/") return "home"
-  if (pathname.startsWith("/account")) return "account"
+  if (pathname.startsWith("/profile") || pathname.startsWith("/points")) return "profile"
   if (pathname.startsWith("/admin")) return "admin"
   return "home"
 }

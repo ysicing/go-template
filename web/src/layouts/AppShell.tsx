@@ -226,13 +226,13 @@ export default function AppShell() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link to="/account/profile">
+                    <Link to="/profile">
                       <UserCircle className="mr-2 h-4 w-4" />
                       {t("app.profile")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/account/points">
+                    <Link to="/points">
                       <Coins className="mr-2 h-4 w-4" />
                       {t("points.title")}
                     </Link>

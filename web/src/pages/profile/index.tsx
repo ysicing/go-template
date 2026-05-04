@@ -66,7 +66,7 @@ export default function ProfilePage() {
       {pointsSummary && (
         <Card
           className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => navigate("/account/points")}
+          onClick={() => navigate("/points")}
         >
           <CardContent className="flex items-center justify-between py-4">
             <div className="flex items-center gap-4">

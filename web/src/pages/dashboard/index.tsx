@@ -87,13 +87,13 @@ export default function DashboardPage() {
     {
       title: t("app.profile"),
       description: t("dashboard.quickAccessProfile"),
-      href: "/account/profile",
+      href: "/profile",
       icon: UserCircle,
     },
     {
       title: t("points.title"),
       description: t("dashboard.quickAccessPoints"),
-      href: "/account/points",
+      href: "/points",
       icon: Coins,
     },
   ]
@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   const secondaryAction = canAccessAdmin && adminEntry
     ? { href: adminEntry, label: t("app.admin") }
-    : { href: "/account/points", label: t("points.title") }
+    : { href: "/points", label: t("points.title") }
 
   return (
     <div className="space-y-6">
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-slate-100">
-                <Link to="/account/profile">{t("app.profile")}</Link>
+                <Link to="/profile">{t("app.profile")}</Link>
               </Button>
               <Button
                 asChild

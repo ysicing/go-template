@@ -39,8 +39,8 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Identity control center" })).toBeInTheDocument()
     expect(screen.getAllByText("Quick access").length).toBeGreaterThan(0)
-    expect(screen.getAllByRole("link", { name: /Profile/ }).some((node) => node.getAttribute("href") === "/account/profile")).toBe(true)
-    expect(screen.getAllByRole("link", { name: /Points/ }).some((node) => node.getAttribute("href") === "/account/points")).toBe(true)
+    expect(screen.getAllByRole("link", { name: /Profile/ }).some((node) => node.getAttribute("href") === "/profile")).toBe(true)
+    expect(screen.getAllByRole("link", { name: /Points/ }).some((node) => node.getAttribute("href") === "/points")).toBe(true)
     expect(screen.queryByRole("link", { name: "Create application" })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Applications/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Quotes/ })).not.toBeInTheDocument()
