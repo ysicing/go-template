@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/rs/zerolog"
 )
@@ -53,17 +51,6 @@ func seedAdmin(log *zerolog.Logger, userStore *store.UserStore, cfg AdminSeedCon
 		}
 	} else {
 		log.Info().Str("username", cfg.Username).Msg("admin user created")
-	}
-}
-
-func mountOIDCHandler(app *fiber.App, h http.Handler) {
-	adapted := adaptor.HTTPHandler(h)
-	for _, p := range []string{
-		"/.well-known/{path...}", "/authorize", "/authorize/callback",
-		"/oauth/userinfo", "/oauth/keys",
-		"/oauth/introspect", "/oauth/revoke", "/oauth/end_session",
-	} {
-		app.All(p, adapted)
 	}
 }
 

@@ -51,10 +51,7 @@ func allModels() []any {
 	return []any{
 		&User{},
 		&OAuthClient{},
-		&OAuthConsentGrant{},
-		&AuthRequest{},
 		&Token{},
-		&SigningKey{},
 		&SocialProvider{},
 		&SocialAccount{},
 		&Setting{},

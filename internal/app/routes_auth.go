@@ -5,7 +5,6 @@ import "github.com/gofiber/fiber/v3"
 func authRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 	routes := make([]managedRouteSpec, 0)
 	routes = append(routes, authPublicRouteSpecs(rt)...)
-	routes = append(routes, authOIDCRouteSpecs(rt)...)
 	routes = append(routes, authMFARouteSpecs(rt)...)
 	routes = append(routes, authSocialRouteSpecs(rt)...)
 	routes = append(routes, authAccountRouteSpecs(rt)...)
@@ -37,23 +36,6 @@ func authPublicRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		}},
 		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/resend-verification", Summary: "Resend verification email", Tag: "auth", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.authLimiter, rt.jwtMW, rt.tokenVersionMW, rt.handlers.email.ResendVerification}
-		}},
-	}
-}
-
-func authOIDCRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
-	return []managedRouteSpec{
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/oidc-login", Summary: "Submit OIDC login", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.LoginSubmit}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/auth/oidc/consent", Summary: "Read OIDC consent context", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.ConsentContext}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/oidc/consent/approve", Summary: "Approve OIDC consent", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.ConsentApprove}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/api/auth/oidc/consent/deny", Summary: "Deny OIDC consent", Tag: "auth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.authLimiter, rt.handlers.oidcLogin.ConsentDeny}
 		}},
 	}
 }
@@ -122,23 +104,6 @@ func oauthRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		}},
 		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/oauth/revoke", Summary: "OAuth revoke endpoint", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.handlers.clientCredentials.Revoke}
-		}},
-	}
-}
-
-func githubCompatRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
-	return []managedRouteSpec{
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/login/oauth/authorize", Summary: "GitHub compatible authorize", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.Authorize}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodPost, Path: "/login/oauth/access_token", Summary: "GitHub compatible token", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.AccessToken}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/v3/user", Summary: "GitHub compatible current user", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.User}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/v3/user/emails", Summary: "GitHub compatible user emails", Tag: "oauth"}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.ghLimiter, rt.handlers.ghCompat.UserEmails}
 		}},
 	}
 }

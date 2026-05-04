@@ -42,17 +42,10 @@ func TestClientCredentialsHandlerTokenHandlesClientCredentialsGrant(t *testing.T
 	audit := store.NewAuditLogStore(db)
 	client, secret := seedClientCredentialsOAuthClient(t, clients, "client_credentials", "openid profile")
 
-	fallbackCalled := false
-	h := NewClientCredentialsHandler(
-		clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
-			Clients: clients,
-			Audit:   audit,
-		}),
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fallbackCalled = true
-			w.WriteHeader(http.StatusTeapot)
-		}),
-	)
+	h := NewClientCredentialsHandler(clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
+		Clients: clients,
+		Audit:   audit,
+	}))
 
 	app := fiber.New()
 	app.Post("/oauth/token", h.Token)
@@ -71,9 +64,6 @@ func TestClientCredentialsHandlerTokenHandlesClientCredentialsGrant(t *testing.T
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-	if fallbackCalled {
-		t.Fatal("expected client_credentials requests to avoid fallback handler")
 	}
 
 	var body struct {
@@ -96,21 +86,13 @@ func TestClientCredentialsHandlerTokenHandlesClientCredentialsGrant(t *testing.T
 	}
 }
 
-func TestClientCredentialsHandlerTokenDelegatesOtherGrantTypes(t *testing.T) {
+func TestClientCredentialsHandlerTokenRejectsOtherGrantTypes(t *testing.T) {
 	db := setupTestDB(t)
 
-	fallbackCalled := false
-	h := NewClientCredentialsHandler(
-		clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
-			Clients: store.NewOAuthClientStore(db),
-			Audit:   store.NewAuditLogStore(db),
-		}),
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fallbackCalled = true
-			w.WriteHeader(http.StatusTeapot)
-			_, _ = w.Write([]byte("fallback"))
-		}),
-	)
+	h := NewClientCredentialsHandler(clientcredentialsservice.NewClientCredentialsService(clientcredentialsservice.ClientCredentialsServiceDeps{
+		Clients: store.NewOAuthClientStore(db),
+		Audit:   store.NewAuditLogStore(db),
+	}))
 
 	app := fiber.New()
 	app.Post("/oauth/token", h.Token)
@@ -126,10 +108,7 @@ func TestClientCredentialsHandlerTokenDelegatesOtherGrantTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != http.StatusTeapot {
-		t.Fatalf("expected fallback status 418, got %d", resp.StatusCode)
-	}
-	if !fallbackCalled {
-		t.Fatal("expected non-client_credentials requests to use fallback handler")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
 	}
 }

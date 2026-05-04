@@ -163,10 +163,7 @@ func TestMigrate_TemplateSchemaOnlyIncludesRetainedTables(t *testing.T) {
 	for _, table := range []string{
 		"users",
 		"oauth_clients",
-		"oauth_consent_grants",
-		"auth_requests",
 		"tokens",
-		"signing_keys",
 		"social_providers",
 		"social_accounts",
 		"settings",

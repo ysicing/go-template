@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,18 +16,17 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupUserHandler(t *testing.T) (*UserHandler, *store.UserStore, *store.APIRefreshTokenStore, *store.AuditLogStore, *store.OAuthConsentGrantStore, *store.OAuthClientStore, *model.User, *gorm.DB) {
+func setupUserHandler(t *testing.T) (*UserHandler, *store.UserStore, *store.APIRefreshTokenStore, *store.AuditLogStore, *model.User, *gorm.DB) {
 	t.Helper()
 
 	db := setupTestDB(t)
 	cache := store.NewMemoryCache()
 	t.Cleanup(func() { _ = cache.Close() })
+
 	users := store.NewUserStore(db)
 	passwordHistory := store.NewPasswordHistoryStore(db)
 	refreshTokens := store.NewAPIRefreshTokenStore(db)
 	audit := store.NewAuditLogStore(db)
-	consentGrants := store.NewOAuthConsentGrantStore(db)
-	clients := store.NewOAuthClientStore(db)
 	settings := store.NewSettingStore(db, cache)
 	user := createLocalUser(t, db, "profile-user", "profile-user@example.com", "Password123!abcd")
 
@@ -37,12 +35,10 @@ func setupUserHandler(t *testing.T) (*UserHandler, *store.UserStore, *store.APIR
 		PasswordHistory: passwordHistory,
 		RefreshTokens:   refreshTokens,
 		Audit:           audit,
-		ConsentGrants:   consentGrants,
-		Clients:         clients,
 		Cache:           cache,
 		Settings:        settings,
 	})
-	return h, users, refreshTokens, audit, consentGrants, clients, user, db
+	return h, users, refreshTokens, audit, user, db
 }
 
 func newUserTestApp(t *testing.T, h *UserHandler, userID string) *fiber.App {
@@ -60,13 +56,11 @@ func newUserTestApp(t *testing.T, h *UserHandler, userID string) *fiber.App {
 	app.Delete("/api/sessions/:id", h.RevokeSession)
 	app.Delete("/api/sessions", h.RevokeAllSessions)
 	app.Post("/api/users/me/set-password", h.SetPassword)
-	app.Get("/api/users/me/authorized-apps", h.ListAuthorizedApps)
-	app.Delete("/api/users/me/authorized-apps/:id", h.RevokeAuthorizedApp)
 	return app
 }
 
 func TestUserHandler_UpdateMe_WritesAuditLog(t *testing.T) {
-	h, _, _, _, _, _, user, db := setupUserHandler(t)
+	h, _, _, _, user, db := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)
 
 	payload, _ := json.Marshal(map[string]string{"username": "profile-user-updated"})
@@ -84,7 +78,7 @@ func TestUserHandler_UpdateMe_WritesAuditLog(t *testing.T) {
 }
 
 func TestUserHandler_UpdateMe_RejectsInvalidEmailWithoutDomain(t *testing.T) {
-	h, _, _, _, _, _, user, _ := setupUserHandler(t)
+	h, _, _, _, user, _ := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)
 
 	payload, _ := json.Marshal(map[string]string{"email": "invalid@local"})
@@ -100,7 +94,7 @@ func TestUserHandler_UpdateMe_RejectsInvalidEmailWithoutDomain(t *testing.T) {
 }
 
 func TestUserHandler_RevokeSession_WritesAuditLog(t *testing.T) {
-	h, _, refreshTokens, _, _, _, user, db := setupUserHandler(t)
+	h, _, refreshTokens, _, user, db := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)
 
 	token := &model.APIRefreshToken{
@@ -129,7 +123,7 @@ func TestUserHandler_RevokeSession_WritesAuditLog(t *testing.T) {
 }
 
 func TestUserHandler_SetPassword_WritesAuditLog(t *testing.T) {
-	h, users, _, _, _, _, user, db := setupUserHandler(t)
+	h, users, _, _, user, db := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)
 
 	user.PasswordHash = ""
@@ -152,12 +146,10 @@ func TestUserHandler_SetPassword_WritesAuditLog(t *testing.T) {
 }
 
 func TestUserHandler_SetPassword_AllowsWeakPasswordWhenPolicyDisabled(t *testing.T) {
-	h, users, _, _, _, _, user, db := setupUserHandler(t)
+	h, users, _, _, user, db := setupUserHandler(t)
 
-	// Explicitly disable password policy for this test.
 	settings := store.NewSettingStore(db, store.NewMemoryCache())
 	_ = settings.Set(context.Background(), store.SettingPasswordPolicyEnabled, "false")
-	// Replace handler's settings with the one that has the policy disabled.
 	h.settings = settings
 
 	app := newUserTestApp(t, h, user.ID)
@@ -180,7 +172,7 @@ func TestUserHandler_SetPassword_AllowsWeakPasswordWhenPolicyDisabled(t *testing
 }
 
 func TestUserHandler_ChangePassword_BumpsTokenVersionAndClearsSessions(t *testing.T) {
-	h, users, refreshTokens, _, _, _, user, _ := setupUserHandler(t)
+	h, users, refreshTokens, _, user, _ := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)
 	ctx := context.Background()
 
@@ -235,7 +227,7 @@ func TestUserHandler_ChangePassword_BumpsTokenVersionAndClearsSessions(t *testin
 }
 
 func TestUserHandler_RevokeAllSessions_BumpsTokenVersion(t *testing.T) {
-	h, users, refreshTokens, _, _, _, user, _ := setupUserHandler(t)
+	h, users, refreshTokens, _, user, _ := setupUserHandler(t)
 	app := newUserTestApp(t, h, user.ID)
 	ctx := context.Background()
 
@@ -301,7 +293,7 @@ func TestUserHandler_RevokeAllSessions_BumpsTokenVersion(t *testing.T) {
 }
 
 func TestUserHandler_RevokeAllSessions_ReturnsErrorWhenUserMissing(t *testing.T) {
-	h, _, _, _, _, _, _, _ := setupUserHandler(t)
+	h, _, _, _, _, _ := setupUserHandler(t)
 	app := newUserTestApp(t, h, "missing-user-id")
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/sessions", nil)
@@ -314,107 +306,6 @@ func TestUserHandler_RevokeAllSessions_ReturnsErrorWhenUserMissing(t *testing.T)
 	}
 }
 
-func TestUserHandlerListAuthorizedApps(t *testing.T) {
-	h, _, _, _, consentGrants, clients, user, db := setupUserHandler(t)
-	app := newUserTestApp(t, h, user.ID)
-	ctx := context.Background()
-
-	if err := clients.Create(ctx, &model.OAuthClient{
-		Name:         "Acme Docs",
-		ClientID:     "client-1",
-		ClientSecret: "hash",
-		RedirectURIs: "https://example.com/callback",
-		UserID:       "owner-1",
-	}); err != nil {
-		t.Fatalf("seed client: %v", err)
-	}
-	if err := consentGrants.Upsert(ctx, &model.OAuthConsentGrant{
-		UserID:   user.ID,
-		ClientID: "client-1",
-		Scopes:   "openid profile",
-	}); err != nil {
-		t.Fatalf("seed current user grant: %v", err)
-	}
-	if err := consentGrants.Upsert(ctx, &model.OAuthConsentGrant{
-		UserID:   "other-user",
-		ClientID: "client-2",
-		Scopes:   "openid",
-	}); err != nil {
-		t.Fatalf("seed other user grant: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/users/me/authorized-apps", nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != fiber.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-
-	var body struct {
-		Apps []struct {
-			ClientID   string `json:"client_id"`
-			ClientName string `json:"client_name"`
-			Scopes     string `json:"scopes"`
-		} `json:"apps"`
-		Total int64 `json:"total"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-	if body.Total != 1 {
-		t.Fatalf("expected total 1, got %d", body.Total)
-	}
-	if len(body.Apps) != 1 {
-		t.Fatalf("expected 1 app, got %d", len(body.Apps))
-	}
-	if body.Apps[0].ClientName != "Acme Docs" {
-		t.Fatalf("expected client name Acme Docs, got %q", body.Apps[0].ClientName)
-	}
-	if body.Apps[0].ClientID != "client-1" {
-		t.Fatalf("expected client id client-1, got %q", body.Apps[0].ClientID)
-	}
-	if body.Apps[0].Scopes != "openid profile" {
-		t.Fatalf("expected scopes openid profile, got %q", body.Apps[0].Scopes)
-	}
-
-	assertNoUserAuditLogByAction(t, db, user.ID, model.AuditOIDCConsentGrantRevoke)
-}
-
-func TestUserHandlerRevokeAuthorizedAppDeletesGrantAndWritesAudit(t *testing.T) {
-	h, _, _, _, consentGrants, _, user, db := setupUserHandler(t)
-	app := newUserTestApp(t, h, user.ID)
-	ctx := context.Background()
-
-	if err := consentGrants.Upsert(ctx, &model.OAuthConsentGrant{
-		UserID:   user.ID,
-		ClientID: "client-1",
-		Scopes:   "openid profile",
-	}); err != nil {
-		t.Fatalf("seed grant: %v", err)
-	}
-	grant, err := consentGrants.GetByUserAndClient(ctx, user.ID, "client-1")
-	if err != nil {
-		t.Fatalf("load grant: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodDelete, "/api/users/me/authorized-apps/"+grant.ID, nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != fiber.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-
-	if _, err := consentGrants.GetByUserAndClient(ctx, user.ID, "client-1"); !errors.Is(err, store.ErrNotFound) {
-		t.Fatalf("expected deleted grant to be missing, got %v", err)
-	}
-
-	assertUserAuditLogByAction(t, db, user.ID, model.AuditOIDCConsentGrantRevoke, "oauth_consent_grant")
-}
-
 func assertUserAuditLogByAction(t *testing.T, db *gorm.DB, userID, action, resource string) {
 	t.Helper()
 
@@ -424,17 +315,5 @@ func assertUserAuditLogByAction(t *testing.T, db *gorm.DB, userID, action, resou
 		Order("created_at DESC").
 		First(&auditLog).Error; err != nil {
 		t.Fatalf("expected audit log for action %s: %v", action, err)
-	}
-}
-
-func assertNoUserAuditLogByAction(t *testing.T, db *gorm.DB, userID, action string) {
-	t.Helper()
-
-	var auditLog model.AuditLog
-	err := db.WithContext(context.Background()).
-		Where("user_id = ? AND action = ?", userID, action).
-		First(&auditLog).Error
-	if err == nil {
-		t.Fatalf("expected no audit log for action %s, got err=%v record=%+v", action, err, auditLog)
 	}
 }

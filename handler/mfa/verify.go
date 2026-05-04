@@ -1,7 +1,6 @@
 package mfahandler
 
 import (
-	"strings"
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
@@ -14,7 +13,7 @@ import (
 
 // Verify handles POST /api/auth/mfa/verify.
 func (h *MFAHandler) Verify(c fiber.Ctx) error {
-	req, userID, pendingCtx, err := h.loadMFAVerifyContext(c)
+	req, userID, err := h.loadMFAVerifyContext(c)
 	if err != nil {
 		return handlercommon.FinishHandlerError(c, err)
 	}
@@ -28,9 +27,6 @@ func (h *MFAHandler) Verify(c fiber.Ctx) error {
 	}
 
 	refreshTTL := h.consumeMFAVerifyContext(c, req.MFAToken)
-	if strings.HasPrefix(pendingCtx, "oidc:") {
-		return h.completeOIDCMFAVerify(c, pendingCtx, userID)
-	}
 	return h.finishBrowserMFAVerify(c, userID, refreshTTL)
 }
 
@@ -40,29 +36,28 @@ type mfaVerifyRequest struct {
 	BackupCode string `json:"backup_code"`
 }
 
-func (h *MFAHandler) loadMFAVerifyContext(c fiber.Ctx) (*mfaVerifyRequest, string, string, error) {
+func (h *MFAHandler) loadMFAVerifyContext(c fiber.Ctx) (*mfaVerifyRequest, string, error) {
 	var req mfaVerifyRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return nil, "", "", handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
+		return nil, "", handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
 	if req.MFAToken == "" {
-		return nil, "", "", handlercommon.JSONError(fiber.StatusBadRequest, "mfa_token is required")
+		return nil, "", handlercommon.JSONError(fiber.StatusBadRequest, "mfa_token is required")
 	}
 
 	userID, err := h.cache.Get(c.Context(), "mfa_pending:"+req.MFAToken)
 	if err != nil || userID == "" {
-		return nil, "", "", handlercommon.JSONError(fiber.StatusUnauthorized, "invalid or expired mfa_token")
+		return nil, "", handlercommon.JSONError(fiber.StatusUnauthorized, "invalid or expired mfa_token")
 	}
 	consumed, err := h.cache.SetNX(c.Context(), mfaConsumedKey(req.MFAToken), "1", 5*time.Minute)
 	if err != nil || !consumed {
-		return nil, "", "", handlercommon.JSONError(fiber.StatusUnauthorized, "invalid or expired mfa_token")
+		return nil, "", handlercommon.JSONError(fiber.StatusUnauthorized, "invalid or expired mfa_token")
 	}
 	if h.isMFAVerifyLocked(c.Context(), req.MFAToken) {
-		return nil, "", "", handlercommon.JSONError(fiber.StatusTooManyRequests, "too many MFA attempts, please log in again")
+		return nil, "", handlercommon.JSONError(fiber.StatusTooManyRequests, "too many MFA attempts, please log in again")
 	}
 
-	pendingCtx, _ := h.cache.Get(c.Context(), "mfa_pending_ctx:"+req.MFAToken)
-	return &req, userID, pendingCtx, nil
+	return &req, userID, nil
 }
 
 func (h *MFAHandler) verifyMFACode(c fiber.Ctx, req *mfaVerifyRequest, userID string, cfg *model.MFAConfig) error {
@@ -102,32 +97,6 @@ func (h *MFAHandler) consumeMFAVerifyContext(c fiber.Ctx, mfaToken string) time.
 		return h.tokenConfig.RememberMeTTL
 	}
 	return h.tokenConfig.RefreshTTL
-}
-
-func (h *MFAHandler) completeOIDCMFAVerify(c fiber.Ctx, pendingCtx, userID string) error {
-	authReqID := strings.TrimPrefix(pendingCtx, "oidc:")
-	if authReqID == "" || h.oidc == nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid oidc login context"})
-	}
-
-	shouldPrompt := h.oidc.AuthRequestRequiresConsent(c.Context(), authReqID)
-	if !shouldPrompt && h.clients != nil {
-		var err error
-		shouldPrompt, err = handlercommon.ShouldPromptOIDCConsent(c.Context(), h.oidc, h.clients, h.consentGrants, authReqID, userID)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth request not found or expired"})
-		}
-	}
-	if shouldPrompt {
-		if err := h.oidc.AssignAuthRequestUser(c.Context(), authReqID, userID); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth request not found or expired"})
-		}
-		return c.JSON(fiber.Map{"redirect": "/consent?id=" + authReqID})
-	}
-	if err := h.oidc.CompleteAuthRequest(c.Context(), authReqID, userID); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth request not found or expired"})
-	}
-	return c.JSON(fiber.Map{"redirect": "/authorize/callback?id=" + authReqID})
 }
 
 func (h *MFAHandler) finishBrowserMFAVerify(c fiber.Ctx, userID string, refreshTTL time.Duration) error {

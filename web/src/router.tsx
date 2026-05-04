@@ -6,7 +6,6 @@ import { useAuthStore } from "@/stores/auth"
 import { hasAnyAdminPermission, hasPermission, adminPermissions } from "@/lib/permissions"
 
 const LoginPage = lazy(() => import("@/pages/login"))
-const ConsentPage = lazy(() => import("@/pages/consent"))
 const RegisterPage = lazy(() => import("@/pages/register"))
 const MfaVerifyPage = lazy(() => import("@/pages/mfa-verify"))
 const LoginCallbackPage = lazy(() => import("@/pages/login/callback"))
@@ -78,7 +77,6 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/consent" element={<ConsentPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/mfa-verify" element={<MfaVerifyPage />} />
       <Route path="/login/callback" element={<LoginCallbackPage />} />

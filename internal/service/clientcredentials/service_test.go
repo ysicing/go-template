@@ -2,6 +2,7 @@ package clientcredentialsservice
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -152,7 +153,7 @@ func TestClientCredentialsServiceIntrospectReturnsActiveForOwnedToken(t *testing
 	require.Equal(t, client.ClientID, resp.Subject)
 	require.Equal(t, client.ClientID, resp.ClientID)
 	require.Equal(t, "access", resp.TokenType)
-	require.Equal(t, []string{"openid", "profile"}, []string(resp.Scope))
+	require.Equal(t, []string{"openid", "profile"}, strings.Fields(resp.Scope))
 }
 
 func TestClientCredentialsServiceRevokeDeletesOwnedTokenAndWritesAudit(t *testing.T) {

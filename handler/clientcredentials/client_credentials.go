@@ -2,8 +2,6 @@ package clientcredentialshandler
 
 import (
 	"encoding/base64"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
@@ -12,17 +10,16 @@ import (
 )
 
 type ClientCredentialsHandler struct {
-	service  *clientcredentialsservice.ClientCredentialsService
-	fallback http.Handler
+	service *clientcredentialsservice.ClientCredentialsService
 }
 
-func NewClientCredentialsHandler(service *clientcredentialsservice.ClientCredentialsService, fallback http.Handler) *ClientCredentialsHandler {
-	return &ClientCredentialsHandler{service: service, fallback: fallback}
+func NewClientCredentialsHandler(service *clientcredentialsservice.ClientCredentialsService) *ClientCredentialsHandler {
+	return &ClientCredentialsHandler{service: service}
 }
 
 func (h *ClientCredentialsHandler) Token(c fiber.Ctx) error {
 	if strings.TrimSpace(c.FormValue("grant_type")) != "client_credentials" {
-		return h.delegate(c, "/oauth/token")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "unsupported_grant_type"})
 	}
 
 	clientID, clientSecret := extractOAuthClientCredentials(c)
@@ -66,7 +63,7 @@ func (h *ClientCredentialsHandler) Introspect(c fiber.Ctx) error {
 	if handled {
 		return c.JSON(resp)
 	}
-	return h.delegate(c, "/oauth/introspect")
+	return c.JSON(&clientcredentialsservice.ClientCredentialsIntrospectionResponse{})
 }
 
 func (h *ClientCredentialsHandler) Revoke(c fiber.Ctx) error {
@@ -86,35 +83,7 @@ func (h *ClientCredentialsHandler) Revoke(c fiber.Ctx) error {
 	if handled {
 		return c.SendStatus(fiber.StatusOK)
 	}
-	return h.delegate(c, "/oauth/revoke")
-}
-
-func (h *ClientCredentialsHandler) delegate(c fiber.Ctx, path string) error {
-	if h.fallback == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "not found"})
-	}
-
-	req := httptest.NewRequest(c.Method(), path, strings.NewReader(string(c.Body())))
-	req.Header.Set("Content-Type", c.Get("Content-Type"))
-	if accept := c.Get("Accept"); accept != "" {
-		req.Header.Set("Accept", accept)
-	}
-	if auth := c.Get("Authorization"); auth != "" {
-		req.Header.Set("Authorization", auth)
-	}
-	req.Host = c.Hostname()
-	if fh := c.Get("X-Forwarded-Host"); fh != "" {
-		req.Header.Set("X-Forwarded-Host", fh)
-	}
-	if fp := c.Get("X-Forwarded-Proto"); fp != "" {
-		req.Header.Set("X-Forwarded-Proto", fp)
-	}
-
-	rec := httptest.NewRecorder()
-	h.fallback.ServeHTTP(rec, req)
-
-	c.Set("Content-Type", rec.Header().Get("Content-Type"))
-	return c.Status(rec.Code).Send(rec.Body.Bytes())
+	return c.SendStatus(fiber.StatusOK)
 }
 
 func extractOAuthClientCredentials(c fiber.Ctx) (string, string) {

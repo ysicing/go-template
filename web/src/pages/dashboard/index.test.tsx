@@ -5,13 +5,9 @@ import DashboardPage from "@/pages/dashboard"
 import { useAuthStore } from "@/stores/auth"
 import { adminPermissions } from "@/lib/permissions"
 
-const authorizedAppsMock = vi.fn()
 const adminMock = vi.fn()
 
 vi.mock("@/api/services", () => ({
-  userApi: {
-    listAuthorizedApps: (...args: unknown[]) => authorizedAppsMock(...args),
-  },
   statsApi: {
     admin: (...args: unknown[]) => adminMock(...args),
   },
@@ -31,18 +27,10 @@ describe("DashboardPage", () => {
       initStatus: "ready",
     })
 
-    authorizedAppsMock.mockReset()
     adminMock.mockReset()
   })
 
   it("shows account-focused quick access for regular users", async () => {
-    authorizedAppsMock.mockResolvedValue({
-      data: {
-        apps: [],
-        total: 0,
-      },
-    })
-
     render(
       <MemoryRouter>
         <DashboardPage />
@@ -51,7 +39,6 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Identity control center" })).toBeInTheDocument()
     expect(screen.getAllByText("Quick access").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("Authorized Apps").length).toBeGreaterThan(0)
     expect(screen.getAllByRole("link", { name: /Profile/ }).some((node) => node.getAttribute("href") === "/account/profile")).toBe(true)
     expect(screen.getAllByRole("link", { name: /Points/ }).some((node) => node.getAttribute("href") === "/account/points")).toBe(true)
     expect(screen.queryByRole("link", { name: "Create application" })).not.toBeInTheDocument()
@@ -78,12 +65,6 @@ describe("DashboardPage", () => {
       initStatus: "ready",
     })
 
-    authorizedAppsMock.mockResolvedValue({
-      data: {
-        apps: [{ id: "grant-1", client_id: "client-1", client_name: "Portal", scopes: "openid", granted_at: "2026-04-12T00:00:00Z" }],
-        total: 1,
-      },
-    })
     adminMock.mockResolvedValue({
       data: {
         total_users: 12,
@@ -102,8 +83,6 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("Platform snapshot")).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Admin/ })).not.toBeInTheDocument()
     expect(screen.getByText("Total users")).toBeInTheDocument()
-    expect(screen.getAllByText("Authorized Apps").length).toBeGreaterThan(0)
-    expect(screen.getByText("Portal")).toBeInTheDocument()
     expect(screen.queryByText("Monitoring")).not.toBeInTheDocument()
     expect(adminMock).toHaveBeenCalledTimes(1)
   })

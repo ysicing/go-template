@@ -2,21 +2,17 @@ package app
 
 import (
 	"context"
-	"crypto/sha256"
-	"errors"
 
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
-	oidcstore "github.com/ysicing/go-template/store/oidc"
 	pointstore "github.com/ysicing/go-template/store/points"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
-	"github.com/zitadel/oidc/v3/pkg/op"
 	"gorm.io/gorm"
 )
 
@@ -70,20 +66,19 @@ func initCache(ctx context.Context, cfg *Config, log *zerolog.Logger) store.Cach
 
 func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, log *zerolog.Logger) *Deps {
 	deps := &Deps{
-		DB:                     db,
-		Cache:                  cache,
-		UserStore:              store.NewUserStore(db),
-		PasswordHistory:        store.NewPasswordHistoryStore(db),
-		ClientStore:            store.NewOAuthClientStore(db),
-		OAuthConsentGrantStore: store.NewOAuthConsentGrantStore(db),
-		SocialStore:            store.NewSocialProviderStore(db, cfg.Security.EncryptionKey),
-		SocialAccountStore:     store.NewSocialAccountStore(db),
-		SettingStore:           store.NewSettingStore(db, cache, cfg.Security.EncryptionKey),
-		RefreshTokenStore:      store.NewAPIRefreshTokenStore(db, cache),
-		AuditLogStore:          store.NewAuditLogStore(db),
-		MFAStore:               store.NewMFAStore(db, cfg.Security.EncryptionKey),
-		WebAuthnStore:          webauthnstore.NewWebAuthnStore(db),
-		PointStore:             pointstore.NewPointStore(db),
+		DB:                 db,
+		Cache:              cache,
+		UserStore:          store.NewUserStore(db),
+		PasswordHistory:    store.NewPasswordHistoryStore(db),
+		ClientStore:        store.NewOAuthClientStore(db),
+		SocialStore:        store.NewSocialProviderStore(db, cfg.Security.EncryptionKey),
+		SocialAccountStore: store.NewSocialAccountStore(db),
+		SettingStore:       store.NewSettingStore(db, cache, cfg.Security.EncryptionKey),
+		RefreshTokenStore:  store.NewAPIRefreshTokenStore(db, cache),
+		AuditLogStore:      store.NewAuditLogStore(db),
+		MFAStore:           store.NewMFAStore(db, cfg.Security.EncryptionKey),
+		WebAuthnStore:      webauthnstore.NewWebAuthnStore(db),
+		PointStore:         pointstore.NewPointStore(db),
 	}
 	deps.CheckInStore = pointstore.NewCheckInStore(db, deps.PointStore)
 	deps.Services = Services{
@@ -103,61 +98,7 @@ func initDeps(ctx context.Context, db *gorm.DB, cache store.Cache, cfg *Config, 
 		Users: deps.UserStore,
 		Cache: cache,
 	})
-
-	oidcStorage, err := oidcstore.NewOIDCStorage(ctx, db, cache, deps.UserStore, deps.ClientStore, "/login", cfg.Security.EncryptionKey, 0, 0, 0)
-	if err != nil {
-		log.Fatal().Err(err).Msg("create oidc storage")
-	}
-	deps.OIDCStorage = oidcStorage
 	return deps
-}
-
-func initOIDCProvider(cfg *Config, deps *Deps, log *zerolog.Logger) *op.Provider {
-	oidcSecretSource, mode, err := resolveOIDCSecretSource(cfg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("resolve oidc secret")
-	}
-	switch mode {
-	case oidcSecretModeEncryptionKey:
-		log.Warn().Msg("security.oidc_secret not set, deriving from security.encryption_key with salt")
-	case oidcSecretModeJWTSecret:
-		log.Warn().Msg("security.oidc_secret not set, deriving from jwt.secret with salt because security.allow_insecure=true")
-	}
-	cryptoKey := sha256.Sum256([]byte(oidcSecretSource))
-	opOpts := []op.Option{}
-	if cfg.Security.AllowInsecure {
-		opOpts = append(opOpts, op.WithAllowInsecure())
-	}
-
-	provider, err := op.NewProvider(
-		&op.Config{CryptoKey: cryptoKey},
-		deps.OIDCStorage,
-		op.IssuerFromForwardedOrHost(""),
-		opOpts...,
-	)
-	if err != nil {
-		log.Fatal().Err(err).Msg("create oidc provider")
-	}
-	return provider
-}
-
-const (
-	oidcSecretModeExplicit      = "explicit"
-	oidcSecretModeEncryptionKey = "encryption_key"
-	oidcSecretModeJWTSecret     = "jwt_secret"
-)
-
-func resolveOIDCSecretSource(cfg *Config) (string, string, error) {
-	switch {
-	case cfg.Security.OIDCSecret != "":
-		return cfg.Security.OIDCSecret, oidcSecretModeExplicit, nil
-	case cfg.Security.EncryptionKey != "":
-		return cfg.Security.EncryptionKey + ":oidc", oidcSecretModeEncryptionKey, nil
-	case cfg.Security.AllowInsecure:
-		return cfg.JWT.Secret + ":oidc", oidcSecretModeJWTSecret, nil
-	default:
-		return "", "", errors.New("security.oidc_secret is required in secure mode when security.encryption_key is unset")
-	}
 }
 
 func newFiberApp(cfg *Config, log *zerolog.Logger) *fiber.App {

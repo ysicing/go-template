@@ -39,10 +39,9 @@ func TestOAuthClientHandler_WriteOperationsCreateAuditLogs(t *testing.T) {
 	app := newOAuthClientTestApp(t, h, admin.ID)
 
 	createPayload, _ := json.Marshal(map[string]any{
-		"name":          "Audit Client",
-		"redirect_uris": "https://example.com/callback",
-		"grant_types":   "authorization_code",
-		"scopes":        "openid,profile,email",
+		"name":        "Audit Client",
+		"grant_types": "client_credentials",
+		"scopes":      "read,write",
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/api/admin/clients", bytes.NewReader(createPayload))
 	createReq.Header.Set("Content-Type", "application/json")
@@ -62,7 +61,8 @@ func TestOAuthClientHandler_WriteOperationsCreateAuditLogs(t *testing.T) {
 	}
 
 	updatePayload, _ := json.Marshal(map[string]any{
-		"name": "Audit Client Updated",
+		"name":   "Audit Client Updated",
+		"scopes": "read",
 	})
 	updateReq := httptest.NewRequest(http.MethodPut, "/api/admin/clients/"+createdBody.Client.ID, bytes.NewReader(updatePayload))
 	updateReq.Header.Set("Content-Type", "application/json")
@@ -88,24 +88,21 @@ func TestOAuthClientHandler_WriteOperationsCreateAuditLogs(t *testing.T) {
 	assertAuditActionExists(t, db, admin.ID, model.AuditAppDelete, "oauth_client")
 }
 
-func TestOAuthClientHandlerWriteOperationsPersistRequireConsent(t *testing.T) {
+func TestOAuthClientHandlerCreateDefaultsToMachineGrant(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	admin := createLocalUser(t, db, "oauth-policy-admin", "oauth-policy-admin@example.com", "Password123!abcd")
+	admin := createLocalUser(t, db, "oauth-default-admin", "oauth-default-admin@example.com", "Password123!abcd")
 
 	h := NewOAuthClientHandler(clients, audit)
 	app := newOAuthClientTestApp(t, h, admin.ID)
 
 	createPayload, _ := json.Marshal(map[string]any{
-		"name":            "Consent Client",
-		"redirect_uris":   "https://example.com/callback",
-		"grant_types":     "authorization_code",
-		"scopes":          "openid,profile,email",
-		"require_consent": true,
+		"name": "Machine Client",
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/api/admin/clients", bytes.NewReader(createPayload))
 	createReq.Header.Set("Content-Type", "application/json")
+
 	createResp, err := app.Test(createReq)
 	if err != nil {
 		t.Fatal(err)
@@ -114,52 +111,33 @@ func TestOAuthClientHandlerWriteOperationsPersistRequireConsent(t *testing.T) {
 		t.Fatalf("expected 201, got %d", createResp.StatusCode)
 	}
 
-	var createdBody struct {
+	var body struct {
 		Client model.OAuthClient `json:"client"`
 	}
-	if err := json.NewDecoder(createResp.Body).Decode(&createdBody); err != nil {
+	if err := json.NewDecoder(createResp.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if !createdBody.Client.RequireConsent {
-		t.Fatal("expected created client require_consent=true")
+	if body.Client.GrantTypes != "client_credentials" {
+		t.Fatalf("expected default grant_types client_credentials, got %q", body.Client.GrantTypes)
 	}
-
-	updatePayload, _ := json.Marshal(map[string]any{
-		"require_consent": false,
-	})
-	updateReq := httptest.NewRequest(http.MethodPut, "/api/admin/clients/"+createdBody.Client.ID, bytes.NewReader(updatePayload))
-	updateReq.Header.Set("Content-Type", "application/json")
-	updateResp, err := app.Test(updateReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if updateResp.StatusCode != fiber.StatusOK {
-		t.Fatalf("expected 200, got %d", updateResp.StatusCode)
-	}
-
-	stored, err := clients.GetByID(context.Background(), createdBody.Client.ID)
-	if err != nil {
-		t.Fatalf("get updated client: %v", err)
-	}
-	if stored.RequireConsent {
-		t.Fatal("expected updated client require_consent=false")
+	if body.Client.Scopes != "read" {
+		t.Fatalf("expected default scopes read, got %q", body.Client.Scopes)
 	}
 }
 
-func TestOAuthClientHandlerCreateAcceptsClientCredentialsGrantType(t *testing.T) {
+func TestOAuthClientHandlerRejectsUnsupportedGrantType(t *testing.T) {
 	db := setupTestDB(t)
 	clients := store.NewOAuthClientStore(db)
 	audit := store.NewAuditLogStore(db)
-	admin := createLocalUser(t, db, "oauth-client-credentials-admin", "oauth-client-credentials-admin@example.com", "Password123!abcd")
+	admin := createLocalUser(t, db, "oauth-invalid-admin", "oauth-invalid-admin@example.com", "Password123!abcd")
 
 	h := NewOAuthClientHandler(clients, audit)
 	app := newOAuthClientTestApp(t, h, admin.ID)
 
 	createPayload, _ := json.Marshal(map[string]any{
-		"name":          "Machine Client",
-		"redirect_uris": "https://example.com/callback",
-		"grant_types":   "client_credentials",
-		"scopes":        "openid,profile",
+		"name":        "Invalid Client",
+		"grant_types": "authorization_code",
+		"scopes":      "read",
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/api/admin/clients", bytes.NewReader(createPayload))
 	createReq.Header.Set("Content-Type", "application/json")
@@ -168,47 +146,8 @@ func TestOAuthClientHandlerCreateAcceptsClientCredentialsGrantType(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if createResp.StatusCode != fiber.StatusCreated {
-		t.Fatalf("expected 201, got %d", createResp.StatusCode)
-	}
-}
-
-func TestOAuthClientHandlerUpdateAcceptsMixedGrantTypesIncludingClientCredentials(t *testing.T) {
-	db := setupTestDB(t)
-	clients := store.NewOAuthClientStore(db)
-	audit := store.NewAuditLogStore(db)
-	admin := createLocalUser(t, db, "oauth-mixed-grants-admin", "oauth-mixed-grants-admin@example.com", "Password123!abcd")
-
-	h := NewOAuthClientHandler(clients, audit)
-	app := newOAuthClientTestApp(t, h, admin.ID)
-
-	client := &model.OAuthClient{
-		Name:         "Mixed Client",
-		ClientID:     "mixed-client-id",
-		RedirectURIs: "https://example.com/callback",
-		GrantTypes:   "authorization_code",
-		Scopes:       "openid,profile",
-		UserID:       admin.ID,
-	}
-	if err := client.SetSecret("secret"); err != nil {
-		t.Fatalf("set secret: %v", err)
-	}
-	if err := clients.Create(context.Background(), client); err != nil {
-		t.Fatalf("create client: %v", err)
-	}
-
-	updatePayload, _ := json.Marshal(map[string]any{
-		"grant_types": "authorization_code,refresh_token,client_credentials",
-	})
-	updateReq := httptest.NewRequest(http.MethodPut, "/api/admin/clients/"+client.ID, bytes.NewReader(updatePayload))
-	updateReq.Header.Set("Content-Type", "application/json")
-
-	updateResp, err := app.Test(updateReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if updateResp.StatusCode != fiber.StatusOK {
-		t.Fatalf("expected 200, got %d", updateResp.StatusCode)
+	if createResp.StatusCode != fiber.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", createResp.StatusCode)
 	}
 }
 

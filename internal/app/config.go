@@ -67,7 +67,6 @@ type JWTConfig struct {
 type SecurityConfig struct {
 	AllowInsecure bool   `yaml:"allow_insecure"`
 	EncryptionKey string `yaml:"encryption_key"`
-	OIDCSecret    string `yaml:"oidc_secret"`
 	Mode          string `yaml:"mode"` // "demo" allows default secrets and relaxed policies; any other value enforces production security
 }
 
@@ -165,7 +164,6 @@ func applyLogEnv(cfg *Config) {
 
 func applySecurityEnv(cfg *Config) {
 	applyStringEnv("ENCRYPTION_KEY", &cfg.Security.EncryptionKey)
-	applyStringEnv("OIDC_SECRET", &cfg.Security.OIDCSecret)
 	applyBoolEnv("SECURITY_ALLOW_INSECURE", &cfg.Security.AllowInsecure)
 	applyStringEnv("SECURITY_MODE", &cfg.Security.Mode)
 }

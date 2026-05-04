@@ -5,12 +5,10 @@
 它保留了开箱即用的认证与控制台底座：
 
 - 本地账号登录、刷新、注销
-- OIDC Provider
-- GitHub Compatible OAuth 端点
 - Social Login Provider 管理
 - MFA / WebAuthn
 - 用户、权限、系统设置、审计日志
-- 应用管理与积分示例模块
+- 机器客户端与积分示例模块
 
 它刻意移除了与模板定位不匹配的业务域：
 
@@ -74,13 +72,9 @@ docker run -d \
 - Swagger UI：`http://localhost:3206/swagger/index.html`
 - OpenAPI JSON：`http://localhost:3206/openapi.json`
 - API Base：`http://localhost:3206/api`
-- OIDC Discovery：`http://localhost:3206/.well-known/openid-configuration`
-- Authorization：`http://localhost:3206/authorize`
 - Token：`http://localhost:3206/oauth/token`
-- UserInfo：`http://localhost:3206/oauth/userinfo`
-- JWKS：`http://localhost:3206/oauth/keys`
-- GitHub OAuth Authorize：`http://localhost:3206/login/oauth/authorize`
-- GitHub OAuth Token：`http://localhost:3206/login/oauth/access_token`
+- Introspect：`http://localhost:3206/oauth/introspect`
+- Revoke：`http://localhost:3206/oauth/revoke`
 
 Swagger 文档会按当前登录用户权限动态裁剪：
 
@@ -101,7 +95,6 @@ Swagger 文档会按当前登录用户权限动态裁剪：
 - `log.file.path`
 - `security.allow_insecure`
 - `security.encryption_key`
-- `security.oidc_secret`
 - `admin.username`
 - `admin.password`（留空会跳过初始管理员自动创建）
 - `admin.email`

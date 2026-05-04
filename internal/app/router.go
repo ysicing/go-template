@@ -1,13 +1,10 @@
 package app
 
 import (
-	"net/http"
-
 	"github.com/ysicing/go-template/handler"
 	adminhandler "github.com/ysicing/go-template/handler/admin"
 	clientcredentialshandler "github.com/ysicing/go-template/handler/clientcredentials"
 	emailhandler "github.com/ysicing/go-template/handler/email"
-	githubcompathandler "github.com/ysicing/go-template/handler/githubcompat"
 	mfahandler "github.com/ysicing/go-template/handler/mfa"
 	oauthhandler "github.com/ysicing/go-template/handler/oauth"
 	oauthclienthandler "github.com/ysicing/go-template/handler/oauthclient"
@@ -18,7 +15,6 @@ import (
 	clientcredentialsservice "github.com/ysicing/go-template/internal/service/clientcredentials"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/store"
-	oidcstore "github.com/ysicing/go-template/store/oidc"
 	pointstore "github.com/ysicing/go-template/store/points"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
 
@@ -40,8 +36,6 @@ type Deps struct {
 	UserStore              *store.UserStore
 	PasswordHistory        *store.PasswordHistoryStore
 	ClientStore            *store.OAuthClientStore
-	OAuthConsentGrantStore *store.OAuthConsentGrantStore
-	OIDCStorage            *oidcstore.OIDCStorage
 	SocialStore            *store.SocialProviderStore
 	SocialAccountStore     *store.SocialAccountStore
 	SettingStore           *store.SettingStore
@@ -52,7 +46,6 @@ type Deps struct {
 	PointStore             *pointstore.PointStore
 	CheckInStore           *pointstore.CheckInStore
 	Cache                  store.Cache
-	OIDCHandler            http.Handler
 	Services               Services
 }
 
@@ -64,7 +57,6 @@ type builtHandlers struct {
 	mfa               *mfahandler.MFAHandler
 	webauthn          *webauthnhandler.WebAuthnHandler
 	oauth             *oauthhandler.OAuthHandler
-	oidcLogin         *handler.OIDCLoginHandler
 	socialAcct        *socialaccounthandler.SocialAccountHandler
 	oauthClient       *oauthclienthandler.OAuthClientHandler
 	admin             *adminhandler.AdminHandler
@@ -72,7 +64,6 @@ type builtHandlers struct {
 	adminSett         *adminhandler.AdminSettingHandler
 	adminPoints       *adminhandler.AdminPointsHandler
 	points            *pointshandler.PointsHandler
-	ghCompat          *githubcompathandler.GitHubCompatHandler
 	clientCredentials *clientcredentialshandler.ClientCredentialsHandler
 }
 
@@ -105,8 +96,6 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 		PasswordHistory: d.PasswordHistory,
 		RefreshTokens:   d.RefreshTokenStore,
 		Audit:           d.AuditLogStore,
-		ConsentGrants:   d.OAuthConsentGrantStore,
-		Clients:         d.ClientStore,
 		Settings:        d.SettingStore,
 		EmailHandler:    h.email,
 		Cache:           d.Cache,
@@ -119,9 +108,6 @@ func buildIdentityHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConf
 		RefreshTokens: d.RefreshTokenStore,
 		Sessions:      d.Services.Sessions,
 		Cache:         d.Cache,
-		OIDC:          d.OIDCStorage,
-		Clients:       d.ClientStore,
-		ConsentGrants: d.OAuthConsentGrantStore,
 		TokenConfig:   tokenCfg,
 	})
 
@@ -153,12 +139,10 @@ func buildOAuthHandlers(h *builtHandlers, d *Deps, tokenCfg handler.TokenConfig)
 		TokenConfig:    tokenCfg,
 	})
 
-	h.oidcLogin = handler.NewOIDCLoginHandler(d.OIDCStorage, d.ClientStore, d.OAuthConsentGrantStore, d.UserStore, d.MFAStore, d.AuditLogStore, d.Cache)
 	h.socialAcct = socialaccounthandler.NewSocialAccountHandler(d.SocialAccountStore, d.UserStore, d.AuditLogStore, nil)
 	h.oauthClient = oauthclienthandler.NewOAuthClientHandler(d.ClientStore, d.AuditLogStore)
 	h.points = pointshandler.NewPointsHandler(d.PointStore, d.CheckInStore, d.AuditLogStore)
-	h.ghCompat = githubcompathandler.NewGitHubCompatHandler(d.OIDCHandler, d.OIDCStorage)
-	h.clientCredentials = clientcredentialshandler.NewClientCredentialsHandler(d.Services.ClientCredentials, d.OIDCHandler)
+	h.clientCredentials = clientcredentialshandler.NewClientCredentialsHandler(d.Services.ClientCredentials)
 }
 
 func buildAdminHandlers(h *builtHandlers, d *Deps) {

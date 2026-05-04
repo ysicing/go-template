@@ -16,17 +16,7 @@ import (
 
 // allowedGrantTypes is the set of permitted OAuth2 grant types.
 var allowedGrantTypes = map[string]bool{
-	"authorization_code": true,
-	"refresh_token":      true,
 	"client_credentials": true,
-}
-
-// allowedScopes is the set of permitted OAuth2 scopes.
-var allowedScopes = map[string]bool{
-	"openid":  true,
-	"profile": true,
-	"email":   true,
-	"admin":   true,
 }
 
 // validateGrantTypes checks that all comma-separated grant types are allowed.
@@ -43,15 +33,15 @@ func validateGrantTypes(raw string) error {
 	return nil
 }
 
-// validateScopes checks that all comma-separated scopes are allowed.
+// validateScopes checks that all comma-separated scopes are non-empty tokens.
 func validateScopes(raw string) error {
 	if raw == "" {
 		return nil
 	}
 	for _, s := range strings.Split(raw, ",") {
 		s = strings.TrimSpace(s)
-		if s != "" && !allowedScopes[s] {
-			return fmt.Errorf("unsupported scope: %s", s)
+		if s == "" {
+			return fmt.Errorf("scope cannot be empty")
 		}
 	}
 	return nil
@@ -80,11 +70,10 @@ func generateSecret() (string, error) {
 // Create handles POST /api/admin/clients.
 func (h *OAuthClientHandler) Create(c fiber.Ctx) error {
 	var req struct {
-		Name           string `json:"name"`
-		RedirectURIs   string `json:"redirect_uris"`
-		GrantTypes     string `json:"grant_types"`
-		Scopes         string `json:"scopes"`
-		RequireConsent bool   `json:"require_consent"`
+		Name         string `json:"name"`
+		RedirectURIs string `json:"redirect_uris"`
+		GrantTypes   string `json:"grant_types"`
+		Scopes       string `json:"scopes"`
 	}
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
@@ -93,8 +82,8 @@ func (h *OAuthClientHandler) Create(c fiber.Ctx) error {
 	req.Name = strings.TrimSpace(req.Name)
 	req.RedirectURIs = strings.TrimSpace(req.RedirectURIs)
 
-	if req.Name == "" || req.RedirectURIs == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name and redirect_uris are required"})
+	if req.Name == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name is required"})
 	}
 
 	if err := validateGrantTypes(req.GrantTypes); err != nil {
@@ -112,22 +101,21 @@ func (h *OAuthClientHandler) Create(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
 
 	client := &model.OAuthClient{
-		Name:           req.Name,
-		ClientID:       uuid.New().String(),
-		RedirectURIs:   req.RedirectURIs,
-		GrantTypes:     req.GrantTypes,
-		Scopes:         req.Scopes,
-		RequireConsent: req.RequireConsent,
-		UserID:         userID,
+		Name:         req.Name,
+		ClientID:     uuid.New().String(),
+		RedirectURIs: req.RedirectURIs,
+		GrantTypes:   req.GrantTypes,
+		Scopes:       req.Scopes,
+		UserID:       userID,
 	}
 	if err := client.SetSecret(secret); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to hash client secret"})
 	}
 	if client.GrantTypes == "" {
-		client.GrantTypes = "authorization_code"
+		client.GrantTypes = "client_credentials"
 	}
 	if client.Scopes == "" {
-		client.Scopes = "openid profile email"
+		client.Scopes = "read"
 	}
 
 	if err := h.clients.Create(c.Context(), client); err != nil {
@@ -190,11 +178,10 @@ func (h *OAuthClientHandler) Update(c fiber.Ctx) error {
 	}
 
 	var req struct {
-		Name           *string `json:"name"`
-		RedirectURIs   *string `json:"redirect_uris"`
-		GrantTypes     *string `json:"grant_types"`
-		Scopes         *string `json:"scopes"`
-		RequireConsent *bool   `json:"require_consent"`
+		Name         *string `json:"name"`
+		RedirectURIs *string `json:"redirect_uris"`
+		GrantTypes   *string `json:"grant_types"`
+		Scopes       *string `json:"scopes"`
 	}
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
@@ -222,9 +209,6 @@ func (h *OAuthClientHandler) Update(c fiber.Ctx) error {
 	}
 	if req.Scopes != nil {
 		client.Scopes = *req.Scopes
-	}
-	if req.RequireConsent != nil {
-		client.RequireConsent = *req.RequireConsent
 	}
 
 	if err := h.clients.Update(c.Context(), client); err != nil {

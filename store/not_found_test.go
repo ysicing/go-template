@@ -33,14 +33,6 @@ func TestStoresNormalizeNotFound(t *testing.T) {
 		t.Fatalf("expected oauth client store ErrNotFound, got %v", err)
 	}
 
-	grantStore := NewOAuthConsentGrantStore(db)
-	if _, err := grantStore.GetByUserAndClient(ctx, "missing-user", "missing-client"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected consent grant store ErrNotFound, got %v", err)
-	}
-	if err := grantStore.DeleteByIDAndUserID(ctx, "missing-grant", "missing-user"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected consent grant delete ErrNotFound, got %v", err)
-	}
-
 	socialStore := NewSocialAccountStore(db)
 	if _, err := socialStore.GetByProviderAndID(ctx, model.SocialProviderGitHub, "missing-provider-id"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected social account store ErrNotFound, got %v", err)

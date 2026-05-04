@@ -28,7 +28,6 @@ type managedRouteRuntime struct {
 	optionalJWT       fiber.Handler
 	authLimiter       fiber.Handler
 	turnstile         fiber.Handler
-	ghLimiter         fiber.Handler
 	pointsLimiter     fiber.Handler
 	registerLimiter   fiber.Handler
 	registerEnabledMW fiber.Handler
@@ -46,7 +45,6 @@ func buildManagedRouteRuntime(d *Deps, h *builtHandlers) managedRouteRuntime {
 		optionalJWT:       handler.OptionalJWTMiddleware(cfg.JWT.Secret, cfg.JWT.Issuer),
 		authLimiter:       newAuthLimiter(d.Cache),
 		turnstile:         turnstileMiddleware(d.SettingStore),
-		ghLimiter:         newGitHubCompatLimiter(d.Cache),
 		pointsLimiter:     newPointsLimiter(d.Cache),
 		registerLimiter:   newRegisterLimiter(d.Cache),
 		registerEnabledMW: registerEnabledMiddleware(d.SettingStore),
@@ -72,14 +70,6 @@ func newPointsLimiter(cache store.Cache) fiber.Handler {
 			return handler.GetRealIPForRateLimit(c, "points:")
 		},
 		Cache: cache,
-	})
-}
-
-func newGitHubCompatLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
-		Max: 120, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string { return handler.GetRealIPForRateLimit(c, "gh_compat:") },
-		Cache:        cache,
 	})
 }
 
@@ -119,7 +109,6 @@ func managedRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 	routes = append(routes, userRouteSpecs(rt)...)
 	routes = append(routes, pointsRouteSpecs(rt)...)
 	routes = append(routes, adminRouteSpecs(rt)...)
-	routes = append(routes, githubCompatRouteSpecs(rt)...)
 	slices.SortFunc(routes, func(left, right managedRouteSpec) int {
 		if left.Doc.Path == right.Doc.Path {
 			return strings.Compare(left.Doc.Method, right.Doc.Method)

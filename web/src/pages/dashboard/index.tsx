@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import dayjs from "dayjs"
 import {
   ArrowRight,
   Coins,
@@ -11,7 +10,7 @@ import {
   UserCircle,
   Users,
 } from "lucide-react"
-import { statsApi, userApi } from "@/api/services"
+import { statsApi } from "@/api/services"
 import { getApiErrorKind, type ApiErrorKind } from "@/api/client"
 import { adminPermissions, hasAnyAdminPermission, hasPermission } from "@/lib/permissions"
 import { getConsoleModuleEntry } from "@/lib/navigation"
@@ -19,30 +18,6 @@ import { useAuthStore } from "@/stores/auth"
 import PageErrorState from "@/components/page-error-state"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-
-interface AuthorizedApp {
-  id: string
-  client_id: string
-  client_name: string
-  scopes: string
-  granted_at: string
-}
 
 interface QuickAction {
   title: string
@@ -65,10 +40,6 @@ export default function DashboardPage() {
     total_logins: 0,
     today_logins: 0,
   })
-  const [authorizedApps, setAuthorizedApps] = useState<{ apps: AuthorizedApp[]; total: number }>({
-    apps: [],
-    total: 0,
-  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,15 +47,7 @@ export default function DashboardPage() {
       setErrorKind(null)
 
       try {
-        const [authorizedRes, adminRes] = await Promise.all([
-          userApi.listAuthorizedApps(1, 5),
-          canReadAdminStats ? statsApi.admin() : Promise.resolve(null),
-        ])
-
-        setAuthorizedApps({
-          apps: authorizedRes.data.apps ?? [],
-          total: authorizedRes.data.total ?? 0,
-        })
+        const adminRes = canReadAdminStats ? await statsApi.admin() : null
 
         if (adminRes) {
           setAdminStats({
@@ -188,15 +151,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-slate-200">{t("profile.authorizedApps")}</p>
-                  <p className="text-3xl font-semibold">{authorizedApps.total}</p>
-                </div>
-                <KeyRound className="h-5 w-5 text-sky-200" />
-              </div>
-            </div>
             <div className="rounded-2xl border border-dashed border-white/20 bg-slate-950/20 p-4 text-sm text-slate-200 sm:col-span-2 lg:col-span-1">
               <p className="font-medium text-white">{t("dashboard.quickAccessTitle")}</p>
               <p className="mt-1 text-slate-300">{t("common.total", { count: quickActions.length })}</p>
@@ -229,75 +183,25 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      {canReadAdminStats && (
         <Card className="rounded-3xl">
           <CardHeader>
-            <CardTitle>{t("profile.authorizedApps")}</CardTitle>
-            <CardDescription>{t("profile.authorizedAppsDesc")}</CardDescription>
+            <CardTitle>{t("dashboard.platformSnapshotTitle")}</CardTitle>
+            <CardDescription>{t("dashboard.platformSnapshotDescription")}</CardDescription>
           </CardHeader>
-          <CardContent>
-            {authorizedApps.apps.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("profile.authorizedAppsApp")}</TableHead>
-                    <TableHead>{t("profile.authorizedAppsClientId")}</TableHead>
-                    <TableHead>{t("profile.authorizedAppsScopes")}</TableHead>
-                    <TableHead className="text-right">{t("profile.authorizedAppsGrantedAt")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {authorizedApps.apps.map((app) => (
-                    <TableRow key={app.id}>
-                      <TableCell className="font-medium">{app.client_name || app.client_id}</TableCell>
-                      <TableCell className="font-mono text-xs">{app.client_id}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{app.scopes || "-"}</TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground">
-                        {app.granted_at ? dayjs(app.granted_at).format("YYYY-MM-DD HH:mm") : "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <Empty className="border bg-muted/20 py-10">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <KeyRound className="h-5 w-5" />
-                  </EmptyMedia>
-                  <EmptyTitle>{t("profile.authorizedAppsEmpty")}</EmptyTitle>
-                  <EmptyDescription>{t("profile.authorizedAppsDesc")}</EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <Button asChild>
-                    <Link to="/account/profile">{t("app.profile")}</Link>
-                  </Button>
-                </EmptyContent>
-              </Empty>
-            )}
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {platformCards.map((card) => (
+              <div key={card.title} className="rounded-2xl border bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">{card.title}</p>
+                  <card.icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="mt-3 text-3xl font-semibold">{card.value}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
-
-        {canReadAdminStats && (
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle>{t("dashboard.platformSnapshotTitle")}</CardTitle>
-              <CardDescription>{t("dashboard.platformSnapshotDescription")}</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              {platformCards.map((card) => (
-                <div key={card.title} className="rounded-2xl border bg-background p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-muted-foreground">{card.title}</p>
-                    <card.icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="mt-3 text-3xl font-semibold">{card.value}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      )}
     </div>
   )
 }

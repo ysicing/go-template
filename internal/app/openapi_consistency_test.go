@@ -1,12 +1,10 @@
 package app
 
 import (
-	"io"
 	"net/http"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/rs/zerolog"
 )
 
 func TestFindUndocumentedRoutes_FindsMissingRoute(t *testing.T) {
@@ -25,14 +23,10 @@ func TestFindUndocumentedRoutes_FindsMissingRoute(t *testing.T) {
 func TestOpenAPIRoutesCoverRegisteredRoutes(t *testing.T) {
 	app := fiber.New()
 	deps := testRouteDeps(t)
-	log := zerolog.New(io.Discard)
-	provider := initOIDCProvider(deps.Config, deps, &log)
-	deps.OIDCHandler = provider
 
 	registerSystemRoutes(app, BuildInfo{Version: "test"})
 	registerDocsRoutes(app, deps, BuildInfo{Version: "test"})
 	SetupRoutes(app, deps)
-	mountOIDCHandler(app, provider)
 
 	missing := findUndocumentedRoutes(app)
 	if len(missing) != 0 {

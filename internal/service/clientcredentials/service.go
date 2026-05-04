@@ -10,7 +10,6 @@ import (
 	"github.com/ysicing/go-template/store"
 
 	"github.com/google/uuid"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 const defaultClientCredentialsAccessTokenTTL = 5 * time.Minute
@@ -52,6 +51,15 @@ type ClientCredentialsRevokeInput struct {
 	ClientID     string
 	ClientSecret string
 	Token        string
+}
+
+type ClientCredentialsIntrospectionResponse struct {
+	Active     bool   `json:"active"`
+	Subject    string `json:"sub,omitempty"`
+	ClientID   string `json:"client_id,omitempty"`
+	Scope      string `json:"scope,omitempty"`
+	TokenType  string `json:"token_type,omitempty"`
+	Expiration int64  `json:"exp,omitempty"`
 }
 
 type ClientCredentialsService struct {
@@ -124,7 +132,7 @@ func (s *ClientCredentialsService) Exchange(ctx context.Context, input ClientCre
 	return resp, nil
 }
 
-func (s *ClientCredentialsService) Introspect(ctx context.Context, input ClientCredentialsIntrospectionInput) (*oidc.IntrospectionResponse, bool, error) {
+func (s *ClientCredentialsService) Introspect(ctx context.Context, input ClientCredentialsIntrospectionInput) (*ClientCredentialsIntrospectionResponse, bool, error) {
 	client, err := s.authenticateClient(ctx, input.ClientID, input.ClientSecret)
 	if err != nil {
 		return nil, false, err
@@ -132,7 +140,7 @@ func (s *ClientCredentialsService) Introspect(ctx context.Context, input ClientC
 	return s.IntrospectForClient(ctx, client, input.Token)
 }
 
-func (s *ClientCredentialsService) IntrospectForClient(ctx context.Context, client *model.OAuthClient, tokenValue string) (*oidc.IntrospectionResponse, bool, error) {
+func (s *ClientCredentialsService) IntrospectForClient(ctx context.Context, client *model.OAuthClient, tokenValue string) (*ClientCredentialsIntrospectionResponse, bool, error) {
 	if client == nil {
 		return nil, false, ErrClientCredentialsInvalidClient
 	}
@@ -141,7 +149,7 @@ func (s *ClientCredentialsService) IntrospectForClient(ctx context.Context, clie
 		return nil, handled, err
 	}
 
-	resp := &oidc.IntrospectionResponse{}
+	resp := &ClientCredentialsIntrospectionResponse{}
 	if token.ClientID != client.ClientID || token.Revoked || time.Now().After(token.ExpiresAt) {
 		return resp, true, nil
 	}
@@ -149,9 +157,9 @@ func (s *ClientCredentialsService) IntrospectForClient(ctx context.Context, clie
 	resp.Active = true
 	resp.Subject = token.SubjectID
 	resp.ClientID = token.ClientID
-	resp.Scope = oidc.SpaceDelimitedArray(parseDelimitedValues(token.Scopes))
+	resp.Scope = strings.Join(parseDelimitedValues(token.Scopes), " ")
 	resp.TokenType = token.TokenType
-	resp.Expiration = oidc.FromTime(token.ExpiresAt)
+	resp.Expiration = token.ExpiresAt.Unix()
 	return resp, true, nil
 }
 

@@ -6,25 +6,18 @@ import LoginPage from "@/pages/login"
 
 const authConfigMock = vi.fn()
 const loginMock = vi.fn()
-const oidcLoginMock = vi.fn()
 const confirmSocialLinkMock = vi.fn()
 const versionGetMock = vi.fn()
-const redirectToSameOriginMock = vi.fn()
 
 vi.mock("@/api/services", () => ({
   authApi: {
     config: (...args: unknown[]) => authConfigMock(...args),
     login: (...args: unknown[]) => loginMock(...args),
-    oidcLogin: (...args: unknown[]) => oidcLoginMock(...args),
     confirmSocialLink: (...args: unknown[]) => confirmSocialLinkMock(...args),
   },
   versionApi: {
     get: (...args: unknown[]) => versionGetMock(...args),
   },
-}))
-
-vi.mock("@/lib/navigation", () => ({
-  redirectToSameOrigin: (...args: unknown[]) => redirectToSameOriginMock(...args),
 }))
 
 function LocationProbe() {
@@ -41,10 +34,8 @@ describe("LoginPage", () => {
     } as unknown as typeof ResizeObserver
     authConfigMock.mockReset()
     loginMock.mockReset()
-    oidcLoginMock.mockReset()
     confirmSocialLinkMock.mockReset()
     versionGetMock.mockReset()
-    redirectToSameOriginMock.mockReset()
     versionGetMock.mockResolvedValue({ data: { git_commit: "", build_date: "" } })
     authConfigMock.mockResolvedValue({
       data: {
@@ -54,7 +45,7 @@ describe("LoginPage", () => {
     })
   })
 
-  it("renders oidc branding when auth config includes branding", async () => {
+  it("renders branding when auth config includes branding", async () => {
     authConfigMock.mockResolvedValue({
       data: {
         register_enabled: true,
@@ -70,7 +61,7 @@ describe("LoginPage", () => {
     versionGetMock.mockResolvedValue({ data: { version: "v1.0.0", git_commit: "abc1234def5678", build_date: "2026-04-12T10:00:00Z" } })
 
     render(
-      <MemoryRouter initialEntries={["/login?id=req-1"]}>
+      <MemoryRouter initialEntries={["/login"]}>
         <LoginPage />
       </MemoryRouter>
     )
@@ -78,37 +69,6 @@ describe("LoginPage", () => {
     expect(await screen.findByText("Acme Cloud")).toBeInTheDocument()
     expect(screen.getByText("Secure access for Acme employees")).toBeInTheDocument()
     expect(screen.getByText("v1.0.0 · abc1234")).toBeInTheDocument()
-  })
-
-  it("redirects oidc consent flows to consent page", async () => {
-    authConfigMock.mockResolvedValue({
-      data: {
-        register_enabled: true,
-        turnstile_site_key: "",
-      },
-    })
-    oidcLoginMock.mockResolvedValue({
-      data: {
-        redirect: "/consent?id=req-1",
-      },
-    })
-    redirectToSameOriginMock.mockReturnValue(true)
-
-    render(
-      <MemoryRouter initialEntries={["/login?id=req-1"]}>
-        <LoginPage />
-      </MemoryRouter>
-    )
-
-    const user = userEvent.setup()
-    await user.type(await screen.findByLabelText("Username / Email"), "alice")
-    await user.type(screen.getByLabelText("Password"), "Password123!abcd")
-    await user.click(screen.getByRole("button", { name: "Sign In" }))
-
-    expect(oidcLoginMock).toHaveBeenCalledWith("req-1", "alice", "Password123!abcd")
-    await waitFor(() => {
-      expect(redirectToSameOriginMock).toHaveBeenCalledWith("/consent?id=req-1")
-    })
   })
 
   it("redirects normal logins to home", async () => {

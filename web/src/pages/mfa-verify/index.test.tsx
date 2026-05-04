@@ -1,11 +1,10 @@
 import { MemoryRouter } from "react-router-dom"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import MFAVerifyPage from "@/pages/mfa-verify"
 
 const mfaVerifyMock = vi.fn()
-const redirectToSameOriginMock = vi.fn()
 
 vi.mock("@/api/services", () => ({
   authApi: {
@@ -13,23 +12,24 @@ vi.mock("@/api/services", () => ({
   },
 }))
 
-vi.mock("@/lib/navigation", () => ({
-  redirectToSameOrigin: (...args: unknown[]) => redirectToSameOriginMock(...args),
-}))
-
 describe("MFAVerifyPage", () => {
   beforeEach(() => {
     mfaVerifyMock.mockReset()
-    redirectToSameOriginMock.mockReset()
   })
 
-  it("redirects oidc consent flows to consent page", async () => {
+  it("submits mfa code for browser login", async () => {
     mfaVerifyMock.mockResolvedValue({
       data: {
-        redirect: "/consent?id=req-1",
+        user: {
+          id: "user-1",
+          username: "alice",
+          email: "alice@example.com",
+          is_admin: false,
+          permissions: [],
+          email_verified: true,
+        },
       },
     })
-    redirectToSameOriginMock.mockReturnValue(true)
 
     render(
       <MemoryRouter initialEntries={["/mfa-verify?mfa_token=token-1"]}>
@@ -42,8 +42,5 @@ describe("MFAVerifyPage", () => {
     await user.click(screen.getByRole("button", { name: "Verify" }))
 
     expect(mfaVerifyMock).toHaveBeenCalledWith("token-1", "123456", undefined)
-    await waitFor(() => {
-      expect(redirectToSameOriginMock).toHaveBeenCalledWith("/consent?id=req-1")
-    })
   })
 })

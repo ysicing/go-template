@@ -1,20 +1,12 @@
 import api from "./client"
 
 export const authApi = {
-  config: (id?: string) => api.get("/auth/config", { params: id ? { id } : undefined }),
+  config: () => api.get("/auth/config"),
   login: (username: string, password: string, turnstile_token?: string, remember_me?: boolean) =>
     api.post("/auth/login", { username, password, turnstile_token, remember_me }),
   register: (username: string, email: string, password: string, turnstile_token?: string) =>
     api.post("/auth/register", { username, email, password, turnstile_token }),
   logout: () => api.post("/auth/logout"),
-  oidcLogin: (id: string, username: string, password: string) =>
-    api.post("/auth/oidc-login", { id, username, password }),
-  oidcConsentContext: (id: string) =>
-    api.get("/auth/oidc/consent", { params: { id } }),
-  oidcConsentApprove: (id: string) =>
-    api.post("/auth/oidc/consent/approve", { id }),
-  oidcConsentDeny: (id: string) =>
-    api.post("/auth/oidc/consent/deny", { id }),
   mfaVerify: (mfa_token: string, code?: string, backup_code?: string) =>
     api.post("/auth/mfa/verify", { mfa_token, code, backup_code }),
   webauthnLoginBegin: (username: string) =>
@@ -68,9 +60,6 @@ export const userApi = {
     api.put("/users/me/password", { current_password, new_password }),
   setPassword: (password: string) =>
     api.post("/users/me/set-password", { password }),
-  listAuthorizedApps: (page = 1, pageSize = 10) =>
-    api.get("/users/me/authorized-apps", { params: { page, page_size: pageSize } }),
-  revokeAuthorizedApp: (id: string) => api.delete(`/users/me/authorized-apps/${id}`),
   listSocialAccounts: () => api.get("/users/me/social-accounts"),
   unlinkSocialAccount: (id: string) => api.delete(`/users/me/social-accounts/${id}`),
 }

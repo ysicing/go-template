@@ -14,7 +14,6 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/pquerna/otp/totp"
-	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -32,13 +31,6 @@ type refreshTokenCreator interface {
 	Create(ctx context.Context, rt *model.APIRefreshToken) error
 }
 
-type oidcAuthCompleter interface {
-	CompleteAuthRequest(ctx context.Context, id, userID string) error
-	AssignAuthRequestUser(ctx context.Context, id, userID string) error
-	AuthRequestRequiresConsent(ctx context.Context, id string) bool
-	AuthRequestByID(ctx context.Context, id string) (op.AuthRequest, error)
-}
-
 // MFADeps aggregates dependencies required by MFAHandler.
 type MFADeps struct {
 	Users         mfaUserStore
@@ -47,9 +39,6 @@ type MFADeps struct {
 	RefreshTokens refreshTokenCreator
 	Sessions      *sessionservice.SessionService
 	Cache         store.Cache
-	OIDC          oidcAuthCompleter
-	Clients       *store.OAuthClientStore
-	ConsentGrants *store.OAuthConsentGrantStore
 	TokenConfig   handlercommon.TokenConfig
 }
 
@@ -60,9 +49,6 @@ type MFAHandler struct {
 	audit         *store.AuditLogStore
 	sessions      *sessionservice.SessionService
 	cache         store.Cache
-	oidc          oidcAuthCompleter
-	clients       *store.OAuthClientStore
-	consentGrants *store.OAuthConsentGrantStore
 	tokenConfig   handlercommon.TokenConfig
 }
 
@@ -84,9 +70,6 @@ func NewMFAHandler(deps MFADeps) *MFAHandler {
 		audit:         deps.Audit,
 		sessions:      sessions,
 		cache:         deps.Cache,
-		oidc:          deps.OIDC,
-		clients:       deps.Clients,
-		consentGrants: deps.ConsentGrants,
 		tokenConfig:   deps.TokenConfig,
 	}
 }

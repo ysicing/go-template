@@ -4,20 +4,15 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { ArrowLeft, Copy, AlertTriangle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { getApiErrorKind, getErrorMessage, type ApiErrorKind } from "@/api/client"
 import PageErrorState from "@/components/page-error-state"
 
 export interface OAuthClientFormData {
   name: string
-  redirect_uris: string
-  grant_types: string
   scopes: string
-  require_consent: boolean
 }
 
 interface OAuthClientMutationResponse {
@@ -25,10 +20,7 @@ interface OAuthClientMutationResponse {
   client?: {
     client_id?: string
     name?: string
-    redirect_uris?: string
-    grant_types?: string
     scopes?: string
-    require_consent?: boolean
   }
 }
 
@@ -36,10 +28,7 @@ interface OAuthClientGetResponse {
   client: {
     client_id?: string
     name?: string
-    redirect_uris?: string
-    grant_types?: string
     scopes?: string
-    require_consent?: boolean
   }
 }
 
@@ -77,10 +66,7 @@ export default function OAuthClientEditor({
   const [existingClientId, setExistingClientId] = useState("")
   const [form, setForm] = useState<OAuthClientFormData>({
     name: "",
-    redirect_uris: "",
-    grant_types: "authorization_code",
-    scopes: "openid profile email",
-    require_consent: false,
+    scopes: "read",
   })
 
   useEffect(() => {
@@ -97,10 +83,7 @@ export default function OAuthClientEditor({
         }
         setForm({
           name: client.name || "",
-          redirect_uris: client.redirect_uris || "",
-          grant_types: client.grant_types || "",
-          scopes: client.scopes || "",
-          require_consent: Boolean(client.require_consent),
+          scopes: client.scopes || "read",
         })
       } catch (error) {
         setErrorKind(getApiErrorKind(error))
@@ -142,10 +125,7 @@ export default function OAuthClientEditor({
 
   const baseUrl = window.location.origin
   const nameID = `${namespace}-name`
-  const redirectURIsID = `${namespace}-redirect-uris`
-  const grantTypesID = `${namespace}-grant-types`
   const scopesID = `${namespace}-scopes`
-  const requireConsentID = `${namespace}-require-consent`
 
   if (createdSecret) {
     return (
@@ -182,28 +162,15 @@ export default function OAuthClientEditor({
             </div>
 
             {showEndpointInfo && (
-              <>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("clients.oidcEndpoints")}</p>
-                  <div className="space-y-1 font-mono text-xs text-muted-foreground">
-                    <p>Discovery: {baseUrl}/.well-known/openid-configuration</p>
-                    <p>Authorization: {baseUrl}/authorize</p>
-                    <p>Token: {baseUrl}/oauth/token</p>
-                    <p>UserInfo: {baseUrl}/oauth/userinfo</p>
-                    <p>JWKS: {baseUrl}/oauth/keys</p>
-                  </div>
+              <div className="space-y-2 rounded-lg border p-4">
+                <p className="text-sm font-medium">{t("clients.machineEndpoints")}</p>
+                <p className="text-xs text-muted-foreground">{t("clients.machineEndpointsDesc")}</p>
+                <div className="space-y-1 font-mono text-xs text-muted-foreground">
+                  <p>Token: {baseUrl}/oauth/token</p>
+                  <p>Introspect: {baseUrl}/oauth/introspect</p>
+                  <p>Revoke: {baseUrl}/oauth/revoke</p>
                 </div>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("clients.githubCompat")}</p>
-                  <p className="text-xs text-muted-foreground">{t("clients.githubCompatDesc")}</p>
-                  <div className="space-y-1 font-mono text-xs text-muted-foreground">
-                    <p>Authorization: {baseUrl}/login/oauth/authorize</p>
-                    <p>Token: {baseUrl}/login/oauth/access_token</p>
-                    <p>User: {baseUrl}/api/v3/user</p>
-                    <p>Emails: {baseUrl}/api/v3/user/emails</p>
-                  </div>
-                </div>
-              </>
+              </div>
             )}
 
             <Button onClick={() => navigate(backPath)}>{t("common.back")}</Button>
@@ -251,63 +218,23 @@ export default function OAuthClientEditor({
               <Label htmlFor={nameID}>{t(`${namespace}.name`)}</Label>
               <Input id={nameID} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={redirectURIsID}>{t(`${namespace}.redirectUris`)}</Label>
-              <Textarea
-                id={redirectURIsID}
-                rows={2}
-                value={form.redirect_uris}
-                onChange={(e) => setForm({ ...form, redirect_uris: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={grantTypesID}>{t(`${namespace}.grantTypes`)}</Label>
-              <Input id={grantTypesID} value={form.grant_types} onChange={(e) => setForm({ ...form, grant_types: e.target.value })} />
-              <p className="text-xs text-muted-foreground">{t(`${namespace}.grantTypesHint`)}</p>
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor={scopesID}>{t(`${namespace}.scopes`)}</Label>
               <Input id={scopesID} value={form.scopes} onChange={(e) => setForm({ ...form, scopes: e.target.value })} />
+              <p className="text-xs text-muted-foreground">{t("clients.machineScopesHint")}</p>
             </div>
-            <div className="space-y-3 rounded-lg border p-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id={requireConsentID}
-                  checked={form.require_consent}
-                  onCheckedChange={(checked) => setForm({ ...form, require_consent: checked === true })}
-                  className="mt-0.5"
-                />
-                <div className="space-y-1">
-                  <Label htmlFor={requireConsentID}>{t(`${namespace}.requireConsent`)}</Label>
-                  <p className="text-sm text-muted-foreground">{t(`${namespace}.requireConsentDesc`)}</p>
+
+            {!isNew && showEndpointInfo && (
+              <div className="space-y-2 rounded-lg border p-4">
+                <p className="text-sm font-medium">{t("clients.machineEndpoints")}</p>
+                <p className="text-xs text-muted-foreground">{t("clients.machineEndpointsDesc")}</p>
+                <div className="space-y-1 font-mono text-xs text-muted-foreground">
+                  <p>Token: {baseUrl}/oauth/token</p>
+                  <p>Introspect: {baseUrl}/oauth/introspect</p>
+                  <p>Revoke: {baseUrl}/oauth/revoke</p>
                 </div>
               </div>
-            </div>
-            {!isNew && showEndpointInfo && (
-              <>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("clients.oidcEndpoints")}</p>
-                  <p className="text-xs text-muted-foreground">{t("clients.oidcEndpointsDesc")}</p>
-                  <div className="space-y-1 font-mono text-xs text-muted-foreground">
-                    <p>Discovery: {baseUrl}/.well-known/openid-configuration</p>
-                    <p>Authorization: {baseUrl}/authorize</p>
-                    <p>Token: {baseUrl}/oauth/token</p>
-                    <p>UserInfo: {baseUrl}/oauth/userinfo</p>
-                    <p>JWKS: {baseUrl}/oauth/keys</p>
-                  </div>
-                </div>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-sm font-medium">{t("clients.githubCompat")}</p>
-                  <p className="text-xs text-muted-foreground">{t("clients.githubCompatDesc")}</p>
-                  <div className="space-y-1 font-mono text-xs text-muted-foreground">
-                    <p>Authorization: {baseUrl}/login/oauth/authorize</p>
-                    <p>Token: {baseUrl}/login/oauth/access_token</p>
-                    <p>User: {baseUrl}/api/v3/user</p>
-                    <p>Emails: {baseUrl}/api/v3/user/emails</p>
-                  </div>
-                </div>
-              </>
             )}
 
             <div className="flex gap-3 pt-2">

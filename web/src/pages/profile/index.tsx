@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator"
 import { useAppStore } from "@/stores/app"
 import { pointsApi } from "@/api/services"
 import ProfileTab from "@/pages/profile/profile-tab"
-import { AuthorizedAppsTab } from "@/pages/profile/authorized-apps-tab"
 import { SocialAccountsTab } from "@/pages/profile/social-accounts-tab"
 import SecurityPage from "@/pages/security"
 import SessionsPage from "@/pages/sessions"
@@ -87,7 +86,6 @@ export default function ProfilePage() {
         <TabsList>
           <TabsTrigger value="profile">{t("app.profileTabProfile")}</TabsTrigger>
           <TabsTrigger value="social-accounts">{t("profile.socialAccounts")}</TabsTrigger>
-          <TabsTrigger value="authorized-apps">{t("profile.authorizedApps")}</TabsTrigger>
           <TabsTrigger value="security">{t("app.profileTabSecurity")}</TabsTrigger>
           <TabsTrigger value="sessions">{t("app.profileTabSessions")}</TabsTrigger>
           <TabsTrigger value="login-history">{t("app.profileTabLoginHistory")}</TabsTrigger>
@@ -100,10 +98,6 @@ export default function ProfilePage() {
 
         <TabsContent value="social-accounts">
           <SocialAccountsTab />
-        </TabsContent>
-
-        <TabsContent value="authorized-apps">
-          <AuthorizedAppsTab />
         </TabsContent>
 
         <TabsContent value="security">

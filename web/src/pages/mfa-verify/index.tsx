@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authApi } from "@/api/services"
 import { useAuthStore } from "@/stores/auth"
-import { redirectToSameOrigin } from "@/lib/navigation"
 
 export default function MFAVerifyPage() {
   const [code, setCode] = useState("")
@@ -32,12 +31,6 @@ export default function MFAVerifyPage() {
         useBackup ? undefined : code,
         useBackup ? code : undefined,
       )
-      if (res.data.redirect) {
-        if (!redirectToSameOrigin(res.data.redirect as string)) {
-          navigate("/")
-        }
-        return
-      }
       const { user } = res.data
       // Tokens are set in HttpOnly cookies
       setUser(user)

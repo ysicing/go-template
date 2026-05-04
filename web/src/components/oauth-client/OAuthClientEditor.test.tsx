@@ -11,7 +11,7 @@ describe("OAuthClientEditor", () => {
     createMock.mockReset()
   })
 
-  it("submits require_consent for application forms", async () => {
+  it("submits machine client form data", async () => {
     createMock.mockResolvedValue({
       client_secret: "secret-1",
       client: { client_id: "client-1" },
@@ -31,19 +31,18 @@ describe("OAuthClientEditor", () => {
     )
 
     const user = userEvent.setup()
-    await user.type(screen.getByLabelText("Name"), "Acme Docs")
-    await user.type(screen.getByLabelText("Redirect URIs"), "https://example.com/callback")
-    await user.click(screen.getByRole("checkbox", { name: "Require consent" }))
+    await user.type(screen.getByLabelText("Name"), "Acme Worker")
+    await user.clear(screen.getByLabelText("Scopes"))
+    await user.type(screen.getByLabelText("Scopes"), "read,write")
     await user.click(screen.getByRole("button", { name: "Save" }))
 
-    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({
-      name: "Acme Docs",
-      redirect_uris: "https://example.com/callback",
-      require_consent: true,
-    }))
+    expect(createMock).toHaveBeenCalledWith({
+      name: "Acme Worker",
+      scopes: "read,write",
+    })
   })
 
-  it("shows supported grant type guidance including client_credentials", () => {
+  it("shows machine endpoint guidance", () => {
     render(
       <MemoryRouter>
         <OAuthClientEditor
@@ -56,22 +55,6 @@ describe("OAuthClientEditor", () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText(/client_credentials/i)).toBeInTheDocument()
-  })
-
-  it("does not show workspace selection for template application forms", () => {
-    render(
-      <MemoryRouter>
-        <OAuthClientEditor
-          namespace="clients"
-          backPath="/admin/clients"
-          onCreate={createMock}
-          onGet={vi.fn()}
-          onUpdate={vi.fn()}
-        />
-      </MemoryRouter>
-    )
-
-    expect(screen.queryByLabelText("Workspace")).not.toBeInTheDocument()
+    expect(screen.getByText(/machine token scopes/i)).toBeInTheDocument()
   })
 })

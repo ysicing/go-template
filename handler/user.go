@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -34,23 +33,12 @@ type userAuditLogStore interface {
 	ListLoginByUserIDPaged(ctx context.Context, userID string, page, pageSize int) ([]store.LoginRow, int64, error)
 }
 
-type userConsentGrantStore interface {
-	ListByUserIDPaged(ctx context.Context, userID string, page, pageSize int) ([]model.OAuthConsentGrant, int64, error)
-	DeleteByIDAndUserID(ctx context.Context, id, userID string) error
-}
-
-type userOAuthClientStore interface {
-	GetByClientID(ctx context.Context, clientID string) (*model.OAuthClient, error)
-}
-
 // UserDeps aggregates dependencies required by UserHandler.
 type UserDeps struct {
 	Users           userStore
 	PasswordHistory passwordHistoryStore
 	RefreshTokens   userRefreshTokenStore
 	Audit           userAuditLogStore
-	ConsentGrants   userConsentGrantStore
-	Clients         userOAuthClientStore
 	Settings        settingReader
 	EmailHandler    emailVerificationSender
 	Cache           store.Cache
@@ -62,8 +50,6 @@ type UserHandler struct {
 	passwordHistory passwordHistoryStore
 	refreshTokens   userRefreshTokenStore
 	audit           userAuditLogStore
-	consentGrants   userConsentGrantStore
-	clients         userOAuthClientStore
 	settings        settingReader
 	emailHandler    emailVerificationSender
 	cache           store.Cache
@@ -76,8 +62,6 @@ func NewUserHandler(deps UserDeps) *UserHandler {
 		passwordHistory: deps.PasswordHistory,
 		refreshTokens:   deps.RefreshTokens,
 		audit:           deps.Audit,
-		consentGrants:   deps.ConsentGrants,
-		clients:         deps.Clients,
 		settings:        deps.Settings,
 		emailHandler:    deps.EmailHandler,
 		cache:           deps.Cache,
@@ -160,71 +144,6 @@ func (h *UserHandler) GetLoginHistory(c fiber.Ctx) error {
 		"page":      page,
 		"page_size": pageSize,
 	})
-}
-
-// ListAuthorizedApps handles GET /api/users/me/authorized-apps.
-func (h *UserHandler) ListAuthorizedApps(c fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	page, pageSize := parsePagination(c)
-	grants, total, err := h.consentGrants.ListByUserIDPaged(c.Context(), userID, page, pageSize)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list authorized apps"})
-	}
-
-	type authorizedAppResp struct {
-		ID         string `json:"id"`
-		ClientID   string `json:"client_id"`
-		ClientName string `json:"client_name"`
-		Scopes     string `json:"scopes"`
-		GrantedAt  string `json:"granted_at"`
-	}
-	apps := make([]authorizedAppResp, len(grants))
-	for index, grant := range grants {
-		clientName := grant.ClientID
-		if h.clients != nil {
-			client, clientErr := h.clients.GetByClientID(c.Context(), grant.ClientID)
-			if clientErr == nil && client != nil && strings.TrimSpace(client.Name) != "" {
-				clientName = client.Name
-			}
-		}
-		apps[index] = authorizedAppResp{
-			ID:         grant.ID,
-			ClientID:   grant.ClientID,
-			ClientName: clientName,
-			Scopes:     grant.Scopes,
-			GrantedAt:  grant.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		}
-	}
-
-	return c.JSON(fiber.Map{
-		"apps":      apps,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
-}
-
-// RevokeAuthorizedApp handles DELETE /api/users/me/authorized-apps/:id.
-func (h *UserHandler) RevokeAuthorizedApp(c fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	grantID := c.Params("id")
-	if err := h.consentGrants.DeleteByIDAndUserID(c.Context(), grantID, userID); err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "authorized app not found"})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke authorized app"})
-	}
-
-	_ = recordAuditFromFiber(c, h.audit, AuditEvent{
-		UserID:     userID,
-		Action:     model.AuditOIDCConsentGrantRevoke,
-		Resource:   "oauth_consent_grant",
-		ResourceID: grantID,
-		Status:     "success",
-		Detail:     "authorized app revoked",
-	})
-
-	return c.JSON(fiber.Map{"message": "authorized app revoked"})
 }
 
 // SetPassword handles POST /api/users/me/set-password (OAuth users setting initial password).

@@ -27,12 +27,6 @@ func currentUserRouteSpecs(rt managedRouteRuntime) []managedRouteSpec {
 		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/users/me/login-history", Summary: "Get login history", Tag: "user", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.user.GetLoginHistory}
 		}},
-		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/users/me/authorized-apps", Summary: "List authorized apps", Tag: "user", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.user.ListAuthorizedApps}
-		}},
-		{Doc: openAPIRoute{Method: fiber.MethodDelete, Path: "/api/users/me/authorized-apps/:id", Summary: "Revoke authorized app", Tag: "user", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
-			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.emailVerified, rt.handlers.user.RevokeAuthorizedApp}
-		}},
 		{Doc: openAPIRoute{Method: fiber.MethodGet, Path: "/api/users/me/social-accounts", Summary: "List linked social accounts", Tag: "user", RequiresAuth: true}, Handlers: func(rt managedRouteRuntime) []fiber.Handler {
 			return []fiber.Handler{rt.jwtMW, rt.tokenVersionMW, rt.handlers.socialAcct.ListMySocialAccounts}
 		}},

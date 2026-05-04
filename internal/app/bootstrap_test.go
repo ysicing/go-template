@@ -67,9 +67,6 @@ func TestInitDepsInitializesTemplateModules(t *testing.T) {
 	if deps.PointStore == nil {
 		t.Fatal("expected point store to be initialized")
 	}
-	if deps.OIDCStorage == nil {
-		t.Fatal("expected oidc storage to be initialized")
-	}
 	if deps.Services.ClientCredentials == nil {
 		t.Fatal("expected client credentials service to be initialized")
 	}
@@ -91,40 +88,5 @@ func TestInitCache_FallbacksToMemoryWhenRedisUnavailable(t *testing.T) {
 
 	if _, ok := cache.(*store.MemoryCache); !ok {
 		t.Fatalf("expected memory cache fallback, got %T", cache)
-	}
-}
-
-func TestResolveOIDCSecretSource_PrefersExplicitSecret(t *testing.T) {
-	cfg := DefaultConfig()
-	cfg.Security.OIDCSecret = "oidc-secret"
-	cfg.Security.EncryptionKey = "encryption-key"
-
-	got, mode, err := resolveOIDCSecretSource(cfg)
-	if err != nil {
-		t.Fatalf("resolveOIDCSecretSource() error = %v", err)
-	}
-	if got != "oidc-secret" || mode != oidcSecretModeExplicit {
-		t.Fatalf("resolveOIDCSecretSource() = (%q,%q), want (%q,%q)", got, mode, "oidc-secret", oidcSecretModeExplicit)
-	}
-}
-
-func TestResolveOIDCSecretSource_FallsBackToEncryptionKey(t *testing.T) {
-	cfg := DefaultConfig()
-	cfg.Security.EncryptionKey = "encryption-key"
-
-	got, mode, err := resolveOIDCSecretSource(cfg)
-	if err != nil {
-		t.Fatalf("resolveOIDCSecretSource() error = %v", err)
-	}
-	if got != "encryption-key:oidc" || mode != oidcSecretModeEncryptionKey {
-		t.Fatalf("resolveOIDCSecretSource() = (%q,%q), want (%q,%q)", got, mode, "encryption-key:oidc", oidcSecretModeEncryptionKey)
-	}
-}
-
-func TestResolveOIDCSecretSource_RejectsSecureModeWithoutDedicatedSecret(t *testing.T) {
-	cfg := DefaultConfig()
-
-	if _, _, err := resolveOIDCSecretSource(cfg); err == nil {
-		t.Fatal("expected resolveOIDCSecretSource() to reject secure mode without oidc_secret or encryption_key")
 	}
 }

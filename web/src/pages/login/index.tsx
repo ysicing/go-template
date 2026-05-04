@@ -17,7 +17,6 @@ import { getErrorMessage } from "@/api/client"
 import { getBuildVersionLabel } from "@/lib/build-version"
 import { useAuthStore, type User } from "@/stores/auth"
 import { useAppStore } from "@/stores/app"
-import { redirectToSameOrigin } from "@/lib/navigation"
 
 declare global {
   interface Window {
@@ -60,8 +59,6 @@ export default function LoginPage() {
   const { setUser } = useAuthStore()
   const { themeMode } = useAppStore()
 
-  // OIDC auth request id (present when redirected from OIDC flow)
-  const oidcId = searchParams.get("id")
   const linkProviderLabel = formatProviderName(linkProvider)
 
   // Show error from social login redirect (e.g. email_required, account_locked)
@@ -95,13 +92,13 @@ export default function LoginPage() {
   }, [searchParams])
 
   useEffect(() => {
-    authApi.config(oidcId || undefined).then((res) => {
+    authApi.config().then((res) => {
       setRegisterEnabled(res.data.register_enabled)
       setTurnstileSiteKey(res.data.turnstile_site_key || "")
       setBranding(res.data.branding || null)
     }).catch(() => {})
     versionApi.get().then((res) => setVersionInfo(res.data)).catch(() => {})
-  }, [oidcId])
+  }, [])
 
   const brandStyle = branding?.primary_color ? { backgroundColor: branding.primary_color, borderColor: branding.primary_color } : undefined
   const versionLabel = getBuildVersionLabel(versionInfo)
@@ -165,23 +162,6 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      if (oidcId) {
-        const res = await authApi.oidcLogin(oidcId, username, password)
-        if (res.data.mfa_required) {
-          navigate(`/mfa-verify?mfa_token=${encodeURIComponent(res.data.mfa_token)}`)
-          return
-        }
-        // Validate redirect is same-origin to prevent open redirect attacks
-        const redirect = res.data.redirect
-        if (redirect) {
-          if (!redirectToSameOrigin(redirect)) {
-            navigate("/")
-          }
-        } else {
-          navigate("/")
-        }
-        return
-      }
       const res = await authApi.login(username, password, turnstileToken || undefined, rememberMe)
       handleAuthResult(res.data)
     } catch (error) {
@@ -377,27 +357,23 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              {!oidcId && (
-                <>
-                  <div className="relative my-4">
-                    <Separator />
-                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                      {t("login.or")}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleWebAuthn}
-                    disabled={webauthnLoading}
-                  >
-                    {webauthnLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
-                    {t("login.webauthn")}
-                  </Button>
-                </>
-              )}
+              <div className="relative my-4">
+                <Separator />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                  {t("login.or")}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleWebAuthn}
+                disabled={webauthnLoading}
+              >
+                {webauthnLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
+                {t("login.webauthn")}
+              </Button>
 
-              {registerEnabled && !oidcId && (
+              {registerEnabled && (
                 <p className="mt-4 text-center text-sm text-muted-foreground">
                   {t("login.noAccount")}{" "}
                   <Link to="/register" className="text-primary hover:underline">

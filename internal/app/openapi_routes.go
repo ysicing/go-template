@@ -23,12 +23,6 @@ func staticOpenAPIRoutes() []openAPIRoute {
 		{Method: fiber.MethodGet, Path: "/health", Summary: "Health check", Tag: "system"},
 		{Method: fiber.MethodGet, Path: "/api/version", Summary: "Build version", Tag: "system"},
 		{Method: fiber.MethodGet, Path: "/openapi.json", Summary: "OpenAPI document", Tag: "system"},
-		{Method: fiber.MethodGet, Path: "/.well-known/{path...}", Summary: "OIDC discovery metadata", Tag: "oauth"},
-		{Method: fiber.MethodGet, Path: "/authorize", Summary: "OIDC authorize endpoint", Tag: "oauth"},
-		{Method: fiber.MethodGet, Path: "/authorize/callback", Summary: "OIDC authorize callback", Tag: "oauth"},
-		{Method: fiber.MethodGet, Path: "/oauth/userinfo", Summary: "OIDC userinfo endpoint", Tag: "oauth"},
-		{Method: fiber.MethodGet, Path: "/oauth/keys", Summary: "OIDC JWKS endpoint", Tag: "oauth"},
-		{Method: fiber.MethodGet, Path: "/oauth/end_session", Summary: "OIDC end session endpoint", Tag: "oauth"},
 	}
 }
 
@@ -99,11 +93,8 @@ func registeredDocumentableRouteKeys(app *fiber.App) []openAPIRouteKey {
 }
 
 func shouldIgnoreRegisteredRouteKey(key openAPIRouteKey, documented map[openAPIRouteKey]struct{}) bool {
-	if _, ok := documented[key]; ok {
-		return false
-	}
-	_, ok := oidcMountedPathSet()[key.Path]
-	return ok
+	_, _ = documented[key]
+	return false
 }
 
 func registeredDocumentableRouteKeySet(app *fiber.App) map[openAPIRouteKey]struct{} {
@@ -133,27 +124,8 @@ func shouldDocumentFiberRoute(route fiber.Route) bool {
 		return true
 	case strings.HasPrefix(path, "/oauth/"):
 		return true
-	case strings.HasPrefix(path, "/login/oauth/"):
-		return true
-	case strings.HasPrefix(path, "/.well-known/"):
-		return true
-	case path == "/authorize", path == "/authorize/callback":
-		return true
 	default:
 		return false
-	}
-}
-
-func oidcMountedPathSet() map[string]struct{} {
-	return map[string]struct{}{
-		normalizeOpenAPIPath("/.well-known/{path...}"): {},
-		normalizeOpenAPIPath("/authorize"):             {},
-		normalizeOpenAPIPath("/authorize/callback"):    {},
-		normalizeOpenAPIPath("/oauth/userinfo"):        {},
-		normalizeOpenAPIPath("/oauth/keys"):            {},
-		normalizeOpenAPIPath("/oauth/introspect"):      {},
-		normalizeOpenAPIPath("/oauth/revoke"):          {},
-		normalizeOpenAPIPath("/oauth/end_session"):     {},
 	}
 }
 

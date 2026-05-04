@@ -28,7 +28,6 @@ jwt:
 security:
   allow_insecure: false
   # encryption_key: "32-byte-key-for-aes256-gcm"
-  # oidc_secret: "change-me-too"
 
 # Redis 可选；多副本部署时建议启用
 # redis:
