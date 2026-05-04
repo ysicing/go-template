@@ -81,7 +81,7 @@ docker run -d \
 
 ### Docker Compose 本地预览
 
-仓库内置 `docker-compose.yaml`，用于本地构建镜像并快速预览完整控制台。Compose 会同时启动 PostgreSQL 和 Redis；PostgreSQL 作为默认数据库，Redis 用于缓存和异步任务队列。
+仓库内置 `docker-compose.yaml`，用于本地构建镜像并快速预览完整控制台。Compose 会同时启动 PostgreSQL 18 和带密码的 Redis；PostgreSQL 作为默认数据库，Redis 用于缓存和异步任务队列。
 
 ```bash
 docker compose up --build
