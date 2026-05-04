@@ -1,4 +1,4 @@
-package handler
+package response
 
 import (
 	"time"
@@ -19,6 +19,7 @@ type UserResponse struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+// NewUserResponse 将用户模型转换为对外响应结构。
 func NewUserResponse(user *model.User) UserResponse {
 	if user == nil {
 		return UserResponse{}

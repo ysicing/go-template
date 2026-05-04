@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	"github.com/ysicing/go-template/internal/http/response"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	"github.com/ysicing/go-template/model"
 	rootstore "github.com/ysicing/go-template/store"
@@ -61,7 +61,7 @@ func (h *WebAuthnHandler) LoginFinish(c fiber.Ctx) error {
 	if err := h.issueBrowserSession(c, user, h.tokenConfig.RefreshTTL); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
-	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": response.NewUserResponse(user)})
 }
 
 // AuthBegin handles POST /api/auth/mfa/webauthn/begin.
@@ -110,7 +110,7 @@ func (h *WebAuthnHandler) AuthFinish(c fiber.Ctx) error {
 	if err := h.issueBrowserSession(c, user, refreshTTL); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate tokens"})
 	}
-	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": response.NewUserResponse(user)})
 }
 
 func (h *WebAuthnHandler) lookupWebAuthnLoginUser(c fiber.Ctx, username string) (*model.User, error) {

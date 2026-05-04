@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
+	"github.com/ysicing/go-template/internal/http/response"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -89,7 +89,7 @@ func (h *UserHandler) GetMe(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
-	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": response.NewUserResponse(user)})
 }
 
 // ListSessions handles GET /api/sessions/.

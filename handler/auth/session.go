@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	httpcookie "github.com/ysicing/go-template/internal/http/cookie"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
+	"github.com/ysicing/go-template/internal/http/response"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
@@ -27,18 +27,18 @@ type loginRequest struct {
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	req, err := parseLoginRequest(c)
 	if err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 
 	user, err := h.loginUser(c, req)
 	if err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 
 	refreshTTL := h.loginRefreshTTL(req.RememberMe)
 	if mfaResp, ok, err := h.tryBeginMFALogin(c, user, req.RememberMe); ok || err != nil {
 		if err != nil {
-			return handlercommon.FinishHandlerError(c, err)
+			return response.FinishHandlerError(c, err)
 		}
 		return c.JSON(mfaResp)
 	}
@@ -51,11 +51,11 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 func parseLoginRequest(c fiber.Ctx) (*loginRequest, error) {
 	var req loginRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
+		return nil, response.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	if req.Username == "" || req.Password == "" {
-		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "username and password are required")
+		return nil, response.JSONError(fiber.StatusBadRequest, "username and password are required")
 	}
 	return &req, nil
 }
@@ -70,14 +70,14 @@ func (h *AuthHandler) loginUser(c fiber.Ctx, req *loginRequest) (*model.User, er
 			h.recordAudit(c, user.ID, model.AuditLoginFailed, "user", user.ID, "failure", "account locked")
 		}
 		metrics.RecordAuthAttempt("login", "failure")
-		return nil, handlercommon.JSONError(fiber.StatusTooManyRequests, "account temporarily locked, try again later")
+		return nil, response.JSONError(fiber.StatusTooManyRequests, "account temporarily locked, try again later")
 	}
 	if errors.Is(err, authservice.ErrInvalidCredentials) {
 		metrics.RecordAuthAttempt("login", "failure")
-		return nil, handlercommon.JSONError(fiber.StatusUnauthorized, "invalid credentials")
+		return nil, response.JSONError(fiber.StatusUnauthorized, "invalid credentials")
 	}
 	if err != nil {
-		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "login failed")
+		return nil, response.JSONError(fiber.StatusInternalServerError, "login failed")
 	}
 	return user, nil
 }
@@ -97,7 +97,7 @@ func (h *AuthHandler) tryBeginMFALogin(c fiber.Ctx, user *model.User, rememberMe
 
 	mfaToken := store.GenerateRandomToken()
 	if err := h.cache.Set(c.Context(), "mfa_pending:"+mfaToken, user.ID, 5*time.Minute); err != nil {
-		return nil, true, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to initiate MFA")
+		return nil, true, response.JSONError(fiber.StatusInternalServerError, "failed to initiate MFA")
 	}
 	if rememberMe {
 		_ = h.cache.Set(c.Context(), "mfa_pending_rm:"+mfaToken, "1", 5*time.Minute)
@@ -115,7 +115,7 @@ func (h *AuthHandler) finishLogin(c fiber.Ctx, user *model.User, refreshTTL time
 		_ = h.cache.Set(c.Context(), rtRememberKey(tokenHash), "1", h.tokenConfig.RememberMeTTL)
 	}
 	httpcookie.SetTokenCookies(c, issuedSession.AccessToken, issuedSession.RefreshToken, h.tokenConfig.AccessTTL, refreshTTL)
-	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": response.NewUserResponse(user)})
 }
 
 // Refresh handles POST /api/auth/refresh.
@@ -128,7 +128,7 @@ func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 
 	rt, tokenHash, err := h.consumeRefreshToken(c, refreshToken)
 	if err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 	if time.Now().After(rt.ExpiresAt) {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "refresh token expired"})
@@ -152,7 +152,7 @@ func (h *AuthHandler) consumeRefreshToken(c fiber.Ctx, refreshToken string) (*mo
 	rt, err := h.refreshTokens.ConsumeToken(c.Context(), tokenHash)
 	if err != nil {
 		_ = h.revokeRefreshFamilyIfUsed(c, tokenHash)
-		return nil, "", handlercommon.JSONError(fiber.StatusUnauthorized, "invalid refresh token")
+		return nil, "", response.JSONError(fiber.StatusUnauthorized, "invalid refresh token")
 	}
 	return rt, tokenHash, nil
 }
@@ -161,7 +161,7 @@ func (h *AuthHandler) revokeRefreshFamilyIfUsed(c fiber.Ctx, tokenHash string) e
 	family, err := h.refreshTokens.GetUsedFamily(c.Context(), tokenHash)
 	if err == nil && family != "" {
 		_ = h.refreshTokens.DeleteByFamily(c.Context(), family)
-		return handlercommon.JSONError(fiber.StatusUnauthorized, "invalid refresh token")
+		return response.JSONError(fiber.StatusUnauthorized, "invalid refresh token")
 	}
 	return nil
 }

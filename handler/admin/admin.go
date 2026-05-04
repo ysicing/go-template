@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	handlercommon "github.com/ysicing/go-template/handler"
 	httprequest "github.com/ysicing/go-template/internal/http/request"
+	"github.com/ysicing/go-template/internal/http/response"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -93,7 +93,7 @@ func (h *AdminHandler) GetUser(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
-	return c.JSON(fiber.Map{"user": handlercommon.NewUserResponse(user)})
+	return c.JSON(fiber.Map{"user": response.NewUserResponse(user)})
 }
 
 // GetStats handles GET /api/admin/stats.

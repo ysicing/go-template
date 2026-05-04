@@ -1,8 +1,8 @@
 package user
 
 import (
-	handlercommon "github.com/ysicing/go-template/handler"
 	"github.com/ysicing/go-template/internal/audit"
+	"github.com/ysicing/go-template/internal/http/response"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/gofiber/fiber/v3"
@@ -14,7 +14,7 @@ const passwordHistoryKeep = 5
 func (h *UserHandler) ChangePassword(c fiber.Ctx) error {
 	userID, user, err := h.loadCurrentUser(c)
 	if err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 	if user.PasswordHash == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no password set, use set-password first"})
@@ -22,14 +22,14 @@ func (h *UserHandler) ChangePassword(c fiber.Ctx) error {
 
 	req, err := parseChangePasswordRequest(c)
 	if err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 	if err := h.validatePasswordChange(c, userID, user, req); err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 
 	if err := h.persistPasswordChange(c, userID, user, req.NewPassword); err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 	h.auditPasswordChange(c, userID)
 	return c.JSON(fiber.Map{"message": "password updated, please login again"})
@@ -43,32 +43,32 @@ type changePasswordRequest struct {
 func parseChangePasswordRequest(c fiber.Ctx) (*changePasswordRequest, error) {
 	var req changePasswordRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "invalid request body")
+		return nil, response.JSONError(fiber.StatusBadRequest, "invalid request body")
 	}
 	if req.CurrentPassword == "" || req.NewPassword == "" {
-		return nil, handlercommon.JSONError(fiber.StatusBadRequest, "current_password and new_password are required")
+		return nil, response.JSONError(fiber.StatusBadRequest, "current_password and new_password are required")
 	}
 	return &req, nil
 }
 
 func (h *UserHandler) validatePasswordChange(c fiber.Ctx, userID string, user *model.User, req *changePasswordRequest) error {
 	if !user.CheckPassword(req.CurrentPassword) {
-		return handlercommon.JSONError(fiber.StatusUnauthorized, "invalid current password")
+		return response.JSONError(fiber.StatusUnauthorized, "invalid current password")
 	}
 	if user.CheckPassword(req.NewPassword) {
-		return handlercommon.JSONError(fiber.StatusBadRequest, "new password must be different from current password")
+		return response.JSONError(fiber.StatusBadRequest, "new password must be different from current password")
 	}
 	if shouldEnforcePasswordPolicy(h.settings) {
 		if err := model.ValidatePasswordStrength(req.NewPassword); err != nil {
-			return handlercommon.JSONError(fiber.StatusBadRequest, err.Error())
+			return response.JSONError(fiber.StatusBadRequest, err.Error())
 		}
 	}
 	reused, err := h.passwordHistory.IsRecentlyUsed(c.Context(), userID, req.NewPassword, passwordHistoryKeep)
 	if err != nil {
-		return handlercommon.JSONError(fiber.StatusInternalServerError, "failed to validate password history")
+		return response.JSONError(fiber.StatusInternalServerError, "failed to validate password history")
 	}
 	if reused {
-		return handlercommon.JSONError(fiber.StatusBadRequest, "new password was used recently")
+		return response.JSONError(fiber.StatusBadRequest, "new password was used recently")
 	}
 	return nil
 }
@@ -76,14 +76,14 @@ func (h *UserHandler) validatePasswordChange(c fiber.Ctx, userID string, user *m
 func (h *UserHandler) persistPasswordChange(c fiber.Ctx, userID string, user *model.User, newPassword string) error {
 	oldPasswordHash := user.PasswordHash
 	if err := user.SetPassword(newPassword); err != nil {
-		return handlercommon.JSONError(fiber.StatusInternalServerError, "failed to hash password")
+		return response.JSONError(fiber.StatusInternalServerError, "failed to hash password")
 	}
 	if user.TokenVersion < 1 {
 		user.TokenVersion = 1
 	}
 	user.TokenVersion++
 	if err := h.users.ChangePasswordWithHistory(c.Context(), user, oldPasswordHash); err != nil {
-		return handlercommon.JSONError(fiber.StatusInternalServerError, "failed to update password")
+		return response.JSONError(fiber.StatusInternalServerError, "failed to update password")
 	}
 
 	_ = h.passwordHistory.TrimByUserID(c.Context(), userID, passwordHistoryKeep)
@@ -119,7 +119,7 @@ func (h *UserHandler) RevokeAllSessions(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to revoke all sessions"})
 	}
 	if err := h.bumpUserTokenVersion(c, userID, user); err != nil {
-		return handlercommon.FinishHandlerError(c, err)
+		return response.FinishHandlerError(c, err)
 	}
 	if h.cache != nil {
 		_ = h.cache.Del(c.Context(), "token_ver:"+userID)
@@ -143,7 +143,7 @@ func (h *UserHandler) bumpUserTokenVersion(c fiber.Ctx, userID string, user *mod
 	user.TokenVersion++
 	if err := h.users.Update(c.Context(), user); err != nil {
 		h.auditRevokeAllFailure(c, userID, "token_version_update_failed")
-		return handlercommon.JSONError(fiber.StatusInternalServerError, "failed to revoke all sessions")
+		return response.JSONError(fiber.StatusInternalServerError, "failed to revoke all sessions")
 	}
 	return nil
 }

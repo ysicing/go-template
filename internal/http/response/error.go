@@ -1,4 +1,4 @@
-package handler
+package response
 
 import (
 	"errors"
@@ -33,10 +33,12 @@ func finishHandlerError(c fiber.Ctx, err error) error {
 	return err
 }
 
+// JSONError 创建可由 FinishHandlerError 输出的 JSON 错误。
 func JSONError(status int, msg string) error {
 	return jsonError(status, msg)
 }
 
+// FinishHandlerError 将 JSONError 转换成 Fiber 响应，其他错误原样返回。
 func FinishHandlerError(c fiber.Ctx, err error) error {
 	return finishHandlerError(c, err)
 }
