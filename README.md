@@ -79,6 +79,32 @@ docker run -d \
 - 绑定宿主机目录到 `/data` 时，入口脚本会自动修正权限
 - 若改用 MySQL / Postgres，可通过 `/data/config.yaml` 指定数据库连接
 
+### Docker Compose 本地预览
+
+仓库内置 `docker-compose.yaml`，用于本地构建镜像并快速预览完整控制台。Compose 会同时启动 PostgreSQL 和 Redis；PostgreSQL 作为默认数据库，Redis 用于缓存和异步任务队列。
+
+```bash
+docker compose up --build
+```
+
+启动后访问：
+
+- 控制台：`http://localhost:3206`
+- Swagger UI：`http://localhost:3206/swagger/index.html`
+- 默认管理员：`admin` / `admin123456`
+
+停止服务：
+
+```bash
+docker compose down
+```
+
+如需清空本地数据：
+
+```bash
+docker compose down -v
+```
+
 ## 控制台与 API
 
 - 控制台首页：`http://localhost:3206/`
