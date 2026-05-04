@@ -6,6 +6,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 
@@ -263,7 +264,7 @@ func (h *AdminHandler) DeleteUser(c fiber.Ctx) error {
 
 func (h *AdminHandler) auditAdminUserMutation(c fiber.Ctx, action, resourceID string) {
 	adminID, _ := c.Locals("user_id").(string)
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: adminID, Action: action, Resource: "user", ResourceID: resourceID,
 		IP: ip, UserAgent: ua, Status: "success",

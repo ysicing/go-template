@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/validator"
 	"github.com/ysicing/go-template/store"
@@ -125,7 +126,7 @@ func (h *AuthHandler) buildRegisteredUser(c fiber.Ctx, req *registerRequest, inv
 		InvitedByUserID: invitedByUserID,
 	}
 	if invitedByUserID != "" {
-		user.InviteIP = handlercommon.GetRealIP(c)
+		user.InviteIP = httprequest.GetRealIP(c)
 	}
 	if err := user.SetPassword(req.Password); err != nil {
 		return nil, handlercommon.JSONError(fiber.StatusInternalServerError, "failed to hash password")

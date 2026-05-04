@@ -3,7 +3,7 @@ package emailhandler
 import (
 	"testing"
 
-	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 
 	"github.com/glebarez/sqlite"
@@ -24,6 +24,6 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 func trustAll(t *testing.T) func() {
 	t.Helper()
-	handlercommon.SetTrustedProxies([]string{"0.0.0.0/0", "::/0"})
-	return func() { handlercommon.SetTrustedProxies(nil) }
+	httprequest.SetTrustedProxies([]string{"0.0.0.0/0", "::/0"})
+	return func() { httprequest.SetTrustedProxies(nil) }
 }

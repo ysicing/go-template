@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/pkg/metrics"
 	"github.com/ysicing/go-template/store"
 
@@ -24,7 +24,7 @@ func Run(ctx context.Context, cfg *Config, webDistFS fs.FS, buildInfo BuildInfo,
 	go cleanupAPIRefreshTokens(ctx, log, deps.RefreshTokenStore)
 	metrics.StartSystemMetricsCollector(ctx, 15*time.Second)
 
-	handler.SetTrustedProxies(cfg.Server.TrustedProxies)
+	httprequest.SetTrustedProxies(cfg.Server.TrustedProxies)
 	fiberApp := newFiberApp(cfg, log)
 	setupMiddlewareChain(fiberApp, deps.SettingStore, sessionStorage.Storage, log)
 

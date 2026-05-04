@@ -4,6 +4,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 
@@ -72,7 +73,7 @@ func (h *MFAHandler) verifyMFACode(c fiber.Ctx, req *mfaVerifyRequest, userID st
 
 	_ = h.cache.Del(c.Context(), mfaConsumedKey(req.MFAToken))
 	locked := h.recordFailedMFAVerify(c.Context(), req.MFAToken)
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditMFAVerify, Resource: "mfa",
 		IP: ip, UserAgent: ua, Status: "failure",
@@ -105,7 +106,7 @@ func (h *MFAHandler) finishBrowserMFAVerify(c fiber.Ctx, userID string, refreshT
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "user not found"})
 	}
 
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditLogin, Resource: "user", ResourceID: userID,
 		IP: ip, UserAgent: ua, Status: "success", Detail: "local",

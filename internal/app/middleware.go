@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
 
@@ -231,7 +232,7 @@ func requestLogMiddleware() fiber.Handler {
 			event = logger.L.Warn()
 		}
 		event.
-			Str("ip", handler.GetRealIP(c)).
+			Str("ip", httprequest.GetRealIP(c)).
 			Int("status", status).
 			Dur("latency", time.Since(start)).
 			Str("method", c.Method()).

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 
@@ -70,7 +71,7 @@ func recordAuditEvent(ctx context.Context, audit auditCreator, event AuditEvent)
 }
 
 func recordAuditFromFiber(c fiber.Ctx, audit auditCreator, event AuditEvent) error {
-	ip, ua := GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	if event.IP == "" {
 		event.IP = ip
 	}

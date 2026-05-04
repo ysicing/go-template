@@ -8,6 +8,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 
@@ -72,7 +73,7 @@ func (h *WebAuthnHandler) saveSessionData(ctx context.Context, key string, sessi
 }
 
 func (h *WebAuthnHandler) issueBrowserSession(c fiber.Ctx, user *model.User, refreshTTL time.Duration) error {
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         ip,
@@ -87,7 +88,7 @@ func (h *WebAuthnHandler) issueBrowserSession(c fiber.Ctx, user *model.User, ref
 }
 
 func (h *WebAuthnHandler) writeSuccessfulLoginAudit(c fiber.Ctx, userID string) {
-	loginIP, loginUA := handlercommon.GetRealIPAndUA(c)
+	loginIP, loginUA := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditLogin, Resource: "user", ResourceID: userID,
 		IP: loginIP, UserAgent: loginUA, Status: "success", Detail: "webauthn",
@@ -97,6 +98,6 @@ func (h *WebAuthnHandler) writeSuccessfulLoginAudit(c fiber.Ctx, userID string) 
 func (h *WebAuthnHandler) writeFailedLoginAudit(c fiber.Ctx, userID, action, resource, detail string) {
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: action, Resource: resource, ResourceID: userID,
-		IP: handlercommon.GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: detail,
+		IP: httprequest.GetRealIP(c), UserAgent: c.Get("User-Agent"), Status: "failure", Detail: detail,
 	})
 }

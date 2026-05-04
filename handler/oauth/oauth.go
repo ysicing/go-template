@@ -5,6 +5,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
@@ -124,7 +125,7 @@ func (h *OAuthHandler) respondWithTokens(c fiber.Ctx, user *model.User, provider
 		},
 	})
 
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	issuedSession, err := h.sessions.IssueBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
 		IP:         ip,

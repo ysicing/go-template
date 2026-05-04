@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
@@ -21,7 +22,7 @@ func TestRateLimiter_MemoryCache(t *testing.T) {
 		Max:        3,
 		Expiration: 1 * time.Second,
 		KeyGenerator: func(c fiber.Ctx) string {
-			return GetRealIPForRateLimit(c, "test")
+			return httprequest.GetRealIPForRateLimit(c, "test")
 		},
 		Cache: cache,
 	}), func(c fiber.Ctx) error {

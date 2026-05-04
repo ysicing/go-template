@@ -5,6 +5,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/pkg/logger"
 	webauthnstore "github.com/ysicing/go-template/store/webauthn"
@@ -89,7 +90,7 @@ func (h *WebAuthnHandler) DeleteCredential(c fiber.Ctx) error {
 	if err := h.creds.Delete(c.Context(), credID, userID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete credential"})
 	}
-	waDelIP, waDelUA := handlercommon.GetRealIPAndUA(c)
+	waDelIP, waDelUA := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditWebAuthnRemove, Resource: "webauthn", ResourceID: credID,
 		IP: waDelIP, UserAgent: waDelUA, Status: "success",
@@ -142,7 +143,7 @@ func (h *WebAuthnHandler) buildWebAuthnCredential(
 }
 
 func (h *WebAuthnHandler) writeCredentialAddedAudit(c fiber.Ctx, userID, credentialID string) {
-	waAddIP, waAddUA := handlercommon.GetRealIPAndUA(c)
+	waAddIP, waAddUA := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: userID, Action: model.AuditWebAuthnAdd, Resource: "webauthn", ResourceID: credentialID,
 		IP: waAddIP, UserAgent: waAddUA, Status: "success",

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	authservice "github.com/ysicing/go-template/internal/service/auth"
 	sessionservice "github.com/ysicing/go-template/internal/service/session"
 	"github.com/ysicing/go-template/model"
@@ -173,7 +174,7 @@ func (h *AuthHandler) refreshTTLForToken(c fiber.Ctx, tokenHash string) time.Dur
 func (h *AuthHandler) finishRefresh(c fiber.Ctx, user *model.User, family, oldTokenHash string, refreshTTL time.Duration) error {
 	issuedSession, err := h.sessions.RotateBrowserSession(c.Context(), sessionservice.SessionRequest{
 		User:       user,
-		IP:         handlercommon.GetRealIP(c),
+		IP:         httprequest.GetRealIP(c),
 		UserAgent:  c.Get("User-Agent"),
 		RefreshTTL: refreshTTL,
 		Family:     family,
@@ -195,7 +196,7 @@ func (h *AuthHandler) finishRefresh(c fiber.Ctx, user *model.User, family, oldTo
 func browserSessionRequest(c fiber.Ctx, user *model.User, refreshTTL time.Duration) sessionservice.SessionRequest {
 	return sessionservice.SessionRequest{
 		User:       user,
-		IP:         handlercommon.GetRealIP(c),
+		IP:         httprequest.GetRealIP(c),
 		UserAgent:  c.Get("User-Agent"),
 		RefreshTTL: refreshTTL,
 	}

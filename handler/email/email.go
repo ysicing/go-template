@@ -7,6 +7,7 @@ import (
 	"time"
 
 	handlercommon "github.com/ysicing/go-template/handler"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/model"
 	"github.com/ysicing/go-template/store"
 	pointstore "github.com/ysicing/go-template/store/points"
@@ -99,7 +100,7 @@ func (h *EmailHandler) VerifyEmail(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to verify email"})
 	}
 
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: user.ID, Action: model.AuditEmailVerify, Resource: "user",
 		ResourceID: user.ID, IP: ip, UserAgent: ua, Status: "success",
@@ -142,7 +143,7 @@ func (h *EmailHandler) ResendVerification(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to queue verification email"})
 	}
 
-	ip, ua := handlercommon.GetRealIPAndUA(c)
+	ip, ua := httprequest.GetRealIPAndUA(c)
 	_ = handlercommon.WriteAudit(c.Context(), h.audit, &model.AuditLog{
 		UserID: user.ID, Action: model.AuditEmailResend, Resource: "user",
 		ResourceID: user.ID, IP: ip, UserAgent: ua, Status: "success",

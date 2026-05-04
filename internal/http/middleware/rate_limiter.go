@@ -1,9 +1,10 @@
-package handler
+package middleware
 
 import (
 	"fmt"
 	"time"
 
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/pkg/logger"
 	"github.com/ysicing/go-template/store"
 
@@ -51,7 +52,7 @@ func RateLimiter(config RateLimiterConfig) fiber.Handler {
 	}
 	if config.KeyGenerator == nil {
 		config.KeyGenerator = func(c fiber.Ctx) string {
-			return GetRealIPForRateLimit(c, "ratelimit")
+			return httprequest.GetRealIPForRateLimit(c, "ratelimit")
 		}
 	}
 	if config.Cache == nil {

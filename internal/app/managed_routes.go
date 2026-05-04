@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/ysicing/go-template/handler"
+	httpmiddleware "github.com/ysicing/go-template/internal/http/middleware"
+	httprequest "github.com/ysicing/go-template/internal/http/request"
 	"github.com/ysicing/go-template/store"
 
 	"github.com/gofiber/fiber/v3"
@@ -53,30 +55,30 @@ func buildManagedRouteRuntime(d *Deps, h *builtHandlers) managedRouteRuntime {
 }
 
 func newAuthLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
+	return httpmiddleware.RateLimiter(httpmiddleware.RateLimiterConfig{
 		Max: 20, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string { return handler.GetRealIPForRateLimit(c, "auth:") },
+		KeyGenerator: func(c fiber.Ctx) string { return httprequest.GetRealIPForRateLimit(c, "auth:") },
 		Cache:        cache,
 	})
 }
 
 func newPointsLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
+	return httpmiddleware.RateLimiter(httpmiddleware.RateLimiterConfig{
 		Max: 10, Expiration: 1 * time.Minute,
 		KeyGenerator: func(c fiber.Ctx) string {
 			if uid, _ := c.Locals("user_id").(string); uid != "" {
 				return "points:" + uid
 			}
-			return handler.GetRealIPForRateLimit(c, "points:")
+			return httprequest.GetRealIPForRateLimit(c, "points:")
 		},
 		Cache: cache,
 	})
 }
 
 func newRegisterLimiter(cache store.Cache) fiber.Handler {
-	return handler.RateLimiter(handler.RateLimiterConfig{
+	return httpmiddleware.RateLimiter(httpmiddleware.RateLimiterConfig{
 		Max: 5, Expiration: 1 * time.Minute,
-		KeyGenerator: func(c fiber.Ctx) string { return handler.GetRealIPForRateLimit(c, "register:") },
+		KeyGenerator: func(c fiber.Ctx) string { return httprequest.GetRealIPForRateLimit(c, "register:") },
 		Cache:        cache,
 	})
 }
@@ -164,7 +166,7 @@ func turnstileMiddleware(settings *store.SettingStore) fiber.Handler {
 		form := url.Values{}
 		form.Set("secret", secretKey)
 		form.Set("response", body.TurnstileToken)
-		form.Set("remoteip", handler.GetRealIP(c))
+		form.Set("remoteip", httprequest.GetRealIP(c))
 		request, err := http.NewRequestWithContext(c.Context(), http.MethodPost,
 			"https://challenges.cloudflare.com/turnstile/v0/siteverify",
 			strings.NewReader(form.Encode()))
